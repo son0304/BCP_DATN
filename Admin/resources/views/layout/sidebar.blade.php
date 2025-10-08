@@ -21,6 +21,12 @@
         </a>
       </li>
       <li class="nav-item">
+        <a class="nav-link" href="{{route('brand.index')}}">
+          <span class="menu-title">Brand</span>
+          <i class="mdi mdi-tennis menu-icon"></i>
+        </a>
+      </li>
+      <li class="nav-item">
         <a class="nav-link" href="{{route('courts.index')}}">
           <span class="menu-title">Courts</span>
           <i class="mdi mdi-tennis menu-icon"></i>

@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('app');
 });
-Route::get('/', [HomeController::class, 'index'])-> name('home.index');
-Route::get('/courts', [CourtController::class, 'index'])-> name('courts.index');
-Route::get('/users', [UserController::class, 'index'])-> name('users.index');
-Route::get('/reviews', [ReviewController::class, 'index'])-> name('reivews.index');
+Route::get('/', [HomeController::class, 'index'])->name('home.index');
+Route::resource('courts', CourtController::class);
+Route::get('/users', [UserController::class, 'index'])->name('users.index');
+Route::get('/reviews', [ReviewController::class, 'index'])->name('reivews.index');
 Route::resource('brand', BrandController::class)->parameter('brand', 'venue');

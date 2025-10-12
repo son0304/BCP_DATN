@@ -114,6 +114,6 @@ class BrandController extends Controller
     public function destroy(Venue $venue)
     {
         $venue->delete();
-        return redirect()->route('brand.index')->with('success', 'Xóa sân thành công!');
+        return redirect()->route('admin.brand.index')->with('success', 'Xóa sân thành công!');
     }
 }

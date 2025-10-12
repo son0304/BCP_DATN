@@ -17,6 +17,11 @@ class Item extends Model
     public function time_slot (){
         return $this->belongsTo(TimeSlot::class, 'slot_id');
     }
+    
+    // Alias for consistency
+    public function slot (){
+        return $this->belongsTo(TimeSlot::class, 'slot_id');
+    }
     public function court (){
         return $this->belongsTo(Court::class, 'court_id');
     }

@@ -8,6 +8,11 @@
             {{ session('success') }}
         </div>
     @endif
+    @if (session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+        </div>
+    @endif
 
     <table class="table table-bordered">
         <thead>
@@ -16,8 +21,8 @@
                 <th>Tên sân</th>
                 <th>Địa điểm</th>
                 <th>Loại hình</th>
-                <th>Giá/giờ</th>
-                <th>Trong nhà</th>
+                {{-- ĐÃ XÓA CỘT GIÁ/GIỜ --}}
+                <th>Loại sân</th>
                 <th>Hành động</th>
             </tr>
         </thead>
@@ -28,8 +33,8 @@
                     <td>{{ $court->name }}</td>
                     <td>{{ $court->venue->name ?? 'N/A' }}</td>
                     <td>{{ $court->venue_type->name ?? 'N/A' }}</td>
-                    <td>{{ number_format($court->price_per_hour) }} VNĐ</td>
-                    <td>{{ $court->is_indoor ? 'Có' : 'Không' }}</td>
+                    {{-- ĐÃ XÓA CỘT GIÁ/GIỜ --}}
+                    <td>{{ $court->is_indoor ? 'Trong nhà' : 'Ngoài trời' }}</td>
                     <td>
                         <a href="{{ route('courts.edit', $court) }}" class="btn btn-sm btn-warning">Sửa</a>
                         <form action="{{ route('courts.destroy', $court) }}" method="POST" style="display:inline-block;">

@@ -20,65 +20,190 @@
                         </div>
                     @endif
 
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Tên sân</label>
-                        <input type="text" class="form-control" id="name" name="name"
-                            value="{{ old('name', $court->name) }}" required>
+                    {{-- THÔNG TIN CƠ BẢN CỦA SÂN --}}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Tên sân</label>
+                                <input type="text" class="form-control" id="name" name="name"
+                                    value="{{ old('name', $court->name) }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="venue_id" class="form-label">Địa điểm (Venue)</label>
+                                <select class="form-select" id="venue_id" name="venue_id" required>
+                                    @foreach ($venues as $venue)
+                                        <option value="{{ $venue->id }}"
+                                            {{ old('venue_id', $court->venue_id) == $venue->id ? 'selected' : '' }}>
+                                            {{ $venue->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="venue_type_id" class="form-label">Loại hình</label>
+                                <select class="form-select" id="venue_type_id" name="venue_type_id" required>
+                                    @foreach ($venueTypes as $venueType)
+                                        <option value="{{ $venueType->id }}"
+                                            {{ old('venue_type_id', $court->venue_type_id) == $venueType->id ? 'selected' : '' }}>
+                                            {{ $venueType->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="is_indoor" class="form-label">Loại sân</label>
+                                <select class="form-select" id="is_indoor" name="is_indoor" required>
+                                    <option value="1"
+                                        {{ old('is_indoor', $court->is_indoor) == 1 ? 'selected' : '' }}>Trong
+                                        nhà</option>
+                                    <option value="0"
+                                        {{ old('is_indoor', $court->is_indoor) == 0 ? 'selected' : '' }}>Ngoài
+                                        trời</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="venue_id" class="form-label">Địa điểm (Venue)</label>
-                        <select class="form-select" id="venue_id" name="venue_id" required>
-                            <option value="">-- Chọn địa điểm --</option>
-                            @foreach ($venues as $venue)
-                                <option value="{{ $venue->id }}"
-                                    {{ old('venue_id', $court->venue_id) == $venue->id ? 'selected' : '' }}>
-                                    {{ $venue->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="venue_type_id" class="form-label">Loại hình (Cầu lông, Pickleball...)</label>
-                        <select class="form-select" id="venue_type_id" name="venue_type_id" required>
-                            <option value="">-- Chọn loại hình --</option>
-                            @foreach ($venueTypes as $venueType)
-                                <option value="{{ $venueType->id }}"
-                                    {{ old('venue_type_id', $court->venue_type_id) == $venueType->id ? 'selected' : '' }}>
-                                    {{ $venueType->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="price_per_hour" class="form-label">Giá mỗi giờ (VNĐ)</label>
-                        <input type="number" class="form-control" id="price_per_hour" name="price_per_hour"
-                            value="{{ old('price_per_hour', $court->price_per_hour) }}" required min="0"
-                            step="1000">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="surface" class="form-label">Bề mặt sân (Ví dụ: Thảm, xi măng...)</label>
+                        <label for="surface" class="form-label">Bề mặt sân</label>
                         <input type="text" class="form-control" id="surface" name="surface"
                             value="{{ old('surface', $court->surface) }}">
                     </div>
 
-                    <div class="mb-3">
-                        <label for="is_indoor" class="form-label">Loại sân</label>
-                        <select class="form-select" id="is_indoor" name="is_indoor" required>
-                            <option value="1" {{ old('is_indoor', $court->is_indoor) == 1 ? 'selected' : '' }}>Trong
-                                nhà</option>
-                            <option value="0" {{ old('is_indoor', $court->is_indoor) == 0 ? 'selected' : '' }}>Ngoài
-                                trời</option>
-                        </select>
+                    {{-- PHẦN CẬP NHẬT GIÁ --}}
+                    <hr>
+                    <h4 class="mt-4">Cập nhật khung giờ và giá</h4>
+                    <p class="text-muted">Thay đổi sẽ xóa và tạo lại lịch cho các suất chưa được đặt trong tương lai.</p>
+
+                    <div id="time-slots-container">
+                        {{-- Hiển thị các khung giờ/giá đã có --}}
+                        @foreach ($currentPrices as $slotId => $price)
+                            <div class="row align-items-center mb-2 time-slot-row">
+                                <div class="col-md-5">
+                                    <label class="form-label">Khung giờ</label>
+                                    <select class="form-select" name="slot_ids[]" required>
+                                        <option value="">-- Chọn khung giờ --</option>
+                                        @foreach ($timeSlots as $slot)
+                                            <option value="{{ $slot->id }}"
+                                                {{ $slotId == $slot->id ? 'selected' : '' }}>
+                                                {{ date('H:i', strtotime($slot->start_time)) }} -
+                                                {{ date('H:i', strtotime($slot->end_time)) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label">Giá (VNĐ)</label>
+                                    <input type="number" class="form-control" name="slot_prices[]" placeholder="Nhập giá"
+                                        min="0" step="1000" value="{{ $price }}" required>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button type="button" class="btn btn-danger remove-slot-btn">Xóa</button>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
 
-                    <button type="submit" class="btn btn-success">Cập nhật</button>
-                    <a href="{{ route('courts.index') }}" class="btn btn-secondary">Hủy bỏ</a>
+                    <button type="button" id="add-time-slot-btn" class="btn btn-info mt-2">Thêm khung giờ</button>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-success">Cập nhật</button>
+                        <a href="{{ route('courts.index') }}" class="btn btn-secondary">Hủy bỏ</a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 @endsection
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@push('scripts')
+    <script>
+        const allTimeSlots = @json($timeSlots);
+
+        function createTimeSlotRow() {
+            const options = allTimeSlots.map(slot =>
+                `<option value="${slot.id}">${new Date('1970-01-01T' + slot.start_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})} - ${new Date('1970-01-01T' + slot.end_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</option>`
+            ).join('');
+
+            const newRow = `
+            <div class="row align-items-center mb-2 time-slot-row">
+                <div class="col-md-5">
+                    <label class="form-label">Khung giờ</label>
+                    <select class="form-select" name="slot_ids[]" required>
+                        <option value="">-- Chọn khung giờ --</option>
+                        ${options}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Giá (VNĐ)</label>
+                    <input type="number" class="form-control" name="slot_prices[]" placeholder="Nhập giá" min="0" step="1000" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-danger remove-slot-btn">Xóa</button>
+                </div>
+            </div>
+        `;
+            return newRow;
+        }
+
+        $(document).ready(function() {
+            $('#add-time-slot-btn').click(function() {
+                $('#time-slots-container').append(createTimeSlotRow());
+            });
+
+            $('#time-slots-container').on('click', '.remove-slot-btn', function() {
+                $(this).closest('.time-slot-row').remove();
+            });
+        });
+    </script>
+@endpush
+<script>
+    const allTimeSlots = @json($timeSlots);
+
+    function createTimeSlotRow() {
+        const options = allTimeSlots.map(slot =>
+            `<option value="${slot.id}">${new Date('1970-01-01T' + slot.start_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})} - ${new Date('1970-01-01T' + slot.end_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</option>`
+        ).join('');
+
+        const newRow = `
+            <div class="row align-items-center mb-2 time-slot-row">
+                <div class="col-md-5">
+                    <label class="form-label">Khung giờ</label>
+                    <select class="form-select" name="slot_ids[]" required>
+                        <option value="">-- Chọn khung giờ --</option>
+                        ${options}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Giá (VNĐ)</label>
+                    <input type="number" class="form-control" name="slot_prices[]" placeholder="Nhập giá" min="0" step="1000" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-danger remove-slot-btn">Xóa</button>
+                </div>
+            </div>
+        `;
+        return newRow;
+    }
+
+    $(document).ready(function() {
+        $('#add-time-slot-btn').click(function() {
+            $('#time-slots-container').append(createTimeSlotRow());
+        });
+
+        $('#time-slots-container').on('click', '.remove-slot-btn', function() {
+            $(this).closest('.time-slot-row').remove();
+        });
+    });
+</script>

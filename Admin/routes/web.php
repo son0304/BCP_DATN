@@ -4,8 +4,17 @@ use App\Http\Controllers\Web\CourtController;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\ReviewController;
 use App\Http\Controllers\Web\UserController;
+use App\Http\Controllers\Web\AuthController;
 use Illuminate\Support\Facades\Route;
 
+// Auth Routes
+Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+Route::post('/register', [AuthController::class, 'register']);
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// Main Routes
 Route::get('/', function () {
     return view('app');
 });

@@ -25,9 +25,15 @@
         </div>
     @endif
 
+    @if (session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('register') }}">
         @csrf
-        
+
         <!-- Họ tên -->
         <div class="mb-3">
             <label for="name" class="form-label">
@@ -37,11 +43,11 @@
                 <span class="input-group-text">
                     <i class="fas fa-user"></i>
                 </span>
-                <input type="text" 
-                       class="form-control @error('name') is-invalid @enderror" 
-                       id="name" 
-                       name="name" 
-                       value="{{ old('name') }}" 
+                <input type="text"
+                       class="form-control @error('name') is-invalid @enderror"
+                       id="name"
+                       name="name"
+                       value="{{ old('name') }}"
                        placeholder="Nhập họ và tên"
                        required>
             </div>
@@ -59,11 +65,11 @@
                 <span class="input-group-text">
                     <i class="fas fa-envelope"></i>
                 </span>
-                <input type="email" 
-                       class="form-control @error('email') is-invalid @enderror" 
-                       id="email" 
-                       name="email" 
-                       value="{{ old('email') }}" 
+                <input type="email"
+                       class="form-control @error('email') is-invalid @enderror"
+                       id="email"
+                       name="email"
+                       value="{{ old('email') }}"
                        placeholder="Nhập địa chỉ email"
                        required>
             </div>
@@ -81,11 +87,11 @@
                 <span class="input-group-text">
                     <i class="fas fa-phone"></i>
                 </span>
-                <input type="tel" 
-                       class="form-control @error('phone') is-invalid @enderror" 
-                       id="phone" 
-                       name="phone" 
-                       value="{{ old('phone') }}" 
+                <input type="tel"
+                       class="form-control @error('phone') is-invalid @enderror"
+                       id="phone"
+                       name="phone"
+                       value="{{ old('phone') }}"
                        placeholder="Nhập số điện thoại"
                        required>
             </div>
@@ -103,10 +109,10 @@
                 <span class="input-group-text">
                     <i class="fas fa-lock"></i>
                 </span>
-                <input type="password" 
-                       class="form-control @error('password') is-invalid @enderror" 
-                       id="password" 
-                       name="password" 
+                <input type="password"
+                       class="form-control @error('password') is-invalid @enderror"
+                       id="password"
+                       name="password"
                        placeholder="Nhập mật khẩu"
                        required>
             </div>
@@ -124,10 +130,10 @@
                 <span class="input-group-text">
                     <i class="fas fa-lock"></i>
                 </span>
-                <input type="password" 
-                       class="form-control" 
-                       id="password_confirmation" 
-                       name="password_confirmation" 
+                <input type="password"
+                       class="form-control"
+                       id="password_confirmation"
+                       name="password_confirmation"
                        placeholder="Nhập lại mật khẩu"
                        required>
             </div>

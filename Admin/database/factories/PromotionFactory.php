@@ -17,7 +17,13 @@ class PromotionFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'code' => strtoupper($this->faker->bothify('KM###')),
+            'value' => $this->faker->numberBetween(5, 50),
+            'type' => $this->faker->randomElement(['%', 'VND']),
+            'start_at' => now()->subDay(),
+            'end_at' => now()->addDays(30),
+            'usage_limit' => 50,
+            'used_count' => 0,
         ];
     }
 }

@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('owner_id')->constrained('users');
             $table->string('name');
+            $table->time('start_time')->nullable();
+            $table->time('end_time')->nullable();
             $table->string('address_detail');
             $table->foreignId('district_id')->constrained('districts');
             $table->foreignId('province_id')->constrained('provinces');

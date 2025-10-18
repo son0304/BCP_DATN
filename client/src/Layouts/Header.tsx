@@ -4,7 +4,8 @@ const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="bg-gradient-to-r from-[#1E3A8A]  to-[#3B82F6] text-white shadow-xl relative overflow-hidden">
+    // Nền xanh lá chủ đạo
+    <header className="bg-gradient-to-r from-[#2d6a2d] to-[#348738] text-white shadow-xl relative overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400"></div>
@@ -25,11 +26,13 @@ const Header = () => {
         <nav className="hidden md:flex gap-8">
           <a href="/" className="relative group px-4 py-2 rounded-lg hover:bg-white/10 transition-all duration-300 font-medium">
             <span className="relative z-10">Trang Chủ</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-400 rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+            {/* Gradient xanh lá */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#348738] to-[#2d6a2d] rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
           </a>
           <a href="#" className="relative group px-4 py-2 rounded-lg hover:bg-white/10 transition-all duration-300 font-medium">
             <span className="relative z-10">Dành cho đối tác</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-400 rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+            {/* Gradient xanh lá */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#348738] to-[#2d6a2d] rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
           </a>
         </nav>
 
@@ -50,7 +53,8 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             <button className="relative group p-3 rounded-full hover:bg-white/10 transition-all duration-300">
               <i className="fa-regular fa-circle-user text-2xl group-hover:scale-110 transition-transform duration-300"></i>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              {/* Pulse màu xanh lá */}
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#348738] rounded-full animate-pulse"></div>
             </button>
           </div>
         </div>
@@ -66,7 +70,8 @@ const Header = () => {
 
       {/* Mobile Dropdown Menu */}
       {isOpen && (
-        <div className="md:hidden bg-gradient-to-b from-[#1E3A8A] to-[#3B82F6] px-6 py-6 space-y-6 border-t border-white/20">
+        // Nền xanh lá
+        <div className="md:hidden bg-gradient-to-b from-[#2d6a2d] to-[#348738] px-6 py-6 space-y-6 border-t border-white/20">
           <div className="space-y-4">
             <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
               <h3 className="font-bold text-lg mb-3 text-white border-b border-white/30 pb-2">

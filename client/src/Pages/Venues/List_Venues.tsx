@@ -8,8 +8,6 @@ interface VenuesProps {
   limit?: number;
 }
 
-// Use shared Venue type from Types instead of redefining
-
 const List_Venue = ({ limit }: VenuesProps) => {
   const [selectedVenue, setSelectedVenue] = useState<number | null>(null);
   const { data: venueData, isLoading, isError } = useFetchData<Venue[]>("venues");
@@ -60,7 +58,8 @@ const List_Venue = ({ limit }: VenuesProps) => {
                     {venue.start_time && venue.end_time ? (
                       <p className="text-sm text-[#6B7280] mb-3">
                         🕒 <span className="font-semibold text-[#111827]">Giờ mở cửa:</span>{" "}
-                        <span className="text-[#10B981] font-medium">
+                        {/* Màu xanh lá */}
+                        <span className="text-[#348738] font-medium">
                           {venue.start_time.slice(0, 5)} - {venue.end_time.slice(0, 5)}
                         </span>
                       </p>
@@ -76,7 +75,8 @@ const List_Venue = ({ limit }: VenuesProps) => {
                         venue.types.map((type) => (
                           <span
                             key={type.id}
-                            className="px-3 py-1 bg-[#10B981]/20 text-[#10B981] text-xs font-medium rounded-full"
+                            // Màu xanh lá
+                            className="px-3 py-1 bg-[#348738]/20 text-[#348738] text-xs font-medium rounded-full"
                           >
                             {type.name}
                           </span>
@@ -89,14 +89,17 @@ const List_Venue = ({ limit }: VenuesProps) => {
                     <h2 className="text-lg font-bold text-[#111827] mb-2">{venue.name}</h2>
 
                     <div className="flex items-start text-[#6B7280] mb-4">
-                      <i className="fa-solid fa-location-dot mr-2 text-[#1E3A8A] mt-1"></i>
+                      {/* Màu xanh lá */}
+                      <i className="fa-solid fa-location-dot mr-2 text-[#348738] mt-1"></i>
                       <span className="text-sm">{venue.address_detail}</span>
                     </div>
                   </div>
 
+                  {/* --- ĐỔI MÀU CTA --- */}
+                  {/* Nút CTA màu Cam */}
                   <button
                     onClick={() => setSelectedVenue(venue.id)}
-                    className="w-full bg-[#3B82F6] hover:bg-[#1E3A8A] text-white font-semibold py-2 rounded-lg transition-all"
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition-all"
                   >
                     Xem chi tiết
                   </button>

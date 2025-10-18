@@ -13,7 +13,7 @@ class CourtApiController extends Controller
      */
     public function index()
     {
-        $courts = Court::with('timeSlots:id,court_id,label,start_time,end_time')->get();
+        $courts = Court::with('timeSlots:id,court_id,label,start_time,end_time,is_booking')->get();
 
         return response()->json([
             'message' => 'Lấy danh sách sân thành công',

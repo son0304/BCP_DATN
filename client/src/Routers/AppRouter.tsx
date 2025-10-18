@@ -1,6 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import Content from '../Pages/HomePage'
-import Ticket from '../Pages/Booking/Ticket'
+import Ticket from '../Pages/Ticket/Ticket'
 import App from '../App'
 
 const AppRouter = () => {

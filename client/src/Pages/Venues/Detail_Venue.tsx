@@ -27,18 +27,24 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
   const [selectedPrice, setSelectedPrice] = useState<number>(0);
 
   const navigate = useNavigate();
-  const { data: detail_venue, isLoading } = useFetchDataById<Venue>('venue', id, { date: selectedDate });
+  const { data: detail_venue, isLoading, refetch } = useFetchDataById<Venue>('venue', id, { date: selectedDate });
+  
   const { mutate } = usePostData<ApiResponse<number>, unknown>('tickets');
 
-  // Calculate total price whenever selectedItems changes
   useEffect(() => {
     const total = selectedItems.reduce((sum, item) => sum + Number(item.price_per_hour || 0), 0);
     setSelectedPrice(total);
   }, [selectedItems]);
 
+  useEffect(() => {
+    refetch(); 
+    setSelectedItems([]); 
+  }, [selectedDate, refetch]);
+
   if (isLoading || !detail_venue) {
     return (
       <div className="flex items-center justify-center h-64">
+        {/* Loading màu xanh lá */}
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#348738]"></div>
       </div>
     );
@@ -47,13 +53,18 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
   const venue: Venue = detail_venue.data;
   const primaryImage = venue.images?.find((img: Image) => img.is_primary === 1);
   const allImages = venue.images || [];
-  const courts = venue.courts || [];
 
-  // Handlers
+  const courts = venue.courts ?? [];
+
   const handleChangeDate = (e: React.ChangeEvent<HTMLInputElement>) => setSelectedDate(e.target.value);
   const handleChangeVoucher = (e: React.ChangeEvent<HTMLInputElement>) => setSelectedVoucher(e.target.value);
 
-  const handleSelectItem = (clickedItem: SelectedItem) => {
+  const handleSelectItem = (clickedItem: SelectedItem, isBooking: string | null | undefined) => {
+    if (isBooking === 'confirmed' || isBooking === 'pending') {
+      setNotification({ message: 'Khung giờ này đã có người đặt.', type: 'error' });
+      return;
+    }
+
     const isSelected = selectedItems.some(
       (item) => item.court_id === clickedItem.court_id && item.time_slot_id === clickedItem.time_slot_id
     );
@@ -72,7 +83,7 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (selectedItems.length === 0) {
-      setNotification({ message: 'Vui lòng chọn sân và khung giờ trước khi đặt!', type: 'success' });
+      setNotification({ message: 'Vui lòng chọn sân và khung giờ trước khi đặt!', type: 'error' });
       return;
     }
 
@@ -80,24 +91,19 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
       court_id: item.court_id,
       time_slot_id: item.time_slot_id,
       date: item.date,
-      unit_price: selectedPrice,
+      unit_price: item.price_per_hour,
     }));
 
     const bookingData = {
-      user_id: 1,
+      user_id: 1, 
       promotion_id: null,
       discount_amount: 0,
       bookings: itemsData,
     };
 
-    // console.log(bookingData);
-    
-
     mutate(bookingData, {
       onSuccess: (response) => {
-
         const { success, message, data } = response;
-
         if (success) {
           setNotification({ message, type: 'success' });
           navigate(`/booking/${data}`);
@@ -106,9 +112,8 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
         }
       },
       onError: (error) => {
-        // setNotification({ message: 'Slot đã tồn tại. Đặt slot khác', type: 'error' });
+        setNotification({ message: 'Slot đã tồn tại. Đặt slot khác', type: 'error' });
         console.log(error);
-        
       },
     });
   };
@@ -129,7 +134,8 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
               <span className="font-semibold">{Number(venue.reviews_avg_rating ?? 0).toFixed(1)}</span>
             </div>
             <div className="flex items-center gap-1">
-              <i className="fa-solid fa-location-dot text-green-400"></i>
+              {/* Icon xanh lá */}
+              <i className="fa-solid fa-location-dot text-[#348738] w-5"></i>
               <span className="text-sm">{venue.address_detail}</span>
             </div>
           </div>
@@ -138,7 +144,7 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
 
       {/* Content */}
       <div className="p-6 space-y-6">
-        {/* Types */}
+        {/* Types (xanh lá) */}
         <div>
           <h3 className="text-lg font-bold text-gray-800 mb-3">Loại sân</h3>
           <div className="flex flex-wrap gap-2">
@@ -165,7 +171,7 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
           <p className="text-gray-600 leading-relaxed">{venue.description || 'Chưa có mô tả chi tiết về sân này.'}</p>
         </div>
 
-        {/* Images */}
+        {/* Images (tag "Chính" màu xanh lá) */}
         {allImages.length > 0 && (
           <div>
             <h3 className="text-lg font-bold text-gray-800 mb-3">Hình ảnh</h3>
@@ -188,7 +194,7 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
           </div>
         )}
 
-        {/* Contact Info */}
+        {/* Contact Info (icons xanh lá) */}
         <div>
           <h3 className="text-lg font-bold text-gray-800 mb-3">Thông tin liên hệ</h3>
           <div className="space-y-2">
@@ -211,13 +217,14 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
           </div>
         </div>
 
-        {/* Courts List */}
+        {/* Courts List (border, focus, card border, card title màu xanh lá) */}
         {courts.length > 0 && (
           <div>
             <div className="flex justify-between border-b pb-2 mb-4 border-[#348738]/30">
               <h3 className="text-lg font-bold text-gray-800 mb-4">Danh sách sân</h3>
               <input
                 type="date"
+                value={selectedDate} 
                 onChange={handleChangeDate}
                 className="w-full px-4 py-2 text-gray-700 text-base border-2 rounded-lg border-[#348738] focus:outline-none focus:border-[#246026] focus:ring-1 focus:ring-[#348738]"
               />
@@ -249,14 +256,17 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
                       const isSelected = selectedItems.some(
                         (item) => item.court_id === court.id && item.time_slot_id === time.id
                       );
+                      
+                      const isBooked = time.is_booking === 'confirmed' || time.is_booking === 'pending';
 
+                      // Slot đã chọn màu xanh lá (màu chủ đạo)
                       const timeClass = isSelected
-                        ? 'bg-[#348738] text-white hover:bg-[#2d6a2d]'
-                        : time.is_booking === 'confirmed'
-                          ? 'bg-red-500 text-white'
-                          : time.is_booking === 'pending'
-                            ? 'bg-yellow-400 text-black'
-                            : 'bg-gray-400 text-white';
+                        ? 'bg-[#348738] text-white hover:bg-[#2d6a2d] cursor-pointer' 
+                        : isBooked
+                          ? time.is_booking === 'confirmed'
+                            ? 'bg-red-500 text-white opacity-60 cursor-not-allowed'
+                            : 'bg-yellow-400 text-black opacity-60 cursor-not-allowed'
+                          : 'bg-gray-200 text-gray-800 hover:bg-gray-300 cursor-pointer'; 
 
                       return (
                         <p
@@ -270,9 +280,11 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
                               end_time: time.end_time,
                               date: selectedDate,
                               price_per_hour: court.price_per_hour,
-                            })
+                            },
+                            time.is_booking 
+                            )
                           }
-                          className={`cursor-pointer p-1 rounded text-center transition ${timeClass}`}
+                          className={`p-1 rounded text-center transition ${timeClass}`}
                         >
                           {time.label ?? ''}
                         </p>
@@ -286,7 +298,7 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
           </div>
         )}
 
-        {/* Selected Items & Booking */}
+        {/* Selected Items & Booking (border, text, item bg... màu xanh lá) */}
         <div className="p-4 border rounded-xl border-[#348738]">
           <h1 className="font-bold border-b text-lg border-[#348738] pb-4 mb-4">
             Thông tin sân bạn chọn
@@ -317,7 +329,7 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
               ))}
             </div>
           )}
-
+            
           <p className="font-semibold text-[#2d6a2d] mt-2">
             Tổng tạm tính:{' '}
             <span className="text-lg text-[#348738]">{selectedPrice.toLocaleString('vi-VN')}₫</span>
@@ -332,12 +344,14 @@ const Detail_Venue = ({ id }: { id: number | string }) => {
               onChange={handleChangeVoucher}
             />
 
+            {/* --- ĐỔI MÀU CTA --- */}
+            {/* Nút CTA chính màu Cam */}
             <button
               type="submit"
               disabled={selectedItems.length === 0}
               className={`flex-1 w-full font-bold py-3 px-6 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all duration-300 ${selectedItems.length === 0
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-gradient-to-r from-[#348738] to-[#2d6a2d] hover:from-[#2d6a2d] hover:to-[#1e4d1e] text-white hover:shadow-xl'
+                : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white hover:shadow-xl'
                 }`}
             >
               <i className="fa-solid fa-calendar-plus"></i>

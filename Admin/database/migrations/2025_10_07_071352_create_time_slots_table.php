@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('time_slots', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('court_id')->constrained('courts');
             $table->time('start_time');
             $table->time('end_time');
             $table->string('label')->nullable();

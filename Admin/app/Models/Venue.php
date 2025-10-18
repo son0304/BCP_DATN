@@ -16,6 +16,8 @@ class Venue extends Model
         'address_detail',
         'district_id',
         'province_id',
+        'start_time',
+        'end_time',
         'lat',
         'lng',
         'phone',

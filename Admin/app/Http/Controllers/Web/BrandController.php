@@ -44,11 +44,26 @@ class BrandController extends Controller
             'owner_id' => 'required|exists:users,id',
             'province_id' => 'required|exists:provinces,id',
             'district_id' => 'required|exists:districts,id',
-            'address_detail' => 'nullable|string',
-            'phone' => 'nullable|string|max:15',
+            'address_detail' => 'required|string',
+            'phone' => [
+                'nullable',
+                'regex:/^(0|\+84)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/'
+            ],
             'venue_types' => 'nullable|array',
-            'is_active' => 'required|boolean',
+            'is_active' => 'nullable|boolean',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
         ]);
+
+        // Normalize time to HH:MM:SS for database
+        if (isset($validatedData['start_time']) && strlen($validatedData['start_time']) === 5) {
+            $validatedData['start_time'] .= ':00';
+        }
+        if (isset($validatedData['end_time']) && strlen($validatedData['end_time']) === 5) {
+            $validatedData['end_time'] .= ':00';
+        }
+
+        $validatedData['is_active'] = 0;
 
         $venue = Venue::create($validatedData);
 
@@ -56,7 +71,7 @@ class BrandController extends Controller
             $venue->venueTypes()->sync($request->venue_types);
         }
 
-        return redirect()->route('brand.index')->with('success', 'Thêm sân thành công!');
+        return redirect()->route('admin.brand.index')->with('success', 'Thêm sân thành công!');
     }
 
     /**
@@ -90,12 +105,26 @@ class BrandController extends Controller
             'owner_id' => 'required|exists:users,id',
             'province_id' => 'required|exists:provinces,id',
             'district_id' => 'required|exists:districts,id',
-            'address_detail' => 'nullable|string',
-            'phone' => 'nullable|string|max:15',
+            'address_detail' => 'required|string',
+            'phone' => [
+                'nullable',
+                'regex:/^(0|\+84)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/'
+            ],
             'venue_types' => 'nullable|array',
-            'is_active' => 'required|boolean',
+            'is_active' => 'nullable|boolean',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
         ]);
 
+        // Normalize time to HH:MM:SS for database
+        if (isset($validatedData['start_time']) && strlen($validatedData['start_time']) === 5) {
+            $validatedData['start_time'] .= ':00';
+        }
+        if (isset($validatedData['end_time']) && strlen($validatedData['end_time']) === 5) {
+            $validatedData['end_time'] .= ':00';
+        }
+
+        $validatedData['is_active'] = $venue->is_active;
 
         $venue->update($validatedData);
 
@@ -105,7 +134,7 @@ class BrandController extends Controller
             $venue->venueTypes()->sync([]);
         }
 
-        return redirect()->route('brand.index')->with('success', 'Cập nhật sân thành công!');
+        return redirect()->route('admin.brand.index')->with('success', 'Cập nhật sân thành công!');
     }
 
     /**

@@ -14,10 +14,12 @@ return new class extends Migration
         Schema::create('venues', function (Blueprint $table) {
             $table->id();
             $table->foreignId('owner_id')->constrained('users');
-            $table->string('name');
-            $table->string('address_detail');
             $table->foreignId('district_id')->constrained('districts');
             $table->foreignId('province_id')->constrained('provinces');
+            $table->string('name');
+            $table->string('address_detail');
+            $table->time('start_time');
+            $table->time('end_time');
             $table->decimal('lat', 10, 7)->nullable();
             $table->decimal('lng', 10, 7)->nullable();
             $table->string('phone')->nullable();

@@ -14,6 +14,7 @@
             </a>
         </div>
     </div>
+
     <form action="{{ route('admin.brand.update', $venue) }}" method="POST">
         @csrf
         @method('PUT')
@@ -25,6 +26,8 @@
                         <h5 class="card-title mb-0">Thông tin cơ bản</h5>
                     </div>
                     <div class="card-body">
+
+                        {{-- Tên sân --}}
                         <div class="mb-3">
                             <label for="name" class="form-label fw-bold">Tên thương hiệu (sân)</label>
                             <input type="text" name="name"
@@ -35,6 +38,7 @@
                             @enderror
                         </div>
 
+                        {{-- Chủ sở hữu --}}
                         <div class="mb-3">
                             <label for="owner_id" class="form-label fw-bold">Chủ sở hữu</label>
                             <select name="owner_id" id="owner_id"
@@ -68,6 +72,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+
                             <div class="col-md-6 mb-3">
                                 <label for="district_id" class="form-label">Quận/Huyện</label>
                                 <select name="district_id" id="district_id"
@@ -86,38 +91,34 @@
 
                         <div class="mb-3">
                             <label for="address_detail" class="form-label">Địa chỉ chi tiết</label>
-                            <input type="text" name="address_detail" class="form-control" id="address_detail"
+                            <input type="text" name="address_detail" class="form-control" id="address_detail" required
                                 value="{{ old('address_detail', $venue->address_detail) }}"
                                 placeholder="Số nhà, tên đường, phường/xã...">
                         </div>
+
+                        <hr class="my-4">
+                        <h6 class="fw-bold">Giờ hoạt động</h6>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="start_time" class="form-label fw-bold">Giờ mở cửa</label>
+                                <input type="time" name="start_time" id="start_time" class="form-control"
+                                    value="{{ old('start_time', isset($venue->start_time) ? \Carbon\Carbon::parse($venue->start_time)->format('H:i') : '06:00') }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="end_time" class="form-label fw-bold">Giờ đóng cửa</label>
+                                <input type="time" name="end_time" id="end_time" class="form-control"
+                                    value="{{ old('end_time', isset($venue->end_time) ? \Carbon\Carbon::parse($venue->end_time)->format('H:i') : '22:00') }}">
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
+
+            {{-- Cột phụ bên phải --}}
             <div class="col-lg-4">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header text-center py-3 bg-light">
-                        <h5 class="card-title mb-0 fw-bold text-primary">Hành động</h5>
-                    </div>
 
-                    <div class="card-body px-4 py-4">
-                        <div class="form-check form-switch d-flex justify-content-center align-items-center gap-3 mb-4">
-                            <input type="hidden" name="is_active" value="0">
-                            <input
-                                class="form-check-input"
-                                type="checkbox"
-                                name="is_active"
-                                id="is_active"
-                                value="1"
-                                checked
-                                style="width: 2.5rem; height: 1.3rem;">
-                            <label class="form-check-label fw-medium mb-0" for="is_active">
-                                Kích hoạt thương hiệu
-                            </label>
-                        </div>
-
-                        <div class="d-grid"> <button type="submit" class="btn btn-primary">Lưu và tạo mới</button> </div>
-                    </div>
-                </div>
                 <div class="card shadow-sm">
                     <div class="card-header">
                         <h5 class="card-title mb-0">Thông tin bổ sung</h5>
@@ -125,9 +126,19 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label for="phone" class="form-label fw-bold">Số điện thoại</label>
-                            <input type="tel" name="phone" class="form-control" id="phone"
-                                value="{{ old('phone', $venue->phone) }}" placeholder="09xxxxxxxx">
+                            <input
+                                type="tel"
+                                name="phone"
+                                class="form-control @error('phone') is-invalid @enderror"
+                                id="phone"
+                                value="{{ old('phone', $venue->phone) }}"
+                                placeholder="09xxxxxxxx">
+                            @error('phone')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
+
+
                         <div>
                             <label class="form-label fw-bold d-block">Loại hình sân</label>
                             @foreach ($venue_types as $type)
@@ -143,6 +154,13 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+        <div class="form-check form-switch d-flex justify-content-center align-items-center gap-3 mb-4">
+            <input type="hidden" name="is_active" value="0">
+
+            <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
             </div>
         </div>
     </form>

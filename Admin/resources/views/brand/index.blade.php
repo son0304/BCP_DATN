@@ -32,6 +32,8 @@
                             <th>Tên sân</th>
                             <th>Chủ sở hữu</th>
                             <th>Địa điểm</th>
+                            <th class="text-center" style="width: 140px;">Giờ mở cửa</th>
+                            <th class="text-center" style="width: 140px;">Giờ đóng cửa</th>
                             <th class="text-center" style="width: 140px;">Trạng thái</th>
                             <th class="text-end" style="width: 180px;">Hành động</th>
                         </tr>
@@ -46,6 +48,30 @@
                             </td>
                             <td>{{ $venue->owner->name ?? 'N/A' }}</td>
                             <td>{{ $venue->province->name ?? 'N/A' }}</td>
+
+                            {{-- Giờ mở cửa --}}
+                            <td class="text-center">
+                                @if($venue->start_time)
+                                    <span class="badge bg-info-subtle border border-info-subtle text-info-emphasis rounded-pill px-3 py-2">
+                                        {{ \Carbon\Carbon::parse($venue->start_time)->format('H:i') }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
+
+                            {{-- Giờ đóng cửa --}}
+                            <td class="text-center">
+                                @if($venue->end_time)
+                                    <span class="badge bg-warning-subtle border border-warning-subtle text-warning-emphasis rounded-pill px-3 py-2">
+                                        {{ \Carbon\Carbon::parse($venue->end_time)->format('H:i') }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
+
+                            {{-- Trạng thái --}}
                             <td class="text-center">
                                 @if($venue->is_active)
                                     <span class="badge bg-success-subtle border border-success-subtle text-success-emphasis rounded-pill px-3 py-2">
@@ -57,6 +83,8 @@
                                     </span>
                                 @endif
                             </td>
+
+                            {{-- Hành động --}}
                             <td class="text-end">
                                 <a href="{{ route('admin.brand.edit', $venue->id) }}" class="btn btn-sm btn-outline-secondary me-2">
                                     <i class="fas fa-edit"></i> Sửa
@@ -73,7 +101,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="6" class="text-center py-5">
+                            <td colspan="8" class="text-center py-5">
                                 <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
                                 <h5 class="mb-1">Không tìm thấy thương hiệu sân nào</h5>
                                 <p class="text-muted">Hãy bắt đầu bằng cách thêm một sân mới.</p>

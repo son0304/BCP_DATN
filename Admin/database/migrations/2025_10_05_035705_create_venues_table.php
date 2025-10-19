@@ -18,8 +18,8 @@ return new class extends Migration
             $table->foreignId('province_id')->constrained('provinces');
             $table->string('name');
             $table->string('address_detail');
-            $table->time('start_time');
-            $table->time('end_time');
+            $table->time('start_time')->nullable();
+            $table->time('end_time')->nullable();
             $table->decimal('lat', 10, 7)->nullable();
             $table->decimal('lng', 10, 7)->nullable();
             $table->string('phone')->nullable();

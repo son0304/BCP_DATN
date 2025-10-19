@@ -11,10 +11,9 @@ return new class extends Migration
         Schema::create('items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ticket_id')->constrained('tickets');
-            $table->foreignId('court_id')->constrained('courts');
-            $table->date('date');
-            $table->foreignId('slot_id')->constrained('time_slots');
+            $table->foreignId('booking_id')->constrained('bookings');
             $table->decimal('unit_price', 12, 2);
+            $table->decimal('discount_amount', 12, 2)->default(0);
             $table->timestamps();
             $table->softDeletes();
         });

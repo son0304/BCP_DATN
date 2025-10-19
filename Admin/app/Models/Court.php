@@ -24,10 +24,6 @@ class Court extends Model
         return $this->hasMany(TimeSlot::class);
     }
 
-    public function availabilities()
-    {
-        return $this->hasMany(Availability::class, 'court_id');
-    }
 
     public function items()
     {

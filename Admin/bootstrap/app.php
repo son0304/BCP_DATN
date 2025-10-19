@@ -12,8 +12,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Dòng này đã có sẵn
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
+
+        // =========================================================
+        // ===       THÊM DÒNG NÀY ĐỂ ĐĂNG KÝ MIDDLEWARE MỚI       ===
+        // =========================================================
+        $middleware->api(append: [
+            \App\Http\Middleware\AutoCancelTicketsMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

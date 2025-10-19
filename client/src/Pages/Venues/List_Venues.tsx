@@ -3,6 +3,7 @@ import { useFetchData } from "../../Hooks/useApi";
 import Detail_Venue from "./Detail_Venue";
 import type { Venue } from "../../Types/venue";
 import type { Image } from "../../Types/image";
+import Loading from "../../Components/Loading";
 
 interface VenuesProps {
   limit?: number;
@@ -13,7 +14,7 @@ const List_Venue = ({ limit }: VenuesProps) => {
   const { data: venueData, isLoading, isError } = useFetchData<Venue[]>("venues");
 
   if (isLoading)
-    return <p className="text-center text-gray-500">Đang tải dữ liệu...</p>;
+    return <Loading/>;
 
   if (isError)
     return <p className="text-center text-red-500">Lỗi tải dữ liệu!</p>;

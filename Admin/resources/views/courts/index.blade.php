@@ -32,7 +32,7 @@
             <td>{{ $court->id }}</td>
             <td>{{ $court->name }}</td>
             <td>{{ $court->venue->name ?? 'N/A' }}</td>
-            <td>{{ $court->venue_type->name ?? 'N/A' }}</td>
+            <td>{{ $court->venueType->name ?? 'N/A' }}</td>
             {{-- ĐÃ XÓA CỘT GIÁ/GIỜ --}}
             <td>{{ $court->is_indoor ? 'Trong nhà' : 'Ngoài trời' }}</td>
             <td>

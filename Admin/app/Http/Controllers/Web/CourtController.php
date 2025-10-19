@@ -16,13 +16,13 @@ class CourtController extends Controller
 {
     public function index()
     {
-        $courts = Court::with(['venue', 'venue_type'])->latest()->paginate(10);
+        $courts = Court::with(['venue', 'venueType'])->latest()->paginate(10);
         return view('courts.index', compact('courts'));
     }
 
     public function show(Court $court)
     {
-        $court->load(['venue', 'venue_type']);
+        $court->load(['venue', 'venueType']);
         $availabilities = Availability::where('court_id', $court->id)
             ->where('date', '>=', Carbon::today())
             ->with('timeSlot')

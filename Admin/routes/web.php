@@ -7,7 +7,8 @@ use App\Http\Controllers\Web\{
     ReviewController,
     UserController,
     BrandController,
-    BookingController
+    BookingController,
+    TicketController
 };
 
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -28,4 +29,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     // Quản lý đơn đặt (booking)
     Route::resource('bookings', BookingController::class);
+
+    // Quản lý vé (tickets)
+    Route::resource('tickets', TicketController::class);
+    Route::patch('/tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.updateStatus');
 });

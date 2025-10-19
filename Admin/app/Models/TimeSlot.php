@@ -9,7 +9,7 @@ class TimeSlot extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['start_time', 'end_time', 'label'];
+    protected $fillable = ['court_id', 'start_time', 'end_time', 'label'];
 
     public function bookings()
     {
@@ -24,5 +24,10 @@ class TimeSlot extends Model
     public function items()
     {
         return $this->hasMany(Item::class);
+    }
+    
+    public function court()
+    {
+        return $this->belongsTo(Court::class, 'court_id');
     }
 }

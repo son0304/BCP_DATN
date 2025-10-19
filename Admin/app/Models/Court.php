@@ -17,9 +17,10 @@ class Court extends Model
         'is_indoor'
     ];
 
+    // Time slots are directly linked to courts
     public function timeSlots()
     {
-        return $this->hasMany(TimeSlot::class);
+        return $this->hasMany(TimeSlot::class, 'court_id');
     }
 
     public function availabilities()

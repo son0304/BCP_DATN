@@ -63,6 +63,14 @@
       </a>
     </li>
 
+    {{-- Quản lý vé --}}
+    <li class="nav-item">
+      <a class="nav-link" href="{{ route('admin.tickets.index') }}">
+        <span class="menu-title">Quản lý vé</span>
+        <i class="mdi mdi-ticket menu-icon"></i>
+      </a>
+    </li>
+
     {{-- Tài liệu --}}
     <li class="nav-item">
       <a class="nav-link" href="docs/documentation.html" target="_blank">

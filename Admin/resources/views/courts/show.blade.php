@@ -28,7 +28,7 @@
                             </tr>
                             <tr>
                                 <td><strong>Loại hình:</strong></td>
-                                <td>{{ $court->venue_type->name ?? 'N/A' }}</td>
+                                <td>{{ $court->venueType->name ?? 'N/A' }}</td>
                             </tr>
                             <tr>
                                 <td><strong>Loại sân:</strong></td>

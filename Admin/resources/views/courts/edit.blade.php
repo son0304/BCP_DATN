@@ -6,7 +6,7 @@
 
         <div class="card">
             <div class="card-body">
-                <form action="{{ route('courts.update', $court) }}" method="POST">
+                <form action="{{ route('admin.courts.update', $court) }}" method="POST">
                     @csrf
                     @method('PUT')
                     @if ($errors->any())
@@ -31,7 +31,7 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="venue_id" class="form-label">Địa điểm (Venue)</label>
+                                <label for="venue_id" class="form-label">Thương hiệu (Venue)</label>
                                 <select class="form-select" id="venue_id" name="venue_id" required>
                                     @foreach ($venues as $venue)
                                         <option value="{{ $venue->id }}"
@@ -117,7 +117,7 @@
 
                     <div class="mt-4">
                         <button type="submit" class="btn btn-success">Cập nhật</button>
-                        <a href="{{ route('courts.index') }}" class="btn btn-secondary">Hủy bỏ</a>
+                        <a href="{{ route('admin.courts.index') }}" class="btn btn-secondary">Hủy bỏ</a>
                     </div>
                 </form>
             </div>
@@ -126,84 +126,90 @@
 @endsection
 
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-@push('scripts')
-    <script>
-        const allTimeSlots = @json($timeSlots);
-
-        function createTimeSlotRow() {
-            const options = allTimeSlots.map(slot =>
-                `<option value="${slot.id}">${new Date('1970-01-01T' + slot.start_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})} - ${new Date('1970-01-01T' + slot.end_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</option>`
-            ).join('');
-
-            const newRow = `
-            <div class="row align-items-center mb-2 time-slot-row">
-                <div class="col-md-5">
-                    <label class="form-label">Khung giờ</label>
-                    <select class="form-select" name="slot_ids[]" required>
-                        <option value="">-- Chọn khung giờ --</option>
-                        ${options}
-                    </select>
-                </div>
-                <div class="col-md-5">
-                    <label class="form-label">Giá (VNĐ)</label>
-                    <input type="number" class="form-control" name="slot_prices[]" placeholder="Nhập giá" min="0" step="1000" required>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="button" class="btn btn-danger remove-slot-btn">Xóa</button>
-                </div>
-            </div>
-        `;
-            return newRow;
-        }
-
-        $(document).ready(function() {
-            $('#add-time-slot-btn').click(function() {
-                $('#time-slots-container').append(createTimeSlotRow());
-            });
-
-            $('#time-slots-container').on('click', '.remove-slot-btn', function() {
-                $(this).closest('.time-slot-row').remove();
-            });
-        });
-    </script>
-@endpush
 <script>
-    const allTimeSlots = @json($timeSlots);
+    // Wait for document to be ready
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Edit form JavaScript loaded');
+        
+        // Check if jQuery is available
+        if (typeof $ === 'undefined') {
+            console.error('jQuery is not loaded!');
+            return;
+        }
+        
+        console.log('jQuery version:', $.fn.jquery);
+        
+        try {
+            const allTimeSlots = @json($timeSlots);
+            console.log('Time slots data:', allTimeSlots);
+            
+            // Check if elements exist
+            console.log('Add button exists:', $('#add-time-slot-btn').length > 0);
+            console.log('Container exists:', $('#time-slots-container').length > 0);
+            console.log('Current time slot rows:', $('.time-slot-row').length);
 
-    function createTimeSlotRow() {
-        const options = allTimeSlots.map(slot =>
-            `<option value="${slot.id}">${new Date('1970-01-01T' + slot.start_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})} - ${new Date('1970-01-01T' + slot.end_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</option>`
-        ).join('');
+            function createTimeSlotRow() {
+                const options = allTimeSlots.map(slot => {
+                    const startTime = new Date('1970-01-01T' + slot.start_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+                    const endTime = new Date('1970-01-01T' + slot.end_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+                    return `<option value="${slot.id}">${startTime} - ${endTime}</option>`;
+                }).join('');
 
-        const newRow = `
-            <div class="row align-items-center mb-2 time-slot-row">
-                <div class="col-md-5">
-                    <label class="form-label">Khung giờ</label>
-                    <select class="form-select" name="slot_ids[]" required>
-                        <option value="">-- Chọn khung giờ --</option>
-                        ${options}
-                    </select>
-                </div>
-                <div class="col-md-5">
-                    <label class="form-label">Giá (VNĐ)</label>
-                    <input type="number" class="form-control" name="slot_prices[]" placeholder="Nhập giá" min="0" step="1000" required>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="button" class="btn btn-danger remove-slot-btn">Xóa</button>
-                </div>
-            </div>
-        `;
-        return newRow;
-    }
+                return `
+                <div class="row align-items-center mb-2 time-slot-row">
+                    <div class="col-md-5">
+                        <label class="form-label">Khung giờ</label>
+                        <select class="form-select" name="slot_ids[]" required>
+                            <option value="">-- Chọn khung giờ --</option>
+                            ${options}
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Giá (VNĐ)</label>
+                        <input type="number" class="form-control" name="slot_prices[]" placeholder="Nhập giá" min="0" step="1000" required>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-danger remove-slot-btn">Xóa</button>
+                    </div>
+                </div>`;
+            }
 
-    $(document).ready(function() {
-        $('#add-time-slot-btn').click(function() {
-            $('#time-slots-container').append(createTimeSlotRow());
-        });
+            // Add time slot functionality
+            $(document).on('click', '#add-time-slot-btn', function(e) {
+                e.preventDefault();
+                console.log('Add time slot button clicked');
+                try {
+                    const newRow = createTimeSlotRow();
+                    $('#time-slots-container').append(newRow);
+                    console.log('New time slot row added successfully');
+                } catch (error) {
+                    console.error('Error adding time slot row:', error);
+                }
+            });
 
-        $('#time-slots-container').on('click', '.remove-slot-btn', function() {
-            $(this).closest('.time-slot-row').remove();
-        });
+            // Remove time slot functionality
+            $(document).on('click', '.remove-slot-btn', function(e) {
+                e.preventDefault();
+                console.log('Remove time slot button clicked');
+                try {
+                    $(this).closest('.time-slot-row').remove();
+                    console.log('Time slot row removed successfully');
+                } catch (error) {
+                    console.error('Error removing time slot row:', error);
+                }
+            });
+
+            // Form validation
+            $('form').on('submit', function(e) {
+                if ($('.time-slot-row').length === 0) {
+                    e.preventDefault();
+                    alert('Vui lòng thêm ít nhất một khung giờ trước khi lưu.');
+                    return false;
+                }
+            });
+            
+        } catch (error) {
+            console.error('Error in edit form JavaScript:', error);
+        }
     });
 </script>

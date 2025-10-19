@@ -16,8 +16,8 @@ class TimeSlot extends Model
     public function bookings (){
         return $this->hasMany(Booking::class);
     } 
-    public function availability (){
-        return $this->hasMany(Availability::class);
+    public function availabilities (){
+        return $this->hasMany(Availability::class, 'slot_id');
     } 
     public function items (){
         return $this->hasMany(Item::class);

@@ -9,7 +9,7 @@ class Availability extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['court_id', 'slot_id', 'date', 'status', 'note'];
+    protected $fillable = ['court_id', 'slot_id', 'date', 'status', 'note', 'price'];
 
     public function court()
     {

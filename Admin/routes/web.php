@@ -15,7 +15,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home.index');
 
     // Quản lý sân
-    Route::get('/courts', [CourtController::class, 'index'])->name('courts.index');
+    Route::resource('courts', CourtController::class);
 
     // Quản lý người dùng
     Route::get('/users', [UserController::class, 'index'])->name('users.index');

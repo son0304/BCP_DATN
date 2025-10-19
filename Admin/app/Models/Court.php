@@ -9,7 +9,7 @@ class Court extends Model
 {
     /** @use HasFactory<\Database\Factories\CourtFactory> */
     use HasFactory;
-    protected $fillable = ['venue_id','venue_type_id','name','surface','price_per_hour', 'is_indoor'];
+    protected $fillable = ['venue_id','venue_type_id','name','surface','is_indoor'];
     public function courts()
     {
         return $this->hasMany(Item::class);
@@ -27,6 +27,14 @@ class Court extends Model
         return $this->belongsTo(VenueType::class, 'venue_type_id');
     }
     
+    public function availabilities()
+    {
+        return $this->hasMany(Availability::class);
+    }
     
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
 
 }

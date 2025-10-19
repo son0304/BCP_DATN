@@ -21,5 +21,6 @@
     </div>
 
     @include('layout.scrip')
+    @stack('scripts')
   </body>
 </html>

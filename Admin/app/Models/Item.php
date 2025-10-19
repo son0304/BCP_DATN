@@ -28,7 +28,12 @@ class Item extends Model
     }
     public function court()
     {
-        return $this->booking->court();
+        return $this->belongsTo(Court::class, 'court_id');
+    }
+    
+    public function slot()
+    {
+        return $this->belongsTo(TimeSlot::class, 'slot_id');
     }
 
     public function ticket()

@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Venue extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'owner_id',
@@ -17,6 +18,8 @@ class Venue extends Model
         'address_detail',
         'district_id',
         'province_id',
+        'start_time',
+        'end_time',
         'lat',
         'lng',
         'phone',
@@ -57,7 +60,8 @@ class Venue extends Model
     {
         return $this->hasManyThrough(Ticket::class, Court::class, 'venue_id', 'court_id');
     }
-    public function types()
+    
+    public function venueTypes()
     {
         return $this->belongsToMany(
             VenueType::class,

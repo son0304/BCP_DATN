@@ -14,14 +14,13 @@ class Court extends Model
         'venue_type_id',
         'name',
         'surface',
-        'price_per_hour',
         'is_indoor'
     ];
 
-    // ✅ Thêm quan hệ mới: 1 sân có nhiều khung giờ
+    // Time slots are directly linked to courts
     public function timeSlots()
     {
-        return $this->hasMany(TimeSlot::class);
+        return $this->hasMany(TimeSlot::class, 'court_id');
     }
 
 

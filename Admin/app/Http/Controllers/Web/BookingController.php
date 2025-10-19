@@ -23,5 +23,5 @@ class BookingController extends Controller
             ->paginate(10); // 10 ticket/trang
 
         return view('bookings.index', compact('tickets', 'search'));
-    } 
+    }
 }

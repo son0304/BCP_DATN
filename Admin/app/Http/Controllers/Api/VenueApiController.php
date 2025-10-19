@@ -27,11 +27,11 @@ class VenueApiController extends Controller
             'courts:id,venue_id,name,surface,price_per_hour,is_indoor',
             'courts.timeSlots:id,court_id,label,start_time,end_time',
             'reviews:id,venue_id,rating',
-            'types:id,name',
+            'venueTypes:id,name',
         ])->withAvg('reviews', 'rating');
 
         if ($request->filled('type_id')) {
-            $query->whereHas('types', fn($q) => $q->where('venue_types.id', $request->type_id));
+            $query->whereHas('venueTypes', fn($q) => $q->where('venue_types.id', $request->type_id));
         }
 
         // Filter theo province
@@ -67,9 +67,9 @@ class VenueApiController extends Controller
         $venue = Venue::with([
             'images:id,venue_id,url,is_primary,description',
             'courts:id,venue_id,name,surface,price_per_hour,is_indoor',
-            'courts.timeSlots:id,court_id,label,start_time,end_time',
+            'courts.timeSlots',
             'reviews:id,venue_id,rating',
-            'types:id,name',
+            'venueTypes:id,name',
             'province:id,name',
             'owner:id,name,email',
         ])->withAvg('reviews', 'rating')->find($id);

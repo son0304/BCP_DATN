@@ -2,16 +2,17 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\{Venue, Service};
 
 class ServiceSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        //
+        foreach (Venue::all() as $venue) {
+            Service::factory()->count(2)->create([
+                'venue_id' => $venue->id,
+            ]);
+        }
     }
 }

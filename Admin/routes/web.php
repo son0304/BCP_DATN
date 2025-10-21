@@ -1,11 +1,21 @@
 <?php
 
-use App\Http\Controllers\Web\CourtController;
-use App\Http\Controllers\Web\HomeController;
-use App\Http\Controllers\Web\ReviewController;
-use App\Http\Controllers\Web\UserController;
-use App\Http\Controllers\Web\AuthController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Web\{
+    AvailabilityController,
+    HomeController,
+    CourtController,
+    ReviewController,
+    UserController,
+    BrandController,
+    BookingController,
+    TicketController,
+    AuthController
+};
+
+// ==============================
+// ====== AUTH & PUBLIC ROUTES ======
+// ==============================
 
 // Auth Routes
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
@@ -19,10 +29,30 @@ Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail'])->nam
 Route::post('/resend-verification', [AuthController::class, 'resendVerification'])->name('resend.verification');
 
 // Main Routes
-Route::get('/', function () {
-    return view('app');
+Route::get('/', [HomeController::class, 'index'])->name('home.index');
+Route::get('/courts', [CourtController::class, 'index'])->name('courts.index');
+Route::get('/users', [UserController::class, 'index'])->name('users.index');
+Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+
+
+// ==============================
+// ====== ADMIN ROUTES ======
+// ==============================
+Route::prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [HomeController::class, 'index'])->name('home.index');
+
+    // Quản lý Địa điểm (Venues)
+    Route::resource('brand', BrandController::class);
+
+    // Quản lý Sân (Courts) & Lịch (Availabilities)
+    Route::resource('courts', CourtController::class);
+    Route::post('/courts/{court}/availabilities/update', [AvailabilityController::class, 'updateAll'])
+        ->name('courts.updateAvailabilities');
+
+    // Quản lý Booking & Ticket
+    Route::resource('bookings', BookingController::class);
+
+    // Quản lý Người dùng & Đánh giá
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 });
-Route::get('/', [HomeController::class, 'index'])-> name('home.index');
-Route::get('/courts', [CourtController::class, 'index'])-> name('courts.index');
-Route::get('/users', [UserController::class, 'index'])-> name('users.index');
-Route::get('/reviews', [ReviewController::class, 'index'])-> name('reivews.index');

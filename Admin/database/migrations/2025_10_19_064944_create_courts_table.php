@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('courts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('venue_id')->constrained('venues');
-            $table->foreignId('venue_type_id')->constrained('venue_types');
+            $table->foreignId('venue_id')->constrained('venues')->cascadeOnDelete();
+            $table->foreignId('venue_type_id')->nullable()->constrained('venue_types')->nullOnDelete();
             $table->string('name');
             $table->string('surface')->nullable();
             $table->decimal('price_per_hour', 10, 2)->default(0);
@@ -22,8 +22,8 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
-    }
 
+    }
 
     /**
      * Reverse the migrations.

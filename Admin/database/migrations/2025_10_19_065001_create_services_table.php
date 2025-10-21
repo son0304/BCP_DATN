@@ -8,12 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('time_slots', function (Blueprint $table) {
+        Schema::create('services', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('court_id')->constrained('courts');
-            $table->time('start_time');
-            $table->time('end_time');
-            $table->string('label')->nullable();
+            $table->foreignId('venue_id')->constrained('venues')->cascadeOnDelete();
+            $table->string('name');
+            $table->string('unit')->nullable(); // VD: "chai", "giờ"
+            $table->decimal('price', 10, 2)->default(0);
             $table->timestamps();
             $table->softDeletes();
         });
@@ -21,6 +21,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('time_slots');
+        Schema::dropIfExists('services');
     }
 };

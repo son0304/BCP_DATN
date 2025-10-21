@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\{
+    AvailabilityController,
     HomeController,
     CourtController,
     ReviewController,
@@ -12,25 +13,22 @@ use App\Http\Controllers\Web\{
 };
 
 Route::prefix('admin')->name('admin.')->group(function () {
-    // Trang dashboard admin
     Route::get('/', [HomeController::class, 'index'])->name('home.index');
 
-    // Quản lý sân
+    // Quản lý Địa điểm (Venues)
+    Route::resource('brand', BrandController::class);
+
+    // Quản lý Sân (Courts) & Lịch (Availabilities)
     Route::resource('courts', CourtController::class);
+    Route::post('/courts/{court}/availabilities/update', [AvailabilityController::class, 'updateAll'])
+        ->name('courts.updateAvailabilities');
 
-    // Quản lý người dùng
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-
-    // Quản lý đánh giá
-    Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
-
-    // Quản lý thương hiệu sân (venue)
-    Route::resource('brand', BrandController::class)->parameter('brand', 'venue');
-
-    // Quản lý đơn đặt (booking)
+    // Quản lý Booking & Ticket
     Route::resource('bookings', BookingController::class);
-
-    // Quản lý vé (tickets)
     Route::resource('tickets', TicketController::class);
     Route::patch('/tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.updateStatus');
+
+    // Quản lý Người dùng & Đánh giá
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 });

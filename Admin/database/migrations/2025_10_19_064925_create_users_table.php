@@ -11,30 +11,28 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('venues', function (Blueprint $table) {
+        Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('owner_id')->constrained('users');
-            $table->foreignId('district_id')->constrained('districts');
-            $table->foreignId('province_id')->constrained('provinces');
+            $table->foreignId('role_id')->constrained('roles');
             $table->string('name');
-            $table->string('address_detail');
-            $table->time('start_time')->nullable();
-            $table->time('end_time')->nullable();
+            $table->string('email')->unique();
+            $table->string('password');
+            $table->string('phone')->nullable();
+            $table->foreignId('district_id')->nullable()->constrained('districts');
+            $table->foreignId('province_id')->nullable()->constrained('provinces');
             $table->decimal('lat', 10, 7)->nullable();
             $table->decimal('lng', 10, 7)->nullable();
-            $table->string('phone')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
         });
     }
-    
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('venues');
+        Schema::dropIfExists('users');
     }
 };

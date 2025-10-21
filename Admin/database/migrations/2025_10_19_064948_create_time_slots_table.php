@@ -11,24 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('images', function (Blueprint $table) {
+        Schema::create('time_slots', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('venue_id')->nullable()->constrained('venues');
-            $table->foreignId('court_id')->nullable()->constrained('courts');
-            $table->string('url');
-            $table->text('description')->nullable();
-            $table->boolean('is_primary')->default(false);
+            $table->foreignId('court_id')->constrained('courts')->cascadeOnDelete();
+            $table->time('start_time');
+            $table->time('end_time');
+            $table->string('label')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });
     }
-    
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('images');
+        Schema::dropIfExists('time_slots');
     }
 };

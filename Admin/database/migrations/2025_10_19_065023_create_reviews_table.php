@@ -11,21 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('venue_types', function (Blueprint $table) {
+        Schema::create('reviews', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->text('description')->nullable();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('venue_id')->constrained('venues')->cascadeOnDelete();
+            $table->integer('rating')->default(5);
+            $table->text('comment')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });
     }
-    
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('venue_types');
+        Schema::dropIfExists('reviews');
     }
 };

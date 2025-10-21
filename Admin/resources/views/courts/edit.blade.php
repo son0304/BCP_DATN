@@ -1,215 +1,190 @@
 @extends('app')
 
 @section('content')
-    <div class="container-fluid">
-        <h1>Chỉnh sửa sân: {{ $court->name }}</h1>
+{{-- Thêm <style> để định nghĩa màu xanh lá chủ đạo --}}
+<style>
+    :root {
+        --bs-primary: #348738;
+        --bs-primary-rgb: 52, 135, 56;
+    }
+    .btn-primary {
+        --bs-btn-hover-bg: #2d6a2d;
+        --bs-btn-hover-border-color: #2d6a2d;
+    }
+    .btn-outline-primary {
+        --bs-btn-hover-color: #fff;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #84c887;
+        box-shadow: 0 0 0 0.25rem rgba(52, 135, 56, 0.25);
+    }
+</style>
 
-        <div class="card">
-            <div class="card-body">
-                <form action="{{ route('admin.courts.update', $court) }}" method="POST">
-                    @csrf
-                    @method('PUT')
-                    @if ($errors->any())
-                        <div class="alert alert-danger">
-                            <strong>Có lỗi xảy ra!</strong>
-                            <ul>
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-0 py-3">
+            <h1 class="h4 mb-0">Chỉnh sửa sân: <strong>{{ $court->name }}</strong></h1>
+        </div>
+        <div class="card-body">
+            @if ($errors->any())
+            <div class="alert alert-danger">
+                <strong>Có lỗi xảy ra!</strong>
+                <ul>
+                    @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+            @endif
+
+            <form action="{{ route('admin.courts.update', $court) }}" method="POST">
+                @csrf
+                @method('PUT')
+
+                {{-- THÔNG TIN CƠ BẢN --}}
+                <fieldset class="mb-4">
+                    <legend class="h6">1. Thông tin cơ bản</legend>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Tên sân <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name"
+                                value="{{ old('name', $court->name) }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="venue_id" class="form-label">Thương hiệu (Venue) <span class="text-danger">*</span></label>
+                            <select class="form-select" id="venue_id" name="venue_id" required>
+                                @foreach ($venues as $venue)
+                                <option value="{{ $venue->id }}"
+                                    {{ old('venue_id', $court->venue_id) == $venue->id ? 'selected' : '' }}>
+                                    {{ $venue->name }}
+                                </option>
                                 @endforeach
-                            </ul>
+                            </select>
                         </div>
-                    @endif
-
-                    {{-- THÔNG TIN CƠ BẢN CỦA SÂN --}}
+                    </div>
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="name" class="form-label">Tên sân</label>
-                                <input type="text" class="form-control" id="name" name="name"
-                                    value="{{ old('name', $court->name) }}" required>
-                            </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="venue_type_id" class="form-label">Loại hình <span class="text-danger">*</span></label>
+                            <select class="form-select" id="venue_type_id" name="venue_type_id" required>
+                                @foreach ($venueTypes as $venueType)
+                                <option value="{{ $venueType->id }}"
+                                    {{ old('venue_type_id', $court->venue_type_id) == $venueType->id ? 'selected' : '' }}>
+                                    {{ $venueType->name }}
+                                </option>
+                                @endforeach
+                            </select>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="venue_id" class="form-label">Thương hiệu (Venue)</label>
-                                <select class="form-select" id="venue_id" name="venue_id" required>
-                                    @foreach ($venues as $venue)
-                                        <option value="{{ $venue->id }}"
-                                            {{ old('venue_id', $court->venue_id) == $venue->id ? 'selected' : '' }}>
-                                            {{ $venue->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="is_indoor" class="form-label">Loại sân <span class="text-danger">*</span></label>
+                            <select class="form-select" id="is_indoor" name="is_indoor" required>
+                                <option value="1" {{ old('is_indoor', $court->is_indoor) == 1 ? 'selected' : '' }}>Trong nhà</option>
+                                <option value="0" {{ old('is_indoor', $court->is_indoor) == 0 ? 'selected' : '' }}>Ngoài trời</option>
+                            </select>
                         </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="venue_type_id" class="form-label">Loại hình</label>
-                                <select class="form-select" id="venue_type_id" name="venue_type_id" required>
-                                    @foreach ($venueTypes as $venueType)
-                                        <option value="{{ $venueType->id }}"
-                                            {{ old('venue_type_id', $court->venue_type_id) == $venueType->id ? 'selected' : '' }}>
-                                            {{ $venueType->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="is_indoor" class="form-label">Loại sân</label>
-                                <select class="form-select" id="is_indoor" name="is_indoor" required>
-                                    <option value="1"
-                                        {{ old('is_indoor', $court->is_indoor) == 1 ? 'selected' : '' }}>Trong
-                                        nhà</option>
-                                    <option value="0"
-                                        {{ old('is_indoor', $court->is_indoor) == 0 ? 'selected' : '' }}>Ngoài
-                                        trời</option>
-                                </select>
-                            </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="surface" class="form-label">Bề mặt sân</label>
+                            <input type="text" class="form-control" id="surface" name="surface"
+                                value="{{ old('surface', $court->surface) }}" placeholder="Ví dụ: Cỏ nhân tạo, Sàn gỗ">
                         </div>
                     </div>
+                </fieldset>
 
-                    <div class="mb-3">
-                        <label for="surface" class="form-label">Bề mặt sân</label>
-                        <input type="text" class="form-control" id="surface" name="surface"
-                            value="{{ old('surface', $court->surface) }}">
-                    </div>
-
-                    {{-- PHẦN CẬP NHẬT GIÁ --}}
-                    <hr>
-                    <h4 class="mt-4">Cập nhật khung giờ và giá</h4>
-                    <p class="text-muted">Thay đổi sẽ xóa và tạo lại lịch cho các suất chưa được đặt trong tương lai.</p>
-
-                    <div id="time-slots-container">
+                {{-- PHẦN KHUNG GIỜ & GIÁ --}}
+                <fieldset>
+                    <legend class="h6">2. Cập nhật khung giờ & Giá</legend>
+                    <p class="text-muted small">
+                        Thay đổi tại đây sẽ xóa và tạo lại lịch cho các suất **chưa được đặt** trong tương lai. Các suất đã đặt sẽ không bị ảnh hưởng.
+                    </p>
+                    <div id="time-slots-container" class="p-3 bg-light rounded border">
                         {{-- Hiển thị các khung giờ/giá đã có --}}
                         @foreach ($currentPrices as $slotId => $price)
-                            <div class="row align-items-center mb-2 time-slot-row">
+                            <div class="row align-items-center mb-2 time-slot-row p-2 bg-white rounded border">
                                 <div class="col-md-5">
-                                    <label class="form-label">Khung giờ</label>
-                                    <select class="form-select" name="slot_ids[]" required>
+                                    <select class="form-select form-select-sm" name="slot_ids[]" required>
                                         <option value="">-- Chọn khung giờ --</option>
                                         @foreach ($timeSlots as $slot)
-                                            <option value="{{ $slot->id }}"
-                                                {{ $slotId == $slot->id ? 'selected' : '' }}>
-                                                {{ date('H:i', strtotime($slot->start_time)) }} -
-                                                {{ date('H:i', strtotime($slot->end_time)) }}
+                                            <option value="{{ $slot->id }}" {{ $slotId == $slot->id ? 'selected' : '' }}>
+                                                {{ date('H:i', strtotime($slot->start_time)) }} - {{ date('H:i', strtotime($slot->end_time)) }}
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="col-md-5">
-                                    <label class="form-label">Giá (VNĐ)</label>
-                                    <input type="number" class="form-control" name="slot_prices[]" placeholder="Nhập giá"
+                                    <input type="number" class="form-control form-control-sm" name="slot_prices[]" placeholder="Nhập giá (VNĐ)"
                                         min="0" step="1000" value="{{ $price }}" required>
                                 </div>
-                                <div class="col-md-2 d-flex align-items-end">
-                                    <button type="button" class="btn btn-danger remove-slot-btn">Xóa</button>
+                                <div class="col-md-2 d-flex align-items-center justify-content-end">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-slot-btn" title="Xóa khung giờ">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
                             </div>
                         @endforeach
                     </div>
+                    <button type="button" id="add-time-slot-btn" class="btn btn-outline-primary mt-3">
+                        <i class="fas fa-plus me-1"></i> Thêm khung giờ
+                    </button>
+                </fieldset>
 
-                    <button type="button" id="add-time-slot-btn" class="btn btn-info mt-2">Thêm khung giờ</button>
-
-                    <div class="mt-4">
-                        <button type="submit" class="btn btn-success">Cập nhật</button>
-                        <a href="{{ route('admin.courts.index') }}" class="btn btn-secondary">Hủy bỏ</a>
-                    </div>
-                </form>
-            </div>
+                <div class="card-footer bg-white text-end border-0 px-0 pt-4">
+                    <a href="{{ route('admin.courts.index') }}" class="btn btn-secondary">Hủy bỏ</a>
+                    <button type="submit" class="btn btn-primary">Cập nhật</button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
 @endsection
 
-
+@push('scripts')
 <script>
-    // Wait for document to be ready
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('Edit form JavaScript loaded');
-        
-        // Check if jQuery is available
         if (typeof $ === 'undefined') {
             console.error('jQuery is not loaded!');
             return;
         }
-        
-        console.log('jQuery version:', $.fn.jquery);
-        
-        try {
-            const allTimeSlots = @json($timeSlots);
-            console.log('Time slots data:', allTimeSlots);
-            
-            // Check if elements exist
-            console.log('Add button exists:', $('#add-time-slot-btn').length > 0);
-            console.log('Container exists:', $('#time-slots-container').length > 0);
-            console.log('Current time slot rows:', $('.time-slot-row').length);
 
-            function createTimeSlotRow() {
-                const options = allTimeSlots.map(slot => {
-                    const startTime = new Date('1970-01-01T' + slot.start_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
-                    const endTime = new Date('1970-01-01T' + slot.end_time).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
-                    return `<option value="${slot.id}">${startTime} - ${endTime}</option>`;
-                }).join('');
+        const allTimeSlots = @json($timeSlots);
+        const container = $('#time-slots-container');
 
-                return `
-                <div class="row align-items-center mb-2 time-slot-row">
-                    <div class="col-md-5">
-                        <label class="form-label">Khung giờ</label>
-                        <select class="form-select" name="slot_ids[]" required>
-                            <option value="">-- Chọn khung giờ --</option>
-                            ${options}
-                        </select>
-                    </div>
-                    <div class="col-md-5">
-                        <label class="form-label">Giá (VNĐ)</label>
-                        <input type="number" class="form-control" name="slot_prices[]" placeholder="Nhập giá" min="0" step="1000" required>
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button type="button" class="btn btn-danger remove-slot-btn">Xóa</button>
-                    </div>
-                </div>`;
-            }
+        // Hàm tạo một hàng slot mới (để thêm)
+        function createTimeSlotRow() {
+            const options = allTimeSlots.map(slot => {
+                const startTime = slot.start_time.substring(0, 5);
+                const endTime = slot.end_time.substring(0, 5);
+                return `<option value="${slot.id}">${startTime} - ${endTime}</option>`;
+            }).join('');
 
-            // Add time slot functionality
-            $(document).on('click', '#add-time-slot-btn', function(e) {
-                e.preventDefault();
-                console.log('Add time slot button clicked');
-                try {
-                    const newRow = createTimeSlotRow();
-                    $('#time-slots-container').append(newRow);
-                    console.log('New time slot row added successfully');
-                } catch (error) {
-                    console.error('Error adding time slot row:', error);
-                }
-            });
-
-            // Remove time slot functionality
-            $(document).on('click', '.remove-slot-btn', function(e) {
-                e.preventDefault();
-                console.log('Remove time slot button clicked');
-                try {
-                    $(this).closest('.time-slot-row').remove();
-                    console.log('Time slot row removed successfully');
-                } catch (error) {
-                    console.error('Error removing time slot row:', error);
-                }
-            });
-
-            // Form validation
-            $('form').on('submit', function(e) {
-                if ($('.time-slot-row').length === 0) {
-                    e.preventDefault();
-                    alert('Vui lòng thêm ít nhất một khung giờ trước khi lưu.');
-                    return false;
-                }
-            });
-            
-        } catch (error) {
-            console.error('Error in edit form JavaScript:', error);
+            return `
+            <div class="row align-items-center mb-2 time-slot-row p-2 bg-white rounded border">
+                <div class="col-md-5">
+                    <select class="form-select form-select-sm" name="slot_ids[]" required>
+                        <option value="" disabled selected>-- Chọn khung giờ --</option>
+                        ${options}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <input type="number" class="form-control form-control-sm" name="slot_prices[]" placeholder="Nhập giá (VNĐ)" min="0" step="1000" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-center justify-content-end">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-slot-btn" title="Xóa khung giờ">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>`;
         }
+
+        // Sự kiện click nút "Thêm khung giờ"
+        $(document).on('click', '#add-time-slot-btn', function(e) {
+            e.preventDefault();
+            container.append(createTimeSlotRow());
+        });
+
+        // Sự kiện click nút "Xóa" (cho cả hàng cũ và hàng mới)
+        $(document).on('click', '.remove-slot-btn', function(e) {
+            e.preventDefault();
+            $(this).closest('.time-slot-row').remove();
+        });
     });
 </script>
+@endpush

@@ -11,9 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('availabilities', function (Blueprint $table) {
-            $table->decimal('price', 10, 2)->default(0)->after('status');
+        Schema::create('provinces', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('code')->unique();
+            $table->timestamps();
+            $table->softDeletes();
         });
+
     }
 
     /**
@@ -21,8 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('availabilities', function (Blueprint $table) {
-            $table->dropColumn('price');
-        });
+        Schema::dropIfExists('provinces');
     }
 };

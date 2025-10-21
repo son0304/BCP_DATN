@@ -10,21 +10,18 @@ use App\Models\{Court, TimeSlot};
  */
 class AvailabilityFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
-        $courtId = Court::inRandomOrder()->value('id') ?? Court::factory();
-        $slotId = TimeSlot::where('court_id', $courtId)->inRandomOrder()->value('id') ?? TimeSlot::factory();
+        $court = Court::inRandomOrder()->first() ?? Court::factory()->create();
+        $slot = TimeSlot::where('court_id', $court->id)->inRandomOrder()->first()
+                 ?? TimeSlot::factory()->create(['court_id' => $court->id]);
+
         return [
-            'court_id' => $courtId,
+            'court_id' => $court->id,
+            'slot_id' => $slot->id,
             'date' => now()->addDays($this->faker->numberBetween(1, 14))->toDateString(),
-            'slot_id' => $slotId,
-            'status' => 'open',
-            'note' => null,
+            'status' => $this->faker->randomElement(['open', 'booked', 'maintenance']),
+            'note' => $this->faker->optional()->sentence(),
         ];
     }
 }

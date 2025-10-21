@@ -8,10 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('roles', function (Blueprint $table) {
+        Schema::create('images', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
+            $table->foreignId('venue_id')->nullable()->constrained('venues')->nullOnDelete();
+            $table->foreignId('court_id')->nullable()->constrained('courts')->nullOnDelete();
+            $table->string('url');
             $table->text('description')->nullable();
+            $table->boolean('is_primary')->default(false);
             $table->timestamps();
             $table->softDeletes();
         });
@@ -19,6 +22,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('roles');
+        Schema::dropIfExists('images');
     }
 };

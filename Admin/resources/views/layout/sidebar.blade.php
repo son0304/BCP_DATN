@@ -1,6 +1,8 @@
 <nav class="sidebar sidebar-offcanvas" id="sidebar">
   <ul class="nav">
     {{-- Thông tin người quản trị --}}
+
+
     <li class="nav-item nav-profile">
       <a href="#" class="nav-link">
         <div class="nav-profile-image">
@@ -15,6 +17,9 @@
       </a>
     </li>
 
+    {{--///////////////////////////  SuperAdmin /////////////////////////// --}}
+
+
     {{-- Trang tổng quan --}}
     <li class="nav-item">
       <a class="nav-link" href="{{ route('admin.home.index') }}">
@@ -23,29 +28,36 @@
       </a>
     </li>
 
+     {{-- Quản lý người dùng --}}
+     <li class="nav-item">
+        <a class="nav-link" href="{{ route('admin.users.index') }}">
+          <span class="menu-title">Người dùng</span>
+          <i class="mdi mdi-account menu-icon"></i>
+        </a>
+      </li>
+
     {{-- Quản lý thương hiệu sân --}}
     <li class="nav-item">
       <a class="nav-link" href="{{ route('admin.brand.index') }}">
-        <span class="menu-title">Thương hiệu sân</span>
+        <span class="menu-title"> Quản lý thương hiệu </span>
         <i class="mdi mdi-store menu-icon"></i>
       </a>
     </li>
 
+
+
+    {{--///////////////////////////  Admin /////////////////////////// --}}
+
+
     {{-- Quản lý sân --}}
     <li class="nav-item">
       <a class="nav-link" href="{{ route('admin.courts.index') }}">
-        <span class="menu-title">Danh sách sân</span>
+        <span class="menu-title">Quản lý sân</span>
         <i class="mdi mdi-tennis menu-icon"></i>
       </a>
     </li>
 
-    {{-- Quản lý người dùng --}}
-    <li class="nav-item">
-      <a class="nav-link" href="{{ route('admin.users.index') }}">
-        <span class="menu-title">Người dùng</span>
-        <i class="mdi mdi-account menu-icon"></i>
-      </a>
-    </li>
+
 
     {{-- Quản lý đánh giá --}}
     <li class="nav-item">
@@ -63,13 +75,7 @@
       </a>
     </li>
 
-    {{-- Quản lý vé --}}
-    <li class="nav-item">
-      <a class="nav-link" href="{{ route('admin.tickets.index') }}">
-        <span class="menu-title">Quản lý vé</span>
-        <i class="mdi mdi-ticket menu-icon"></i>
-      </a>
-    </li>
+
 
     {{-- Tài liệu --}}
     <li class="nav-item">

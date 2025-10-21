@@ -22,7 +22,10 @@ class Court extends Model
     {
         return $this->hasMany(TimeSlot::class, 'court_id');
     }
-
+    public function availabilities()
+    {
+        return $this->hasMany(Availability::class);
+    }
 
     public function items()
     {

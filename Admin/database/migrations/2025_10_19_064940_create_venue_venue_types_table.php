@@ -8,12 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('reviews', function (Blueprint $table) {
+        Schema::create('venue_venue_types', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('venue_id')->constrained('venues');
-            $table->integer('rating');
-            $table->text('comment')->nullable();
+            $table->foreignId('venue_id')->constrained('venues')->cascadeOnDelete();
+            $table->foreignId('venue_type_id')->constrained('venue_types')->cascadeOnDelete();
             $table->timestamps();
             $table->softDeletes();
         });
@@ -21,6 +19,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('reviews');
+        Schema::dropIfExists('venue_venue_types');
     }
 };

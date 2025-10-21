@@ -11,14 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('services', function (Blueprint $table) {
+        Schema::create('venue_types', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('venue_id')->constrained('venues');
-            $table->string('name');
-            $table->string('unit');
-            $table->decimal('price', 10, 2)->default(0);
+            $table->string('name');           // Loại sân (vd: 5 người, 7 người, tennis, badminton)
+            $table->text('description')->nullable();  // Mô tả chi tiết loại sân
             $table->timestamps();
-            $table->softDeletes();
+            $table->softDeletes();            // Cho phép xóa mềm
         });
     }
 
@@ -27,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('services');
+        Schema::dropIfExists('venue_types');
     }
 };

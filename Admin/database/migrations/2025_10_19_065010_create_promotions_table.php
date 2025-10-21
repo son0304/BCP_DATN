@@ -11,13 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('districts', function (Blueprint $table) {
+        Schema::create('promotions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('province_id')->constrained('provinces')->onDelete('cascade');
-            $table->string('name');
             $table->string('code')->unique();
+            $table->decimal('value', 10, 2);
+            $table->enum('type', ['%', 'VND']);
+            $table->dateTime('start_at');
+            $table->dateTime('end_at');
+            $table->integer('usage_limit')->default(0);
+            $table->integer('used_count')->default(0);
             $table->timestamps();
-            $table->softDeletes(); // tạo cột deleted_at
+            $table->softDeletes();
         });
     }
 
@@ -26,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('districts');
+        Schema::dropIfExists('promotions');
     }
 };

@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('provinces', function (Blueprint $table) {
+        Schema::create('districts', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('province_id')->constrained('provinces')->cascadeOnDelete();
             $table->string('name');
-            $table->string('code')->unique(); // VD: HN, HCM
+            $table->string('code');
             $table->timestamps();
-            $table->softDeletes(); // tạo cột deleted_at
+            $table->softDeletes();
         });
+
     }
 
     /**
@@ -25,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('provinces');
+        Schema::dropIfExists('districts');
     }
 };

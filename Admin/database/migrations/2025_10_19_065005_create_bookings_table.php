@@ -6,20 +6,27 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('bookings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('court_id')->constrained('courts');
-            $table->foreignId('time_slot_id')->constrained('time_slots');
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('court_id')->constrained('courts')->cascadeOnDelete();
+            $table->foreignId('time_slot_id')->constrained('time_slots')->cascadeOnDelete();
             $table->date('date');
-            $table->string('status')->default('pending');
+            $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');
             $table->timestamps();
             $table->softDeletes();
         });
+
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('bookings');

@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Booking;
+use App\Models\Availability;
+use App\Models\Booking; // Cần cho việc tạo booking
 use App\Models\Item;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
@@ -13,49 +14,27 @@ use Illuminate\Validation\ValidationException;
 
 class TicketApiController extends Controller
 {
-    /**
-     * Lấy danh sách ticket kèm các booking + court.
-     */
     public function index()
     {
-        $tickets = Ticket::with('items.booking.court', 'items.booking.timeSlot')->get();
-
+        $tickets = Ticket::all();
         return response()->json([
             'success' => true,
-            'message' => 'Lấy danh sách ticket thành công',
+            'message' => 'Tạo ticket thành công, vui lòng thanh toán trong 2 phút.',
             'data' => $tickets
         ]);
     }
 
-    /**
-     * Lấy chi tiết 1 ticket theo ID.
-     */
     public function show($id)
     {
-        $ticket = Ticket::with('items.booking.court', 'items.booking.timeSlot')->find($id);
-
-        if (!$ticket) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Không tìm thấy ticket'
-            ], 404);
-        }
-
+        $ticket = Ticket::find($id);
         return response()->json([
             'success' => true,
-            'message' => 'Lấy chi tiết ticket thành công',
+            'message' => 'Tạo ticket thành công, vui lòng thanh toán trong 2 phút.',
             'data' => $ticket
         ]);
     }
-
-    /**
-     * Tạo mới ticket + booking + items.
-     */
     public function store(Request $request)
     {
-        // --- LOGIC AUTO-CANCEL ĐÃ ĐƯỢC CHUYỂN RA MIDDLEWARE ĐỂ CHẠY ĐÁNG TIN CẬY HƠN ---
-
-        // 1️ Validate dữ liệu đầu vào
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'promotion_id' => 'nullable|exists:promotions,id',
@@ -67,84 +46,84 @@ class TicketApiController extends Controller
             'bookings.*.unit_price' => 'required|numeric|min:0',
         ]);
 
-        // 2️ Dùng Transaction để đảm bảo tính toàn vẹn dữ liệu
         try {
             $ticket = DB::transaction(function () use ($validated) {
 
-                // Tối ưu hóa: Kiểm tra tất cả các slot xung đột trong 1 truy vấn
-                $conflictExists = Booking::where(function ($query) use ($validated) {
-                    foreach ($validated['bookings'] as $booking) {
-                        $query->orWhere(function ($subQuery) use ($booking) {
-                            $subQuery->where('court_id', $booking['court_id'])
-                                ->where('time_slot_id', $booking['time_slot_id'])
-                                ->where('date', $booking['date']);
-                        });
-                    }
-                })
-                ->where('status', '!=', 'cancelled')
-                ->whereNull('deleted_at')
-                ->lockForUpdate() // Khóa các hàng để tránh race condition
-                ->exists();
+                // 1. Kiểm tra xung đột trên bảng AVAILABILITIES
+                foreach ($validated['bookings'] as $bookingData) {
+                    $availability = Availability::where('court_id', $bookingData['court_id'])
+                        ->where('slot_id', $bookingData['time_slot_id'])
+                        ->where('date', $bookingData['date'])
+                        ->lockForUpdate() // Khóa hàng để tránh người khác đặt cùng lúc
+                        ->first();
 
-                if ($conflictExists) {
-                    throw ValidationException::withMessages([
-                        'bookings' => 'Một hoặc nhiều slot bạn chọn đã được người khác đặt. Vui lòng thử lại.'
-                    ]);
+                    if (!$availability || $availability->status !== 'open') {
+                        throw ValidationException::withMessages([
+                            'bookings' => "Khung giờ bạn chọn cho sân ID {$bookingData['court_id']} vào ngày {$bookingData['date']} đã có người khác đặt hoặc không khả dụng."
+                        ]);
+                    }
                 }
 
-                // Tính toán tiền
+                // 2. Tính toán tiền
                 $subtotal = array_sum(array_column($validated['bookings'], 'unit_price'));
                 $discount = $validated['discount_amount'] ?? 0;
                 $total = $subtotal - $discount;
 
-                // Tạo ticket
+                // 3. Tạo Ticket
                 $ticket = Ticket::create([
                     'user_id' => $validated['user_id'],
                     'promotion_id' => $validated['promotion_id'] ?? null,
                     'subtotal' => $subtotal,
                     'discount_amount' => $discount,
                     'total_amount' => $total,
-                    'status' => 'pending', // Trạng thái của vé
-                    'payment_status' => 'unpaid', // Trạng thái thanh toán
+                    'status' => 'pending',
+                    'payment_status' => 'unpaid',
                 ]);
 
-                // Tạo booking + item cho từng sân
+                // 4. Tạo Booking, Item và Cập nhật Availability
                 foreach ($validated['bookings'] as $bookingData) {
                     $createdBooking = Booking::create([
                         'user_id' => $validated['user_id'],
                         'court_id' => $bookingData['court_id'],
                         'time_slot_id' => $bookingData['time_slot_id'],
                         'date' => $bookingData['date'],
-                        'status' => 'pending', // Trạng thái của từng slot
+                        'status' => 'pending',
                     ]);
 
+                    // --- ĐÃ SỬA ---
+                    // Sửa 'price' thành 'unit_price' cho khớp với CSDL
                     Item::create([
                         'ticket_id' => $ticket->id,
                         'booking_id' => $createdBooking->id,
                         'unit_price' => $bookingData['unit_price'],
                         'discount_amount' => 0,
                     ]);
+
+                    Availability::where('court_id', $bookingData['court_id'])
+                        ->where('slot_id', $bookingData['time_slot_id'])
+                        ->where('date', $bookingData['date'])
+                        ->update([
+                            'status' => 'closed',
+                            'note' => 'Đã đặt qua ticket #' . $ticket->id,
+                        ]);
                 }
 
                 return $ticket;
             });
 
-             // 3️ Trả về kết quả
+            // 5. Trả về kết quả
             return response()->json([
                 'success' => true,
                 'message' => 'Tạo ticket thành công, vui lòng thanh toán trong 2 phút.',
                 'data' => $ticket->id
             ]);
-
         } catch (ValidationException $e) {
-            // Bắt lỗi validation (slot đã được đặt)
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {
-            // Bắt các lỗi khác
             Log::error('Lỗi khi tạo ticket: ' . $e->getMessage());
             return response()->json([
                 'success' => false,

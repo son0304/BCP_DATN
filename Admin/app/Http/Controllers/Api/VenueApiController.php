@@ -108,4 +108,5 @@ class VenueApiController extends Controller
             'data' => $venue,
         ]);
     }
+
 }

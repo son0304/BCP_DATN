@@ -34,7 +34,6 @@ Route::get('/courts', [CourtController::class, 'index'])->name('courts.index');
 Route::get('/users', [UserController::class, 'index'])->name('users.index');
 Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 
-
 // ==============================
 // ====== ADMIN ROUTES ======
 // ==============================
@@ -45,7 +44,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::resource('brand', BrandController::class);
 
     // Quản lý Sân (Courts) & Lịch (Availabilities)
-    Route::resource('courts', CourtController::class);
+    Route::get('/courts/{court}', [CourtController::class, 'show'])
+        ->name('courts.show')
+        ->middleware('check.availability');
+    Route::resource('courts', CourtController::class)->except(['show']);
     Route::post('/courts/{court}/availabilities/update', [AvailabilityController::class, 'updateAll'])
         ->name('courts.updateAvailabilities');
 

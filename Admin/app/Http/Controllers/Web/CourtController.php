@@ -193,4 +193,50 @@ class CourtController extends Controller
         $court->delete();
         return redirect()->route('admin.courts.index')->with('success', 'Xóa sân thành công!');
     }
+    public function updateAvailabilities(Request $request, Court $court)
+    {
+
+        $statuses = $request->input('statuses', []);
+        $dayStatuses = $request->input('day_statuses', []);
+
+        try {
+            DB::beginTransaction();
+
+            // Lấy tất cả availabilities của court từ hôm nay trở đi
+            $availabilities = $court->availabilities()->where('date', '>=', Carbon::today())->get();
+
+            // Nhóm availabilities theo ngày
+            $availabilitiesByDate = $availabilities->groupBy('date');
+
+            // Xử lý trạng thái ngày
+            foreach ($dayStatuses as $date => $status) {
+                if (isset($availabilitiesByDate[$date])) {
+                    foreach ($availabilitiesByDate[$date] as $availability) {
+                        if ($availability->status === 'booked') {
+                            continue; // Bỏ qua các slot đã đặt
+                        }
+                        $newStatus = $status === 'open' ? 'open' : 'maintenance';
+                        $availability->update(['status' => $newStatus]);
+                    }
+                }
+            }
+
+            // Xử lý trạng thái time slot (chỉ cho các ngày không có day_statuses)
+            foreach ($availabilities as $availability) {
+                if ($availability->status === 'booked') {
+                    continue; // Bỏ qua các slot đã đặt
+                }
+                if (!isset($dayStatuses[$availability->date])) {
+                    $newStatus = isset($statuses[$availability->id]) && $statuses[$availability->id] === 'open' ? 'open' : 'maintenance';
+                    $availability->update(['status' => $newStatus]);
+                }
+            }
+
+            DB::commit();
+            return redirect()->route('admin.courts.show', $court)->with('success', 'Cập nhật trạng thái thành công!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Có lỗi xảy ra khi cập nhật trạng thái: ' . $e->getMessage());
+        }
+    }
 }

@@ -26,21 +26,6 @@
         background-color: #dc3545;
         border-color: #dc3545;
         background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
-    }
-
-    .form-switch .form-check-input:checked {
-        background-color: var(--bs-primary);
-        border-color: var(--bs-primary);
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
-    }
-
-    .custom-switch {
-        width: 70px;
-        font-size: 0.7rem;
-        font-weight: 600;
-    }
-
-    .form-switch .form-check-input {
         width: 100%;
         height: 22px;
         position: relative;
@@ -49,7 +34,17 @@
     }
 
     .form-switch .form-check-input:checked {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
         background-position: right 0.15rem center;
+    }
+
+    .custom-switch {
+        width: 70px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        position: relative;
+        z-index: 10;
     }
 
     .custom-switch .form-check-input::before {
@@ -62,6 +57,7 @@
         transition: opacity 0.2s ease;
         opacity: 1;
         font-size: 0.65rem;
+        pointer-events: none;
     }
 
     .custom-switch .form-check-input::after {
@@ -74,6 +70,7 @@
         transition: opacity 0.2s ease;
         opacity: 0;
         font-size: 0.65rem;
+        pointer-events: none;
     }
 
     .custom-switch .form-check-input:checked::before {
@@ -84,17 +81,35 @@
         opacity: 1;
     }
 
+    /* CSS cụ thể cho công tắc ngày */
+    .form-switch .day-switch {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        z-index: 15;
+        width: 100%;
+        height: 22px;
+        margin: 0;
+        margin-right: 5px;
+        /* Dịch công tắc ngày sang trái 5px */
+    }
+
+    .form-check.form-switch.custom-switch.ms-auto {
+        z-index: 15;
+    }
+
+    .accordion-button {
+        z-index: 5;
+    }
+
     .info-card-decorated .card-body {
         border-left: 4px solid var(--bs-primary);
         background-color: #fdfdfd;
     }
 
-    /* Style cho bảng mới */
     .info-table {
         width: 100%;
         border-collapse: separate;
         border-spacing: 0 8px;
-        /* Khoảng cách giữa các hàng */
     }
 
     .info-table th,
@@ -104,7 +119,6 @@
         background-color: #fff;
         border: 1px solid #e9ecef;
         border-radius: 8px;
-        /* Bo góc cho từng ô */
     }
 
     .info-table th {
@@ -112,13 +126,11 @@
         font-weight: 600;
         color: #495057;
         background-color: #f8f9fa;
-        /* Màu nền nhạt cho tiêu đề */
     }
 
     .info-table td {
         color: #212529;
         word-break: break-word;
-        /* Ngắt từ nếu nội dung dài */
     }
 
     .info-table .badge {
@@ -126,7 +138,6 @@
         font-size: 0.8rem;
     }
 
-    /* Responsive */
     @media (max-width: 768px) {
 
         .info-table th,
@@ -140,7 +151,6 @@
         }
     }
 
-    /* Style cho phân trang */
     .pagination {
         margin: 0;
     }
@@ -165,26 +175,28 @@
         width: 290px;
     }
 
-    /* Style cho container giá + công tắc */
     .d-flex.align-items-center {
         justify-content: flex-end;
-        /* Dịch toàn bộ container sang phải */
     }
 
     .list-group-item .d-flex.align-items-center {
         min-width: 150px;
-        /* Tăng chiều rộng để tạo không gian */
     }
 
     .list-group-item .text-nowrap {
         flex-basis: 50px;
-        /* Giảm không gian cho giá để công tắc dịch sang phải */
         text-align: right;
         font-size: 0.9rem;
         padding-right: 2rem !important;
         padding-top: 7px;
         color: #c11404ff;
         font-weight: bold;
+    }
+
+    .custom-switch .form-check-input:disabled {
+        background-color: #414141ff;
+        border-color: #414141ff;
+        cursor: not-allowed;
     }
 </style>
 
@@ -277,8 +289,8 @@
                     <div class="card-body">
                         @if ($availabilities->isNotEmpty())
                         <?php
-                        $perPage = 7; // Số ngày hiển thị trên mỗi trang
-                        $currentPage = request()->get('page', 1); // Lấy trang hiện tại từ URL, mặc định là 1
+                        $perPage = 6;
+                        $currentPage = request()->get('page', 1);
                         $totalDays = count($availabilities);
                         $totalPages = ceil($totalDays / $perPage);
                         $offset = ($currentPage - 1) * $perPage;
@@ -291,22 +303,26 @@
                                     <button class="accordion-button {{ $loop->first ? '' : 'collapsed' }}"
                                         type="button" data-bs-toggle="collapse"
                                         data-bs-target="#collapse{{ Str::slug($date) }}">
-                                        <strong>Ngày:
-                                            {{ \Carbon\Carbon::parse($date)->format('d/m/Y') }}</strong>
-                                        <span
-                                            class="badge bg-secondary ms-auto me-2">{{ $dayAvailabilities->count() }}
-                                            slots</span>
+                                        <strong>Ngày: {{ \Carbon\Carbon::parse($date)->format('d/m/Y') }}</strong>
+                                        <span class="badge bg-secondary ms-2 me-2">{{ $dayAvailabilities->count() }} slots</span>
+                                        <div class="form-check form-switch custom-switch ms-auto">
+                                            <input type="hidden" name="day_statuses[{{ $date }}]" value="maintenance">
+                                            <input class="form-check-input day-switch" type="checkbox" role="switch"
+                                                id="daySwitch{{ Str::slug($date) }}"
+                                                name="day_statuses[{{ $date }}]" value="open"
+                                                {{ $dayAvailabilities->contains(fn($avail) => $avail->status === 'open') ? 'checked' : '' }}
+                                                data-date="{{ $date }}"
+                                                data-accordion-id="{{ Str::slug($date) }}">
+                                        </div>
                                     </button>
                                 </h2>
                                 <div id="collapse{{ Str::slug($date) }}"
-                                    class="accordion-collapse collapse {{ $loop->first ? 'show' : '' }}"
+                                    class="accordion-collapse collapse"
                                     data-bs-parent="#availabilityAccordion">
                                     <div class="accordion-body p-0">
                                         <ul class="list-group list-group-flush">
                                             @foreach ($dayAvailabilities->sortBy('timeSlot.start_time') as $availability)
                                             <li class="list-group-item d-flex align-items-center">
-
-                                                {{-- Tên khung giờ --}}
                                                 <div class="fw-bold me-auto">
                                                     @if ($availability->timeSlot && $availability->timeSlot->start_time && $availability->timeSlot->end_time)
                                                     {{ \Carbon\Carbon::parse($availability->timeSlot->start_time)->format('H:00') }} - {{ \Carbon\Carbon::parse($availability->timeSlot->end_time)->format('H:00') }}
@@ -314,8 +330,6 @@
                                                     N/A
                                                     @endif
                                                 </div>
-
-                                                {{-- Container giá + công tắc --}}
                                                 <div class="d-flex align-items-center" style="min-width: 140px; position: relative; top: -10px;">
                                                     <span class="text-nowrap text-end pe-4" style="flex-basis: 60px;">
                                                         {{ floor($availability->price / 1000) }}k
@@ -325,7 +339,14 @@
                                                     @else
                                                     <div class="form-check form-switch custom-switch">
                                                         <input type="hidden" name="statuses[{{ $availability->id }}]" value="maintenance">
-                                                        <input class="form-check-input" type="checkbox" role="switch" id="statusSwitch{{ $availability->id }}" name="statuses[{{ $availability->id }}]" value="open" {{ $availability->status === 'open' ? 'checked' : '' }}>
+                                                        <input class="form-check-input slot-switch" type="checkbox" role="switch"
+                                                            id="statusSwitch{{ $availability->id }}"
+                                                            name="statuses[{{ $availability->id }}]" value="open"
+                                                            {{ $availability->status === 'open' ? 'checked' : '' }}
+                                                            data-date="{{ $availability->date }}"
+                                                            data-start-time="{{ $availability->timeSlot->start_time ?? '' }}"
+                                                            data-status="{{ $availability->status }}"
+                                                            data-accordion-id="{{ Str::slug($date) }}">
                                                     </div>
                                                     @endif
                                                 </div>
@@ -336,28 +357,6 @@
                                 </div>
                             </div>
                             @endforeach
-                        </div>
-                        <!-- Phân trang -->
-                        <div class="d-flex justify-content-center mt-3">
-                            <nav aria-label="Page navigation">
-                                <ul class="pagination">
-                                    <li class="page-item {{ $currentPage <= 1 ? 'disabled' : '' }}">
-                                        <a class="page-link" href="{{ request()->fullUrlWithQuery(['page' => $currentPage - 1]) }}" aria-label="Previous">
-                                            <span aria-hidden="true">Previous</span>
-                                        </a>
-                                    </li>
-                                    @for ($i = 1; $i <= $totalPages; $i++)
-                                        <li class="page-item {{ $i == $currentPage ? 'active' : '' }}">
-                                        <a class="page-link" href="{{ request()->fullUrlWithQuery(['page' => $i]) }}">{{ $i }}</a>
-                                        </li>
-                                        @endfor
-                                        <li class="page-item {{ $currentPage >= $totalPages ? 'disabled' : '' }}">
-                                            <a class="page-link" href="{{ request()->fullUrlWithQuery(['page' => $currentPage + 1]) }}" aria-label="Next">
-                                                <span aria-hidden="true">Next</span>
-                                            </a>
-                                        </li>
-                                </ul>
-                            </nav>
                         </div>
                         @else
                         <div class="text-center text-muted p-4">
@@ -375,5 +374,89 @@
 @endsection
 
 @push('scripts')
+<script>
+    function updateSwitchStates() {
+        const now = new Date(new Date().toLocaleString('en-US', {
+            timeZone: 'Asia/Ho_Chi_Minh'
+        }));
+        const switches = document.querySelectorAll('.slot-switch[data-date][data-start-time][data-status]');
+        const daySwitches = document.querySelectorAll('.day-switch');
+
+        // Cập nhật trạng thái công tắc time slot
+        switches.forEach(switchElement => {
+            const date = switchElement.getAttribute('data-date');
+            const startTimeStr = switchElement.getAttribute('data-start-time');
+            const status = switchElement.getAttribute('data-status');
+
+            const fullStartTimeStr = `${date} ${startTimeStr}`;
+            const startTime = new Date(fullStartTimeStr);
+
+            if (isNaN(startTime)) {
+                console.warn('Invalid start_time format for switch:', switchElement.id, fullStartTimeStr);
+                return;
+            }
+
+            if (now > startTime || status === 'booked') {
+                switchElement.checked = false;
+                switchElement.disabled = true;
+            } else {
+                switchElement.disabled = false;
+            }
+        });
+
+        // Cập nhật trạng thái công tắc ngày
+        daySwitches.forEach(daySwitch => {
+            daySwitch.disabled = false; // Đảm bảo công tắc ngày không bị vô hiệu hóa
+            const accordionId = daySwitch.getAttribute('data-accordion-id');
+            const slotSwitches = document.querySelectorAll(`.slot-switch[data-accordion-id="${accordionId}"]`);
+            const anyOpen = Array.from(slotSwitches).some(slot => slot.checked && !slot.disabled);
+            daySwitch.checked = anyOpen;
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('Found day switches:', document.querySelectorAll('.day-switch').length);
+        updateSwitchStates();
+
+        // Xử lý sự kiện khi công tắc ngày thay đổi
+        document.querySelectorAll('.day-switch').forEach(daySwitch => {
+            // Ngăn sự kiện click lan truyền lên accordion
+            daySwitch.addEventListener('click', (event) => {
+                event.stopPropagation();
+                console.log('Day switch clicked:', daySwitch.id);
+            });
+            // Xử lý sự kiện change
+            daySwitch.addEventListener('change', (event) => {
+                event.stopPropagation();
+                console.log('Day switch changed:', daySwitch.id, 'checked:', daySwitch.checked);
+                const accordionId = daySwitch.getAttribute('data-accordion-id');
+                const slotSwitches = document.querySelectorAll(`.slot-switch[data-accordion-id="${accordionId}"]:not(:disabled)`);
+                console.log('Updating slot switches for accordion:', accordionId, 'count:', slotSwitches.length);
+                slotSwitches.forEach(slot => {
+                    slot.checked = daySwitch.checked;
+                });
+            });
+        });
+
+        // Xử lý sự kiện khi công tắc time slot thay đổi
+        document.querySelectorAll('.slot-switch').forEach(slotSwitch => {
+            slotSwitch.addEventListener('change', () => {
+                const accordionId = slotSwitch.getAttribute('data-accordion-id');
+                const daySwitch = document.querySelector(`.day-switch[data-accordion-id="${accordionId}"]`);
+                const slotSwitches = document.querySelectorAll(`.slot-switch[data-accordion-id="${accordionId}"]`);
+                const anyOpen = Array.from(slotSwitches).some(slot => slot.checked && !slot.disabled);
+                daySwitch.checked = anyOpen;
+            });
+        });
+
+        // Lắng nghe sự kiện khi accordion thay đổi
+        document.querySelectorAll('.accordion-button').forEach(button => {
+            button.addEventListener('click', updateSwitchStates);
+        });
+    });
+
+    // Cập nhật trạng thái mỗi phút
+    setInterval(updateSwitchStates, 60000);
+</script>
 @endpush
 </xaiArtifact>

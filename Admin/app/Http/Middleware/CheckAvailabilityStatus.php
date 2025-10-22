@@ -15,7 +15,7 @@ class CheckAvailabilityStatus
 
         $updated = Availability::where('status', 'open')
             ->whereHas('timeSlot', function ($query) use ($now) {
-                $query->whereRaw("CONCAT(availabilities.date, ' ', time_slots.end_time) < ?", [$now]);
+                $query->whereRaw("CONCAT(availabilities.date, ' ', time_slots.start_time) < ?", [$now]);
             })
             ->update(['status' => 'maintenance']);
 

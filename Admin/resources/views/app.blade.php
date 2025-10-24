@@ -3,24 +3,19 @@
   @include('layout.head')
   <body>
     <div class="container-scroller">
-      @include('layout.nav')
-
+     @include('layout.nav')
       <div class="container-fluid page-body-wrapper">
-        @include('layout.sidebar')
-
+      @include('layout.sidebar')
         <div class="main-panel">
-          {{-- Content --}}
-          <div class="content-wrapper mb-4">
-            @yield('content')
-          </div>
-          {{-- EndContent --}}
-          
+         {{-- Content --}}
+         @yield('content')
+
+         {{-- EndCotent --}}
+         
           @include('layout.footer')
         </div>
       </div>
     </div>
-
     @include('layout.scrip')
-    @stack('scripts')
   </body>
 </html>

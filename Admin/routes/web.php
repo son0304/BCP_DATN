@@ -24,9 +24,11 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+
 // Email verification routes
 Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail'])->name('verify.email');
 Route::post('/resend-verification', [AuthController::class, 'resendVerification'])->name('resend.verification');
+
 
 // Main Routes
 Route::get('/', [HomeController::class, 'index'])->name('home.index');

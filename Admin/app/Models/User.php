@@ -27,7 +27,10 @@ class User extends Authenticatable
         'province_id',
         'lat',
         'lng',
-        'is_active'
+        'is_active',
+        'email_verified_at',
+        'email_verification_token',
+        'is_email_verified'
     ];
 
     public function role()
@@ -78,6 +81,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_email_verified' => 'boolean',
         ];
     }
 }

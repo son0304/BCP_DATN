@@ -7,26 +7,48 @@ use Illuminate\Database\Eloquent\Model;
 
 class Court extends Model
 {
-    /** @use HasFactory<\Database\Factories\CourtFactory> */
     use HasFactory;
-    protected $fillable = ['venue_id','venue_type_id','name','surface','price_per_hour', 'is_indoor'];
-    public function courts()
+
+    protected $fillable = [
+        'venue_id',
+        'venue_type_id',
+        'name',
+        'surface',
+        'is_indoor'
+    ];
+
+    // Time slots are directly linked to courts
+    public function timeSlots()
     {
-        return $this->hasMany(Item::class);
+        return $this->hasMany(TimeSlot::class, 'court_id');
     }
+    public function availabilities()
+    {
+        return $this->hasMany(Availability::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(Item::class, 'court_id');
+    }
+
     public function images()
     {
-        return $this->hasMany(Image::class);
+        return $this->hasMany(Image::class, 'court_id');
     }
+
     public function venue()
     {
         return $this->belongsTo(Venue::class, 'venue_id');
     }
-    public function venue_type()
+
+    public function venueType()
     {
         return $this->belongsTo(VenueType::class, 'venue_type_id');
     }
-    
-    
 
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class, 'court_id');
+    }
 }

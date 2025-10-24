@@ -10,10 +10,15 @@ class DistrictFactory extends Factory
 
     public function definition()
     {
+        // Generate a unique code to avoid duplicates
+        do {
+            $code = strtoupper($this->faker->bothify('??#'));
+        } while (\App\Models\District::where('code', $code)->exists());
+        
         return [
             'province_id' => \App\Models\Province::factory(), // Tự động tạo province nếu chưa có
             'name' => $this->faker->city,
-            'code' => strtoupper($this->faker->bothify('??#')), // VD: Q1, D2
+            'code' => $code,
             'created_at' => now(),
             'updated_at' => now(),
         ];

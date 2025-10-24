@@ -9,11 +9,18 @@ class Availability extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['court_id', 'slot_id', 'date', 'status', 'note'];
+    protected $fillable = [
+        'court_id',
+        'slot_id',
+        'price',
+        'date',
+        'status',
+        'note',
+    ];
 
     public function court()
     {
-        return $this->belongsTo(Court::class, 'court_id');
+        return $this->belongsTo(Court::class);
     }
 
     public function timeSlot()

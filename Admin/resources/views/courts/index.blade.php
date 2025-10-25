@@ -1,7 +1,7 @@
 @extends('app')
 
 @section('content')
-{{-- Thêm <style> để định nghĩa màu xanh lá chủ đạo --}}
+
 <style>
     :root {
         --bs-primary: #348738;
@@ -21,7 +21,7 @@
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white border-0 py-3">
             <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h4 mb-0">Quản lý Sân</h1>
+                <h1 class="h3 mb-0 fw-bold">Danh sách Sân</h1>
                 <a href="{{ route('admin.courts.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus me-1"></i> Thêm sân mới
                 </a>
@@ -76,7 +76,7 @@
                                     <a href="{{ route('admin.courts.edit', $court) }}" class="btn btn-sm btn-outline-warning" title="Chỉnh sửa">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete({{ $court->id }})" title="Xóa">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete('{{ $court->id }}')" title="Xóa">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>

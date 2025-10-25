@@ -9,7 +9,6 @@ use App\Http\Controllers\Web\{
     UserController,
     BrandController,
     BookingController,
-    TicketController,
     AuthController
 };
 
@@ -42,7 +41,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home.index');
 
     // Quản lý Địa điểm (Venues)
-    Route::resource('brand', BrandController::class);
+    Route::resource('brand', BrandController::class)->parameter('brand', 'venue');
 
     // Quản lý Sân (Courts) & Lịch (Availabilities)
     Route::resource('courts', CourtController::class);

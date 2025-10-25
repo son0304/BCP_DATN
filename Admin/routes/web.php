@@ -55,6 +55,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::resource('bookings', BookingController::class);
 
     // Quản lý Người dùng & Đánh giá
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::resource('users', UserController::class);
+    Route::post('/users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 });

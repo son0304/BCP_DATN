@@ -13,3 +13,6 @@
     <script src="{{ asset('dist/assets/js/jquery.cookie.js') }}"></script>
     <!-- Custom js for this page -->
     <script src="{{ asset('dist/assets/js/dashboard.js') }}"></script>
+    
+    <!-- User Management Scripts -->
+    <script src="{{ asset('js/user-management.js') }}"></script>

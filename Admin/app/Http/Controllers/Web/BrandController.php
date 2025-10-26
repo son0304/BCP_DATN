@@ -66,7 +66,7 @@ class BrandController extends Controller
             'courts.*.time_slots.*.start_time' => 'required_with:courts.*.time_slots|date_format:H:i',
             'courts.*.time_slots.*.end_time' => 'required_with:courts.*.time_slots|date_format:H:i|after:courts.*.time_slots.*.start_time',
             'courts.*.time_slots.*.price' => 'required_with:courts.*.time_slots|numeric|min:0',
-            
+
         ],[
             'name.required' => 'Không được bỏ trống'
         ]);

@@ -23,40 +23,38 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-
 // Email verification routes
 Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail'])->name('verify.email');
 Route::post('/resend-verification', [AuthController::class, 'resendVerification'])->name('resend.verification');
 
-
-// Main Routes
+// Main Routes (public)
 Route::get('/', [HomeController::class, 'index'])->name('home.index');
 Route::get('/courts', [CourtController::class, 'index'])->name('courts.index');
 Route::get('/users', [UserController::class, 'index'])->name('users.index');
 Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 
-
 // ==============================
 // ====== ADMIN ROUTES ======
 // ==============================
 Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
-    // Dashboard - Admin và Chủ sân đều có thể truy cập
     Route::get('/', [HomeController::class, 'index'])->name('home.index');
-
-    // ====== ADMIN ONLY ROUTES ======
     Route::middleware(['role:admin'])->group(function () {
-        Route::resource('brand', BrandController::class);
+        // Quản lý thương hiệu
+        Route::resource('brand', BrandController::class)->parameters([
+            'brand' => 'venue'
+        ]);
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
     });
 
-
-    // ====== VENUE OWNER ROUTES ======
+    // ====== VENUE OWNER ======
     Route::middleware(['role:venue_owner'])->group(function () {
+        // Quản lý sân
         Route::resource('courts', CourtController::class);
         Route::post('/courts/{court}/availabilities/update', [AvailabilityController::class, 'updateAll'])
             ->name('courts.updateAvailabilities');
-        Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 
+        // Quản lý đánh giá & đơn đặt
+        Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
         Route::resource('bookings', BookingController::class);
     });
 });

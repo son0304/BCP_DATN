@@ -17,7 +17,23 @@ class CourtController extends Controller
 {
     public function index()
     {
-        $courts = Court::with(['venue', 'venueType'])->latest()->paginate(10);
+        $user = auth()->user();
+
+        if ($user->role->name === 'admin') {
+            $courts = Court::with(['venue', 'venueType'])->latest()->paginate(10);
+        }
+        else if ($user->role->name === 'venue_owner') {
+            $courts = Court::with(['venue', 'venueType'])
+                ->whereHas('venue', function($query) use ($user) {
+                    $query->where('owner_id', $user->id);
+                })
+                ->latest()
+                ->paginate(10);
+        }
+        else {
+            abort(403, 'Bạn không có quyền truy cập trang này');
+        }
+
         return view('courts.index', compact('courts'));
     }
 
@@ -37,7 +53,18 @@ class CourtController extends Controller
 
     public function create()
     {
-        $venues = Venue::orderBy('name')->get();
+        $user = auth()->user();
+
+        if ($user->role->name === 'admin') {
+            $venues = Venue::orderBy('name')->get();
+        }
+        else if ($user->role->name === 'venue_owner') {
+            $venues = Venue::where('owner_id', $user->id)->orderBy('name')->get();
+        }
+        else {
+            abort(403, 'Bạn không có quyền truy cập trang này');
+        }
+
         $venueTypes = VenueType::orderBy('name')->get();
         $timeSlots = TimeSlot::orderBy('start_time')->get();
 

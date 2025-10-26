@@ -23,9 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\AutoCancelTicketsMiddleware::class,
         ]);
 
-        // Giữ alias middleware từ nhánh ducx
         $middleware->alias([
             'email.verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
+            'role' => \App\Http\Middleware\CheckRole::class,
+            'venue.owner' => \App\Http\Middleware\CheckVenueOwner::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

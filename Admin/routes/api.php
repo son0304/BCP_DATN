@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ProvinceApiController;
 use App\Http\Controllers\Api\TicketApiController;
 use App\Http\Controllers\Api\TimeSlotApiController;
 use App\Http\Controllers\Api\VenueApiController;
+use App\Http\Controllers\Api\AuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthApiController::class, 'register']);

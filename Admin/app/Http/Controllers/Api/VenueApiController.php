@@ -5,8 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Venue;
 use App\Models\Availability;
+use App\Models\Image;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class VenueApiController extends Controller
 {
@@ -109,4 +113,58 @@ class VenueApiController extends Controller
         ]);
     }
 
+    public function store(Request $request)
+    {
+        // Validate dữ liệu
+        $validatedData = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'provinceId' => 'required|integer|exists:provinces,id',
+            'districtId' => 'required|integer|exists:districts,id',
+            'address' => 'required|string',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'description' => 'nullable|string',
+            'images' => 'required|array|min:1',
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:10240', // 10MB
+            'mainImageIndex' => 'required|integer|min:0',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $venue = Venue::create([
+                'owner_id' => $validatedData['user_id'],
+                'name' => $validatedData['name'],
+                'phone' => $validatedData['phone'],
+                'province_id' => $validatedData['provinceId'],
+                'district_id' => $validatedData['districtId'],
+                'address_detail' => $validatedData['address'],
+                'start_time' => $validatedData['start_time'],
+                'end_time' => $validatedData['end_time'],
+                'is_active' => false,
+            ]);
+
+            Log::info('Venue vừa tạo: ', $venue->toArray()); // check ID
+
+            $files = $request->file('images');
+            foreach ($files as $index => $file) {
+                $path = $file->store('uploads/venues', 'public');
+                $url = asset('storage/' . $path);
+
+                Image::create([
+                    'venue_id' => $venue->id,  // đây phải có giá trị
+                    'url' => $url,
+                    'is_primary' => $index == $validatedData['mainImageIndex'],
+                ]);
+            }
+
+            DB::commit();
+            return response()->json(['success' => true, 'data' => $venue], 201);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Lỗi tạo venue: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
 }

@@ -9,7 +9,6 @@ use App\Http\Controllers\Web\{
     UserController,
     BrandController,
     BookingController,
-    TicketController,
     AuthController
 };
 
@@ -28,7 +27,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail'])->name('verify.email');
 Route::post('/resend-verification', [AuthController::class, 'resendVerification'])->name('resend.verification');
 
-// Main Routes
+// Main Routes (public)
 Route::get('/', [HomeController::class, 'index'])->name('home.index');
 Route::get('/courts', [CourtController::class, 'index'])->name('courts.index');
 Route::get('/users', [UserController::class, 'index'])->name('users.index');
@@ -37,24 +36,25 @@ Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index'
 // ==============================
 // ====== ADMIN ROUTES ======
 // ==============================
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home.index');
+    Route::middleware(['role:admin'])->group(function () {
+        // Quản lý thương hiệu
+        Route::resource('brand', BrandController::class)->parameters([
+            'brand' => 'venue'
+        ]);
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    });
 
-    // Quản lý Địa điểm (Venues)
-    Route::resource('brand', BrandController::class);
+    // ====== VENUE OWNER ======
+    Route::middleware(['role:venue_owner'])->group(function () {
+        // Quản lý sân
+        Route::resource('courts', CourtController::class);
+        Route::post('/courts/{court}/availabilities/update', [AvailabilityController::class, 'updateAll'])
+            ->name('courts.updateAvailabilities');
 
-    // Quản lý Sân (Courts) & Lịch (Availabilities)
-    Route::get('/courts/{court}', [CourtController::class, 'show'])
-        ->name('courts.show')
-        ->middleware('check.availability');
-    Route::resource('courts', CourtController::class)->except(['show']);
-    Route::post('/courts/{court}/availabilities/update', [AvailabilityController::class, 'updateAll'])
-        ->name('courts.updateAvailabilities');
-
-    // Quản lý Booking & Ticket
-    Route::resource('bookings', BookingController::class);
-
-    // Quản lý Người dùng & Đánh giá
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+        // Quản lý đánh giá & đơn đặt
+        Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+        Route::resource('bookings', BookingController::class);
+    });
 });

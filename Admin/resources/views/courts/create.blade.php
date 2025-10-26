@@ -1,7 +1,6 @@
 @extends('app')
 
 @section('content')
-{{-- Thêm <style> để định nghĩa màu xanh lá chủ đạo --}}
 <style>
     :root {
         --bs-primary: #348738;
@@ -124,30 +123,25 @@
             return;
         }
 
-        const timeSlots = @json($timeSlots);
         const container = $('#time-slots-container');
 
-        // Hàm tạo một hàng slot mới
+        // Hàm tạo một hàng slot mới với input thủ công
         function createTimeSlotRow() {
-            const options = timeSlots.map(slot => {
-                // Định dạng thời gian cho dễ nhìn
-                const startTime = slot.start_time.substring(0, 5);
-                const endTime = slot.end_time.substring(0, 5);
-                return `<option value="${slot.id}">${startTime} - ${endTime}</option>`;
-            }).join('');
-
             return `
             <div class="row align-items-center mb-2 time-slot-row p-2 bg-white rounded border">
-                <div class="col-md-5">
-                    <select class="form-select form-select-sm" name="slot_ids[]" required>
-                        <option value="" disabled selected>-- Chọn khung giờ --</option>
-                        ${options}
-                    </select>
+                <div class="col-md-3">
+                    <label class="form-label small">Giờ bắt đầu</label>
+                    <input type="time" class="form-control form-control-sm time-start" required>
                 </div>
-                <div class="col-md-5">
-                    <input type="number" class="form-control form-control-sm" name="slot_prices[]" placeholder="Nhập giá (VNĐ)" min="0" step="1000" required>
+                <div class="col-md-3">
+                    <label class="form-label small">Giờ kết thúc</label>
+                    <input type="time" class="form-control form-control-sm time-end" required>
                 </div>
-                <div class="col-md-2 d-flex align-items-center justify-content-end">
+                <div class="col-md-4">
+                    <label class="form-label small">Giá (VNĐ)</label>
+                    <input type="number" class="form-control form-control-sm time-price" placeholder="Nhập giá (VNĐ)" min="0" step="1000" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end justify-content-end">
                     <button type="button" class="btn btn-sm btn-outline-danger remove-slot-btn" title="Xóa khung giờ">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -155,16 +149,100 @@
             </div>`;
         }
 
+        // Hàm chia thời gian thành các slot 1 giờ
+        function splitTimeIntoHourlySlots(startTime, endTime, price) {
+            const slots = [];
+            const start = new Date('2000-01-01 ' + startTime);
+            const end = new Date('2000-01-01 ' + endTime);
+            
+            // Nếu thời gian kết thúc là ngày hôm sau (ví dụ: 23:00 - 01:00)
+            if (end <= start) {
+                end.setDate(end.getDate() + 1);
+            }
+            
+            let current = new Date(start);
+            
+            while (current < end) {
+                const nextHour = new Date(current);
+                nextHour.setHours(nextHour.getHours() + 1);
+                
+                // Nếu slot tiếp theo vượt quá thời gian kết thúc, dừng lại
+                if (nextHour > end) {
+                    break;
+                }
+                
+                const slotStart = current.toTimeString().substring(0, 5);
+                const slotEnd = nextHour.toTimeString().substring(0, 5);
+                
+                slots.push({
+                    start_time: slotStart,
+                    end_time: slotEnd,
+                    price: price
+                });
+                
+                current = nextHour;
+            }
+            
+            return slots;
+        }
+
+        // Hàm cập nhật tên input để gửi đúng dữ liệu
+        function updateInputNames() {
+            let slotIndex = 0;
+            container.find('.time-slot-row').each(function() {
+                const $row = $(this);
+                $row.find('.time-start').attr('name', `time_slots[${slotIndex}][start_time]`);
+                $row.find('.time-end').attr('name', `time_slots[${slotIndex}][end_time]`);
+                $row.find('.time-price').attr('name', `time_slots[${slotIndex}][price]`);
+                slotIndex++;
+            });
+        }
+
         // Sự kiện click nút "Thêm khung giờ"
         $(document).on('click', '#add-time-slot-btn', function(e) {
             e.preventDefault();
             container.append(createTimeSlotRow());
+            updateInputNames();
         });
 
         // Sự kiện click nút "Xóa"
         $(document).on('click', '.remove-slot-btn', function(e) {
             e.preventDefault();
             $(this).closest('.time-slot-row').remove();
+            updateInputNames();
+        });
+
+        // Sự kiện thay đổi thời gian - tự động chia slot
+        $(document).on('change', '.time-start, .time-end, .time-price', function() {
+            const $row = $(this).closest('.time-slot-row');
+            const startTime = $row.find('.time-start').val();
+            const endTime = $row.find('.time-end').val();
+            const price = $row.find('.time-price').val();
+            
+            if (startTime && endTime && price) {
+                const slots = splitTimeIntoHourlySlots(startTime, endTime, price);
+                
+                if (slots.length > 1) {
+                    // Xóa hàng hiện tại
+                    $row.remove();
+                    
+                    // Thêm các slot 1 giờ
+                    slots.forEach(slot => {
+                        const newRow = $(createTimeSlotRow());
+                        newRow.find('.time-start').val(slot.start_time);
+                        newRow.find('.time-end').val(slot.end_time);
+                        newRow.find('.time-price').val(slot.price);
+                        container.append(newRow);
+                    });
+                    
+                    updateInputNames();
+                }
+            }
+        });
+
+        // Sự kiện submit form - cập nhật tên input cuối cùng
+        $('form').on('submit', function() {
+            updateInputNames();
         });
 
         // Tự động thêm một hàng khi trang tải lần đầu nếu chưa có

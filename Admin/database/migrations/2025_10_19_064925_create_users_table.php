@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('password');
             $table->string('phone')->nullable();
+            $table->string('avt')->nullable();
             $table->foreignId('district_id')->nullable()->constrained('districts');
             $table->foreignId('province_id')->nullable()->constrained('provinces');
             $table->decimal('lat', 10, 7)->nullable();

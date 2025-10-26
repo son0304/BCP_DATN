@@ -1,60 +1,47 @@
-// components/Notification.tsx
-import React, { useEffect, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from "react";
 
-type NotificationProps = {
+type NotificationType = "success" | "error";
+
+interface Notification {
   message: string;
-  type: 'success' | 'error';
-  onClose?: () => void;
+  type: NotificationType;
+}
+
+interface NotificationContextType {
+  showNotification: (message: string, type?: NotificationType) => void;
+}
+
+const NotificationContext = createContext<NotificationContextType | null>(null);
+
+export const useNotification = () => {
+  const ctx = useContext(NotificationContext);
+  if (!ctx) throw new Error("useNotification phải được dùng bên trong <NotificationProvider>");
+  return ctx;
 };
 
-const Notification: React.FC<NotificationProps> = ({ message, type, onClose }) => {
-  const [show, setShow] = useState(true);
-  const [slideIn, setSlideIn] = useState(false);
+export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [notification, setNotification] = useState<Notification | null>(null);
 
-  useEffect(() => {
-    // Kích hoạt animation slide-in
-    const timer = setTimeout(() => setSlideIn(true), 10);
-
-    // Tự ẩn sau 3 giây
-    const autoClose = setTimeout(() => {
-      setSlideIn(false);
-      setTimeout(() => onClose?.(), 300); // cho animation kết thúc
-    }, 3000);
-
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(autoClose);
-    };
-  }, [onClose]);
-
-  if (!show) return null;
-
-  const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
-  const icon = type === 'success' ? '✔️' : '❌';
+  const showNotification = useCallback((message: string, type: NotificationType = "success") => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000); // tự ẩn sau 3s
+  }, []);
 
   return (
-    <div className="fixed top-5 right-5 z-999">
-      <div
-        className={`
-          ${bgColor} text-white px-4 py-3 rounded-lg shadow-lg border border-white/20 flex items-center gap-3
-          transform transition-transform duration-300
-          ${slideIn ? 'translate-x-0' : 'translate-x-full'}
-        `}
-      >
-        <span className="text-lg">{icon}</span>
-        <span className="font-medium">{message}</span>
-        <button
-          onClick={() => {
-            setSlideIn(false);
-            setTimeout(() => onClose?.(), 300);
-          }}
-          className="ml-2 text-white hover:text-gray-200 font-bold"
+    <NotificationContext.Provider value={{ showNotification }}>
+      {children}
+
+      {notification && (
+        <div
+          key={Date.now()}
+          className={`fixed top-24 right-5 z-50 p-4 rounded-lg shadow-xl max-w-sm
+            ${notification.type === "success" ? "bg-green-600" : "bg-red-600"} text-white
+            animate-slide-in
+          `}
         >
-          ×
-        </button>
-      </div>
-    </div>
+          {notification.message}
+        </div>
+      )}
+    </NotificationContext.Provider>
   );
 };
-
-export default Notification;

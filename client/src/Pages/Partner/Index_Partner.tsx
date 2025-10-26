@@ -1,7 +1,5 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
-// Bạn có thể import các icon từ thư viện (ví dụ: react-icons)
-// import { FaChartLine, FaTasks, FaShieldAlt } from 'react-icons/fa';
+
 
 const Index_Partner = () => {
   return (

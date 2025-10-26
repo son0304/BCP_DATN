@@ -13,6 +13,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(({ label, id, ..
                 id={id}
                 ref={ref}
                 {...props}
+                
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#348738] focus:border-[#348738] sm:text-sm"
             />
         </div>

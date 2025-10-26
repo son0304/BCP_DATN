@@ -1,7 +1,6 @@
 @extends('app')
 
 @section('content')
-{{-- Style cho màu sắc, công tắc, và bảng tùy chỉnh --}}
 <style>
     :root {
         --bs-primary: #348738;
@@ -18,59 +17,42 @@
         color: #2d6a2d;
     }
 
-    .accordion-button:focus {
-        box-shadow: 0 0 0 0.25rem rgba(52, 135, 56, 0.25);
-    }
-
-    .form-switch .form-check-input {
-        background-color: #dc3545;
-        border-color: #dc3545;
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
-        width: 100%;
-        height: 22px;
-        position: relative;
-        cursor: pointer;
-        background-position: left 0.15rem center;
-    }
-
-    .form-switch .form-check-input:checked {
-        background-color: var(--bs-primary);
-        border-color: var(--bs-primary);
-        background-position: right 0.15rem center;
+    /* Đảm bảo nút master không bị màu lạ khi mở */
+    .accordion-button:not(.collapsed) .day-master-switch {
+        background-color: var(--bs-form-switch-bg);
     }
 
     .custom-switch {
-        width: 70px;
-        font-size: 0.7rem;
+        width: 90px;
+        font-size: 0.75rem;
         font-weight: 600;
+    }
+
+    .custom-switch .form-check-input {
+        width: 100%;
+        height: 28px;
         position: relative;
-        z-index: 10;
+    }
+
+    .custom-switch .form-check-input::before,
+    .custom-switch .form-check-input::after {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        color: white;
+        transition: 0.2s;
     }
 
     .custom-switch .form-check-input::before {
         content: 'Bảo trì';
-        position: absolute;
-        right: 5px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: white;
-        transition: opacity 0.2s ease;
+        right: 8px;
         opacity: 1;
-        font-size: 0.65rem;
-        pointer-events: none;
     }
 
     .custom-switch .form-check-input::after {
         content: 'Mở';
-        position: absolute;
-        left: 5px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: white;
-        transition: opacity 0.2s ease;
+        left: 8px;
         opacity: 0;
-        font-size: 0.65rem;
-        pointer-events: none;
     }
 
     .custom-switch .form-check-input:checked::before {
@@ -81,122 +63,8 @@
         opacity: 1;
     }
 
-    /* CSS cụ thể cho công tắc ngày */
-    .form-switch .day-switch {
-        pointer-events: auto !important;
-        cursor: pointer !important;
-        z-index: 15;
-        width: 100%;
-        height: 22px;
-        margin: 0;
-        margin-right: 5px;
-        /* Dịch công tắc ngày sang trái 5px */
-    }
-
-    .form-check.form-switch.custom-switch.ms-auto {
-        z-index: 15;
-    }
-
-    .accordion-button {
-        z-index: 5;
-    }
-
-    .info-card-decorated .card-body {
-        border-left: 4px solid var(--bs-primary);
-        background-color: #fdfdfd;
-    }
-
-    .info-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0 8px;
-    }
-
-    .info-table th,
-    .info-table td {
-        padding: 10px 15px;
-        text-align: left;
-        background-color: #fff;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-    }
-
-    .info-table th {
-        width: 35%;
-        font-weight: 600;
-        color: #495057;
-        background-color: #f8f9fa;
-    }
-
-    .info-table td {
-        color: #212529;
-        word-break: break-word;
-    }
-
-    .info-table .badge {
-        padding: 4px 8px;
-        font-size: 0.8rem;
-    }
-
-    @media (max-width: 768px) {
-
-        .info-table th,
-        .info-table td {
-            padding: 8px 10px;
-            font-size: 0.9rem;
-        }
-
-        .info-table th {
-            width: 40%;
-        }
-    }
-
-    .pagination {
-        margin: 0;
-    }
-
-    .page-item.active .page-link {
-        background-color: var(--bs-primary);
-        border-color: var(--bs-primary);
-        color: #fff;
-    }
-
-    .page-item.disabled .page-link {
-        color: #6c757d;
-        background-color: #e9ecef;
-        cursor: not-allowed;
-    }
-
-    .page-link {
-        font-size: 14px;
-    }
-
-    .list-group-flush {
-        width: 290px;
-    }
-
-    .d-flex.align-items-center {
-        justify-content: flex-end;
-    }
-
-    .list-group-item .d-flex.align-items-center {
-        min-width: 150px;
-    }
-
-    .list-group-item .text-nowrap {
-        flex-basis: 50px;
-        text-align: right;
-        font-size: 0.9rem;
-        padding-right: 2rem !important;
-        padding-top: 7px;
-        color: #c11404ff;
-        font-weight: bold;
-    }
-
-    .custom-switch .form-check-input:disabled {
-        background-color: #414141ff;
-        border-color: #414141ff;
-        cursor: not-allowed;
+    .info-card .fw-semibold {
+        font-size: 1.05rem;
     }
 </style>
 
@@ -207,256 +75,338 @@
             <p class="text-muted mb-0">{{ $court->venue->name ?? 'N/A' }}</p>
         </div>
         <div>
-            <a href="{{ route('admin.courts.edit', $court) }}" class="btn btn-warning">
+            <a href="{{ route('admin.courts.edit', $court) }}" class="btn btn-warning me-1">
                 <i class="fas fa-edit me-1"></i> Chỉnh sửa
             </a>
             <a href="{{ route('admin.courts.index') }}" class="btn btn-secondary">Quay lại</a>
         </div>
     </div>
 
-    @if (session('success'))
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    @endif
-    @if (session('error'))
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    @endif
 
-    <div class="row">
+    <div class="row g-4">
+
         {{-- THÔNG TIN CƠ BẢN --}}
-        <div class="col-lg-8 mb-2 info-card-decorated">
-            <div class="card shadow-sm border-0 h-100">
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 h-100 info-card">
                 <div class="card-header bg-white border-0">
                     <h5 class="mb-0">Thông tin cơ bản</h5>
                 </div>
                 <div class="card-body">
-                    <table class="info-table">
-                        <tr>
-                            <th>Tên sân</th>
-                            <td>{{ $court->name }}</td>
-                        </tr>
-                        <tr>
-                            <th>Địa điểm</th>
-                            <td>{{ $court->venue->name ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Loại hình</th>
-                            <td>{{ $court->venueType->name ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Loại sân</th>
-                            <td>
-                                @if ($court->is_indoor)
-                                <span class="badge bg-info text-dark">Trong nhà</span>
-                                @else
-                                <span class="badge bg-warning text-dark">Ngoài trời</span>
-                                @endif
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Bề mặt</th>
-                            <td>{{ $court->surface ?? 'Chưa cập nhật' }}</td>
-                        </tr>
-                        <tr>
-                            <th>Ngày tạo</th>
-                            <td>{{ $court->created_at->format('d/m/Y H:i') }}</td>
-                        </tr>
-                        <tr>
-                            <th>Cập nhật</th>
-                            <td>{{ $court->updated_at->format('d/m/Y H:i') }}</td>
-                        </tr>
-                    </table>
+
+                    <style>
+                        .info-card .label {
+                            font-size: 0.85rem;
+                            color: #6c757d;
+                        }
+
+                        .info-card .value {
+                            font-size: 1rem;
+                            font-weight: 600;
+                        }
+
+                        .info-card .icon-badge {
+                            font-size: 1.05rem;
+                            padding: 6px 9px;
+                            border-radius: 8px;
+                        }
+                    </style>
+
+                    <div class="mb-3 d-flex align-items-center">
+                        <span class="badge bg-success bg-opacity-10 text-success icon-badge me-3">
+                            <i class="fas fa-futbol"></i>
+                        </span>
+                        <div>
+                            <div class="label">Tên sân</div>
+                            <div class="value">{{ $court->name }}</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 d-flex align-items-center">
+                        <span class="badge bg-primary bg-opacity-10 text-primary icon-badge me-3">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </span>
+                        <div>
+                            <div class="label">Địa điểm</div>
+                            <div class="value">{{ $court->venue->name ?? 'N/A' }}</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 d-flex align-items-center">
+                        <span class="badge bg-info bg-opacity-10 text-info icon-badge me-3">
+                            <i class="fas fa-layer-group"></i>
+                        </span>
+                        <div>
+                            <div class="label">Loại hình</div>
+                            <div class="value">{{ $court->venueType->name ?? 'N/A' }}</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 d-flex align-items-center">
+                        <span class="badge bg-warning bg-opacity-10 text-warning icon-badge me-3">
+                            <i class="fas fa-building"></i>
+                        </span>
+                        <div>
+                            <div class="label">Loại sân</div>
+                            <div class="value">
+                                <span class="badge {{ $court->is_indoor ? 'bg-info' : 'bg-warning' }}">
+                                    {{ $court->is_indoor ? 'Trong nhà' : 'Ngoài trời' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 d-flex align-items-center">
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary icon-badge me-3">
+                            <i class="fas fa-border-all"></i>
+                        </span>
+                        <div>
+                            <div class="label">Bề mặt</div>
+                            <div class="value">{{ $court->surface ?? 'Chưa cập nhật' }}</div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="small text-muted">
+                        Tạo lúc: {{ $court->created_at->format('d/m/Y H:i') }} <br>
+                        Cập nhật: {{ $court->updated_at->format('d/m/Y H:i') }}
+                    </div>
+
                 </div>
+
             </div>
         </div>
 
         {{-- LỊCH HOẠT ĐỘNG --}}
-        <div class="col-lg-4 mb-2 info-card-decorated">
+        <div class="col-lg-6">
             <form action="{{ route('admin.courts.updateAvailabilities', $court) }}" method="POST">
                 @csrf
+
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Lịch hoạt động (30 ngày tới)</h5>
-                        <button type="submit" class="btn btn-primary btn-sm">
+                        <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save me-1"></i> Lưu thay đổi
                         </button>
                     </div>
+
                     <div class="card-body">
-                        @if ($availabilities->isNotEmpty())
-                        <?php
-                        $perPage = 6;
-                        $currentPage = request()->get('page', 1);
-                        $totalDays = count($availabilities);
-                        $totalPages = ceil($totalDays / $perPage);
-                        $offset = ($currentPage - 1) * $perPage;
-                        $pagedAvailabilities = array_slice($availabilities->all(), $offset, $perPage, true);
-                        ?>
-                        <div class="accordion" id="availabilityAccordion">
-                            @foreach ($pagedAvailabilities as $date => $dayAvailabilities)
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading{{ Str::slug($date) }}">
-                                    <button class="accordion-button {{ $loop->first ? '' : 'collapsed' }}"
-                                        type="button" data-bs-toggle="collapse"
-                                        data-bs-target="#collapse{{ Str::slug($date) }}">
-                                        <strong>Ngày: {{ \Carbon\Carbon::parse($date)->format('d/m/Y') }}</strong>
-                                        <span class="badge bg-secondary ms-2 me-2">{{ $dayAvailabilities->count() }} slots</span>
-                                        <div class="form-check form-switch custom-switch ms-auto">
-                                            <input type="hidden" name="day_statuses[{{ $date }}]" value="maintenance">
-                                            <input class="form-check-input day-switch" type="checkbox" role="switch"
-                                                id="daySwitch{{ Str::slug($date) }}"
-                                                name="day_statuses[{{ $date }}]" value="open"
-                                                {{ $dayAvailabilities->contains(fn($avail) => $avail->status === 'open') ? 'checked' : '' }}
-                                                data-date="{{ $date }}"
-                                                data-accordion-id="{{ Str::slug($date) }}">
-                                        </div>
-                                    </button>
-                                </h2>
-                                <div id="collapse{{ Str::slug($date) }}"
-                                    class="accordion-collapse collapse"
-                                    data-bs-parent="#availabilityAccordion">
-                                    <div class="accordion-body p-0">
-                                        <ul class="list-group list-group-flush">
-                                            @foreach ($dayAvailabilities->sortBy('timeSlot.start_time') as $availability)
-                                            <li class="list-group-item d-flex align-items-center">
-                                                <div class="fw-bold me-auto">
-                                                    @if ($availability->timeSlot && $availability->timeSlot->start_time && $availability->timeSlot->end_time)
-                                                    {{ \Carbon\Carbon::parse($availability->timeSlot->start_time)->format('H:00') }} - {{ \Carbon\Carbon::parse($availability->timeSlot->end_time)->format('H:00') }}
-                                                    @else
-                                                    N/A
-                                                    @endif
-                                                </div>
-                                                <div class="d-flex align-items-center" style="min-width: 140px; position: relative; top: -10px;">
-                                                    <span class="text-nowrap text-end pe-4" style="flex-basis: 60px;">
-                                                        {{ floor($availability->price / 1000) }}k
-                                                    </span>
-                                                    @if ($availability->status === 'booked')
-                                                    <span class="badge bg-danger" style="width: 75px;">Đã đặt</span>
-                                                    @else
-                                                    <div class="form-check form-switch custom-switch">
-                                                        <input type="hidden" name="statuses[{{ $availability->id }}]" value="maintenance">
-                                                        <input class="form-check-input slot-switch" type="checkbox" role="switch"
-                                                            id="statusSwitch{{ $availability->id }}"
-                                                            name="statuses[{{ $availability->id }}]" value="open"
-                                                            {{ $availability->status === 'open' ? 'checked' : '' }}
-                                                            data-date="{{ $availability->date }}"
-                                                            data-start-time="{{ $availability->timeSlot->start_time ?? '' }}"
-                                                            data-status="{{ $availability->status }}"
-                                                            data-accordion-id="{{ Str::slug($date) }}">
-                                                    </div>
-                                                    @endif
-                                                </div>
-                                            </li>
-                                            @endforeach
-                                        </ul>
-                                    </div>
+
+                        @if($availabilities->isNotEmpty())
+
+                        {{-- LỊCH 30 NGÀY DẠNG GRID --}}
+                        <div class="calendar-grid row row-cols-7 g-2 text-center mb-4">
+                            @php
+                            $localTimezone = 'Asia/Ho_Chi_Minh';
+                            @endphp
+                            @foreach ($availabilities as $date => $dayAvailabilities)
+                            @php
+                            $carbonDate = \Carbon\Carbon::parse($date, $localTimezone);
+                            if ($carbonDate->isPast() && !$carbonDate->isToday()) continue;
+                            @endphp
+
+                            <div class="col">
+                                <div class="calendar-day p-2 border rounded shadow-sm calendar-select-day"
+                                    data-date="{{ $date }}"
+                                    style="cursor:pointer; transition:0.2s;">
+                                    <strong>{{ $carbonDate->format('d') }}</strong>
+                                    <div class="small text-muted">{{ $carbonDate->isoFormat('ddd') }}</div>
                                 </div>
                             </div>
                             @endforeach
                         </div>
-                        @else
-                        <div class="text-center text-muted p-4">
-                            <i class="fas fa-calendar-times fa-3x mb-3"></i>
-                            <p>Chưa có lịch hoạt động nào được thiết lập.</p>
-                            <a href="{{ route('admin.courts.edit', $court) }}" class="btn btn-primary mt-2">Thiết lập ngay</a>
+
+                        {{-- KHU VỰC LOAD KHUNG GIỜ --}}
+                        <div id="scheduleDetail" class="mt-4">
+                            <p class="text-muted text-center">Hãy chọn ngày để xem chi tiết khung giờ.</p>
                         </div>
+
+                        {{-- TEMPLATES HIDDEN --}}
+                        @foreach ($availabilities as $date => $dayAvailabilities)
+
+                        @php
+                        $carbonDate = \Carbon\Carbon::parse($date, $localTimezone);
+                        if ($carbonDate->isPast() && !$carbonDate->isToday()) continue;
+                        @endphp
+
+                        <template id="tpl-{{ $date }}">
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">Khung giờ ngày <strong>{{ $carbonDate->format('d/m/Y') }}</strong></h6>
+                                    <div class="form-check form-switch mb-0" style="min-width: 120px;">
+                                        <input class="form-check-input day-toggle-all" type="checkbox" data-date="{{ $date }}">
+                                        <label class="form-check-label small">Đóng/Mở</label>
+                                    </div>
+                                </div>
+
+                                {{-- Container scroll --}}
+                                <div class="time-slot-list border rounded p-2" style="max-height: 300px; overflow-y: auto;">
+                                    <ul class="list-group">
+                                        @foreach ($dayAvailabilities->sortBy('timeSlot.start_time') as $availability)
+                                        <li class="list-group-item py-2">
+                                            <div class="d-flex align-items-center">
+                                                <span class="fw-semibold">{{ $availability->timeSlot->label }}</span>
+                                                <div class="d-flex align-items-center ms-auto" style="gap: 40px;">
+                                                    <span class="fw-semibold text-success text-end" style="min-width: 95px;">
+                                                        {{ number_format($availability->price, 0, ',', '.') }}₫
+                                                    </span>
+
+                                                    @if ($availability->status === 'booked')
+                                                    <span class="badge bg-danger" style="min-width: 90px;">Đã đặt</span>
+                                                    @else
+                                                    <div class="form-check form-switch ms-1" style="min-width: 90px;">
+                                                        <input type="hidden" name="statuses[{{ $availability->id }}]" value="maintenance">
+                                                        <input class="form-check-input" type="checkbox"
+                                                            name="statuses[{{ $availability->id }}]"
+                                                            value="open"
+                                                            @checked($availability->status === 'open')>
+                                                    </div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                        </template>
+
+                        @endforeach
+
+                        @else
+                        <p class="text-center text-muted py-4">Chưa có lịch hoạt động.</p>
                         @endif
+
                     </div>
                 </div>
             </form>
         </div>
+
+        {{-- SCRIPT --}}
+        <script>
+            let activeDate = null;
+
+            document.querySelectorAll(".calendar-select-day").forEach(day => {
+                day.addEventListener("click", () => {
+                    let date = day.dataset.date;
+                    let tpl = document.querySelector(`#tpl-${date}`);
+                    const container = document.getElementById("scheduleDetail");
+
+                    if (activeDate === date) {
+                        container.innerHTML = `<p class="text-muted text-center">Hãy chọn ngày để xem chi tiết khung giờ.</p>`;
+                        activeDate = null;
+                        document.querySelectorAll(".calendar-select-day").forEach(d =>
+                            d.classList.remove("bg-primary", "text-white")
+                        );
+                        return;
+                    }
+
+                    activeDate = date;
+                    document.querySelectorAll(".calendar-select-day").forEach(d =>
+                        d.classList.remove("bg-primary", "text-white")
+                    );
+                    day.classList.add("bg-primary", "text-white");
+
+                    container.innerHTML = tpl ? tpl.innerHTML : "<p class='text-muted text-center'>Không có dữ liệu.</p>";
+                    updateMasterToggle();
+                });
+            });
+
+
+            // Hàm cập nhật trạng thái master toggle dựa trên các toggle con
+            function updateMasterToggle() {
+                const masterToggle = document.querySelector("#scheduleDetail .day-toggle-all");
+                if (!masterToggle) return;
+
+                const checkboxes = document.querySelectorAll(`#scheduleDetail input.form-check-input[type="checkbox"]:not(.day-toggle-all)`);
+                if (checkboxes.length === 0) {
+                    masterToggle.checked = false;
+                    masterToggle.disabled = true;
+                    return;
+                }
+
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                masterToggle.checked = allChecked;
+                masterToggle.disabled = false;
+            }
+
+            // Khi click bật/tắt tổng → cập nhật tất cả khung giờ
+            document.addEventListener("change", function(e) {
+                if (e.target.classList.contains("day-toggle-all")) {
+                    let parentChecked = e.target.checked;
+                    document.querySelectorAll(`#scheduleDetail input.form-check-input[type="checkbox"]:not(.day-toggle-all)`)
+                        .forEach(cb => cb.checked = parentChecked);
+                }
+
+                // Khi bật/tắt từng khung giờ → làm mới trạng thái tổng
+                if (e.target.type === "checkbox" && !e.target.classList.contains("day-toggle-all")) {
+                    updateMasterToggle();
+                }
+            });
+        </script>
+
+
+
     </div>
 </div>
-@endsection
 
-@push('scripts')
+{{-- SCRIPT MỚI ĐỂ ĐIỀU KHIỂN SWITCH --}}
 <script>
-    function updateSwitchStates() {
-        const now = new Date(new Date().toLocaleString('en-US', {
-            timeZone: 'Asia/Ho_Chi_Minh'
-        }));
-        const switches = document.querySelectorAll('.slot-switch[data-date][data-start-time][data-status]');
-        const daySwitches = document.querySelectorAll('.day-switch');
+    document.addEventListener('DOMContentLoaded', function() {
 
-        // Cập nhật trạng thái công tắc time slot
-        switches.forEach(switchElement => {
-            const date = switchElement.getAttribute('data-date');
-            const startTimeStr = switchElement.getAttribute('data-start-time');
-            const status = switchElement.getAttribute('data-status');
+        /**
+         * Cập nhật trạng thái của Master Switch dựa trên các switch con
+         */
+        function updateMasterSwitchStatus(dayIndex) {
+            const childSwitches = document.querySelectorAll(`.form-check-input[data-day-index="${dayIndex}"]:not(.day-master-switch)`);
+            const masterSwitch = document.querySelector(`.day-master-switch[data-day-index="${dayIndex}"]`);
 
-            const fullStartTimeStr = `${date} ${startTimeStr}`;
-            const startTime = new Date(fullStartTimeStr);
+            if (!masterSwitch) return;
 
-            if (isNaN(startTime)) {
-                console.warn('Invalid start_time format for switch:', switchElement.id, fullStartTimeStr);
-                return;
-            }
-
-            if (now > startTime || status === 'booked') {
-                switchElement.checked = false;
-                switchElement.disabled = true;
+            if (childSwitches.length > 0) {
+                // Kiểm tra xem TẤT CẢ switch con có đang được check hay không
+                const allChecked = Array.from(childSwitches).every(sw => sw.checked);
+                masterSwitch.checked = allChecked;
+                masterSwitch.disabled = false;
             } else {
-                switchElement.disabled = false;
+                // Nếu không có switch con nào (đã lọc hết), tắt và vô hiệu hóa master
+                masterSwitch.checked = false;
+                masterSwitch.disabled = true;
             }
-        });
+        }
 
-        // Cập nhật trạng thái công tắc ngày
-        daySwitches.forEach(daySwitch => {
-            daySwitch.disabled = false; // Đảm bảo công tắc ngày không bị vô hiệu hóa
-            const accordionId = daySwitch.getAttribute('data-accordion-id');
-            const slotSwitches = document.querySelectorAll(`.slot-switch[data-accordion-id="${accordionId}"]`);
-            const anyOpen = Array.from(slotSwitches).some(slot => slot.checked && !slot.disabled);
-            daySwitch.checked = anyOpen;
-        });
-    }
+        // 1. Lắng nghe sự kiện 'change' trên CÁC MASTER SWITCH
+        const masterSwitches = document.querySelectorAll('.day-master-switch');
+        masterSwitches.forEach(masterSwitch => {
+            masterSwitch.addEventListener('change', function() {
+                const dayIndex = this.dataset.dayIndex;
+                const isChecked = this.checked;
+                // Tìm tất cả switch con CÙNG NGÀY
+                const childSwitches = document.querySelectorAll(`.form-check-input[data-day-index="${dayIndex}"]:not(.day-master-switch)`);
 
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log('Found day switches:', document.querySelectorAll('.day-switch').length);
-        updateSwitchStates();
-
-        // Xử lý sự kiện khi công tắc ngày thay đổi
-        document.querySelectorAll('.day-switch').forEach(daySwitch => {
-            // Ngăn sự kiện click lan truyền lên accordion
-            daySwitch.addEventListener('click', (event) => {
-                event.stopPropagation();
-                console.log('Day switch clicked:', daySwitch.id);
-            });
-            // Xử lý sự kiện change
-            daySwitch.addEventListener('change', (event) => {
-                event.stopPropagation();
-                console.log('Day switch changed:', daySwitch.id, 'checked:', daySwitch.checked);
-                const accordionId = daySwitch.getAttribute('data-accordion-id');
-                const slotSwitches = document.querySelectorAll(`.slot-switch[data-accordion-id="${accordionId}"]:not(:disabled)`);
-                console.log('Updating slot switches for accordion:', accordionId, 'count:', slotSwitches.length);
-                slotSwitches.forEach(slot => {
-                    slot.checked = daySwitch.checked;
+                // Bật/tắt tất cả switch con
+                childSwitches.forEach(childSwitch => {
+                    childSwitch.checked = isChecked;
                 });
             });
         });
 
-        // Xử lý sự kiện khi công tắc time slot thay đổi
-        document.querySelectorAll('.slot-switch').forEach(slotSwitch => {
-            slotSwitch.addEventListener('change', () => {
-                const accordionId = slotSwitch.getAttribute('data-accordion-id');
-                const daySwitch = document.querySelector(`.day-switch[data-accordion-id="${accordionId}"]`);
-                const slotSwitches = document.querySelectorAll(`.slot-switch[data-accordion-id="${accordionId}"]`);
-                const anyOpen = Array.from(slotSwitches).some(slot => slot.checked && !slot.disabled);
-                daySwitch.checked = anyOpen;
+        // 2. Lắng nghe sự kiện 'change' trên CÁC SWITCH CON (để cập nhật lại master)
+        const allChildSwitches = document.querySelectorAll('.form-check-input:not(.day-master-switch)[data-day-index]');
+        allChildSwitches.forEach(childSwitch => {
+            childSwitch.addEventListener('change', function() {
+                const dayIndex = this.dataset.dayIndex;
+                // Khi 1 switch con thay đổi, kiểm tra lại master
+                updateMasterSwitchStatus(dayIndex);
             });
         });
 
-        // Lắng nghe sự kiện khi accordion thay đổi
-        document.querySelectorAll('.accordion-button').forEach(button => {
-            button.addEventListener('click', updateSwitchStates);
+        // 3. Khởi tạo trạng thái Master switches khi tải trang
+        masterSwitches.forEach(masterSwitch => {
+            updateMasterSwitchStatus(masterSwitch.dataset.dayIndex);
         });
-    });
 
-    // Cập nhật trạng thái mỗi phút
-    setInterval(updateSwitchStates, 60000);
+    });
 </script>
-@endpush
-</xaiArtifact>
+
+@endsection

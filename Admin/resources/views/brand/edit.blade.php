@@ -102,12 +102,15 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="start_time" class="form-label fw-bold">Giờ mở cửa</label>
-                                <input type="time" name="start_time" id="start_time" class="form-control"
+                                <input type="time" name="start_time" id="start_time"
+                                    class="form-control w-50"
                                     value="{{ old('start_time', isset($venue->start_time) ? \Carbon\Carbon::parse($venue->start_time)->format('H:i') : '06:00') }}">
                             </div>
+
                             <div class="col-md-6 mb-3">
                                 <label for="end_time" class="form-label fw-bold">Giờ đóng cửa</label>
-                                <input type="time" name="end_time" id="end_time" class="form-control"
+                                <input type="time" name="end_time" id="end_time"
+                                    class="form-control w-50"
                                     value="{{ old('end_time', isset($venue->end_time) ? \Carbon\Carbon::parse($venue->end_time)->format('H:i') : '22:00') }}">
                             </div>
                         </div>

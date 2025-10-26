@@ -28,14 +28,14 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th style="width: 60px;">#</th>
+                            <th style="width: 60px;">ID</th>
                             <th>Tên sân</th>
                             <th>Chủ sở hữu</th>
                             <th>Địa điểm</th>
                             <th class="text-center" style="width: 140px;">Giờ mở cửa</th>
                             <th class="text-center" style="width: 140px;">Giờ đóng cửa</th>
                             <th class="text-center" style="width: 140px;">Trạng thái</th>
-                            <th class="text-end" style="width: 180px;">Hành động</th>
+                            <th class="text-center" style="width: 180px;">Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -43,8 +43,7 @@
                         <tr>
                             <td class="fw-semibold">{{ $venue->id }}</td>
                             <td>
-                                <strong class="text-dark d-block">{{ $venue->name }}</strong>
-                                <small class="text-muted">{{ $venue->address_detail ?? 'Chưa có địa chỉ chi tiết' }}</small>
+                                <strong class="text-dark d-block">{{ $venue->name }}</strong>   
                             </td>
                             <td>{{ $venue->owner->name ?? 'N/A' }}</td>
                             <td>{{ $venue->province->name ?? 'N/A' }}</td>

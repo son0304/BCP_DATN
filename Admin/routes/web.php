@@ -9,7 +9,6 @@ use App\Http\Controllers\Web\{
     UserController,
     BrandController,
     BookingController,
-    TicketController,
     AuthController
 };
 
@@ -49,6 +48,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         Route::resource('brand', BrandController::class);
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
     });
+
 
     // ====== VENUE OWNER ROUTES ======
     Route::middleware(['role:venue_owner'])->group(function () {

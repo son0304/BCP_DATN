@@ -1,20 +1,23 @@
 @extends('app')
 
 @section('content')
-{{-- Thêm <style> để định nghĩa màu xanh lá chủ đạo --}}
 <style>
     :root {
         --bs-primary: #348738;
         --bs-primary-rgb: 52, 135, 56;
     }
+
     .btn-primary {
         --bs-btn-hover-bg: #2d6a2d;
         --bs-btn-hover-border-color: #2d6a2d;
     }
+
     .btn-outline-primary {
         --bs-btn-hover-color: #fff;
     }
-    .form-control:focus, .form-select:focus {
+
+    .form-control:focus,
+    .form-select:focus {
         border-color: #84c887;
         box-shadow: 0 0 0 0.25rem rgba(52, 135, 56, 0.25);
     }
@@ -93,38 +96,38 @@
                 <fieldset>
                     <legend class="h6">2. Cập nhật khung giờ & Giá</legend>
                     <p class="text-muted small">
-                        Thay đổi tại đây sẽ xóa và tạo lại lịch cho các suất **chưa được đặt** trong tương lai. Các suất đã đặt sẽ không bị ảnh hưởng.
+                        Thay đổi tại đây sẽ xóa và tạo lại lịch cho các suất <strong>chưa được đặt</strong> trong tương lai.
                     </p>
+
                     <div id="time-slots-container" class="p-3 bg-light rounded border">
-                        {{-- Hiển thị các khung giờ/giá đã có --}}
-                        @foreach ($currentPrices as $slotId => $price)
-                            <div class="row align-items-center mb-2 time-slot-row p-2 bg-white rounded border">
-                                <div class="col-md-5">
-                                    <select class="form-select form-select-sm" name="slot_ids[]" required>
-                                        <option value="">-- Chọn khung giờ --</option>
-                                        @foreach ($timeSlots as $slot)
-                                            <option value="{{ $slot->id }}" {{ $slotId == $slot->id ? 'selected' : '' }}>
-                                                {{ date('H:i', strtotime($slot->start_time)) }} - {{ date('H:i', strtotime($slot->end_time)) }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-5">
-                                    <input type="number" class="form-control form-control-sm" name="slot_prices[]" placeholder="Nhập giá (VNĐ)"
-                                        min="0" step="1000" value="{{ $price }}" required>
-                                </div>
-                                <div class="col-md-2 d-flex align-items-center justify-content-end">
-                                    <button type="button" class="btn btn-sm btn-outline-danger remove-slot-btn" title="Xóa khung giờ">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
+                        @foreach ($currentPricesDetailed as $i => $item)
+                        <div class="row align-items-center mb-2 time-slot-row p-2 bg-white rounded border">
+                            <div class="col-md-3">
+                                <input type="time" class="form-control form-control-sm" name="time_slots[{{ $i }}][start_time]"
+                                    value="{{ \Carbon\Carbon::parse($item['start_time'])->format('H:i') }}" required>
                             </div>
+                            <div class="col-md-3">
+                                <input type="time" class="form-control form-control-sm" name="time_slots[{{ $i }}][end_time]"
+                                    value="{{ \Carbon\Carbon::parse($item['end_time'])->format('H:i') }}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="number" class="form-control form-control-sm" name="time_slots[{{ $i }}][price]"
+                                    value="{{ $item['price'] }}" min="0" step="1000" required>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-center justify-content-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-slot-btn">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
                         @endforeach
                     </div>
+
                     <button type="button" id="add-time-slot-btn" class="btn btn-outline-primary mt-3">
                         <i class="fas fa-plus me-1"></i> Thêm khung giờ
                     </button>
                 </fieldset>
+
 
                 <div class="card-footer bg-white text-end border-0 px-0 pt-4">
                     <a href="{{ route('admin.courts.index') }}" class="btn btn-secondary">Hủy bỏ</a>
@@ -139,52 +142,92 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        if (typeof $ === 'undefined') {
-            console.error('jQuery is not loaded!');
-            return;
+        const container = document.getElementById('time-slots-container');
+
+        function splitTimeIntoHourlySlots(startTime, endTime, price) {
+            const slots = [];
+            const start = new Date(`2000-01-01T${startTime}`);
+            const end = new Date(`2000-01-01T${endTime}`);
+
+            let current = new Date(start);
+            while (current < end) {
+                const next = new Date(current);
+                next.setHours(next.getHours() + 1);
+                if (next > end) break;
+
+                slots.push({
+                    start_time: current.toTimeString().slice(0, 5),
+                    end_time: next.toTimeString().slice(0, 5),
+                    price: price
+                });
+
+                current = next;
+            }
+            return slots;
         }
 
-        const allTimeSlots = @json($timeSlots);
-        const container = $('#time-slots-container');
-
-        // Hàm tạo một hàng slot mới (để thêm)
-        function createTimeSlotRow() {
-            const options = allTimeSlots.map(slot => {
-                const startTime = slot.start_time.substring(0, 5);
-                const endTime = slot.end_time.substring(0, 5);
-                return `<option value="${slot.id}">${startTime} - ${endTime}</option>`;
-            }).join('');
-
-            return `
-            <div class="row align-items-center mb-2 time-slot-row p-2 bg-white rounded border">
-                <div class="col-md-5">
-                    <select class="form-select form-select-sm" name="slot_ids[]" required>
-                        <option value="" disabled selected>-- Chọn khung giờ --</option>
-                        ${options}
-                    </select>
-                </div>
-                <div class="col-md-5">
-                    <input type="number" class="form-control form-control-sm" name="slot_prices[]" placeholder="Nhập giá (VNĐ)" min="0" step="1000" required>
-                </div>
-                <div class="col-md-2 d-flex align-items-center justify-content-end">
-                    <button type="button" class="btn btn-sm btn-outline-danger remove-slot-btn" title="Xóa khung giờ">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>`;
+        function regenerateIndex() {
+            container.querySelectorAll('.time-slot-row').forEach((row, i) => {
+                row.querySelectorAll('input').forEach(input => {
+                    input.name = input.name.replace(/time_slots\[\d+]/, `time_slots[${i}]`);
+                });
+            });
         }
 
-        // Sự kiện click nút "Thêm khung giờ"
-        $(document).on('click', '#add-time-slot-btn', function(e) {
-            e.preventDefault();
-            container.append(createTimeSlotRow());
+        function addRow(start = "", end = "", price = "") {
+            const index = container.querySelectorAll('.time-slot-row').length;
+
+            const row = `
+        <div class="row align-items-center mb-2 time-slot-row p-2 bg-white rounded border">
+            <div class="col-md-3">
+                <input type="time" class="form-control form-control-sm start" name="time_slots[${index}][start_time]" value="${start}" required>
+            </div>
+            <div class="col-md-3">
+                <input type="time" class="form-control form-control-sm end" name="time_slots[${index}][end_time]" value="${end}" required>
+            </div>
+            <div class="col-md-4">
+                <input type="number" class="form-control form-control-sm price" name="time_slots[${index}][price]" value="${price}" min="0" step="1000" required>
+            </div>
+            <div class="col-md-2 text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-slot-btn">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>`;
+
+            container.insertAdjacentHTML('beforeend', row);
+        }
+
+        document.getElementById('add-time-slot-btn').addEventListener('click', function() {
+            addRow();
         });
 
-        // Sự kiện click nút "Xóa" (cho cả hàng cũ và hàng mới)
-        $(document).on('click', '.remove-slot-btn', function(e) {
-            e.preventDefault();
-            $(this).closest('.time-slot-row').remove();
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-slot-btn')) {
+                e.target.closest('.time-slot-row').remove();
+                regenerateIndex();
+            }
         });
+
+        document.addEventListener('change', function(e) {
+            const row = e.target.closest('.time-slot-row');
+            if (!row) return;
+
+            const start = row.querySelector('.start').value;
+            const end = row.querySelector('.end').value;
+            const price = row.querySelector('.price').value;
+
+            if (start && end && price) {
+                const slots = splitTimeIntoHourlySlots(start, end, price);
+
+                if (slots.length > 1) {
+                    row.remove();
+                    slots.forEach(s => addRow(s.start_time, s.end_time, s.price));
+                    regenerateIndex();
+                }
+            }
+        });
+
     });
 </script>
 @endpush

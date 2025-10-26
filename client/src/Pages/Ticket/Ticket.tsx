@@ -104,7 +104,6 @@ const Ticket: React.FC = () => {
             </div>
           )}
           
-          {/* Thêm class 'blur-sm' và 'pointer-events-none' khi ticket bị hủy để làm mờ và vô hiệu hóa nội dung */}
           <div className={`p-6 sm:p-8 space-y-8 ${ticket.status === 'cancelled' ? 'blur-sm pointer-events-none' : ''}`}>
           
             {/* Phần Trạng thái (Render trực tiếp) */}

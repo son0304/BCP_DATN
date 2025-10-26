@@ -9,7 +9,7 @@ import {
     deleteData,
 } from "../Api/fetchApi";
 
-// 🟢 GET all
+//  GET all
 export function useFetchData<T>(resource: string, params?: Record<string, any>) {
     return useQuery<ApiResponse<T>>({
         queryKey: [resource, params],
@@ -17,7 +17,7 @@ export function useFetchData<T>(resource: string, params?: Record<string, any>) 
     });
 }
 
-// 🟢 GET by ID
+//  GET by ID
 export function useFetchDataById<T>(resource: string, id: string | number, params?: Record<string, any>) {
     return useQuery<ApiResponse<T>>({
         queryKey: [resource, id, params],
@@ -26,18 +26,18 @@ export function useFetchDataById<T>(resource: string, id: string | number, param
     });
 }
 
-// 🟢 POST
+//  POST
 export function usePostData<TOut, TIn = unknown>(resource: string) {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (data: TIn) => postData<TOut, TIn>(resource, data),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: [resource] }),
-        onError: (error)=> console.log(error)
-        
+        onError: (error) => console.log(error)
+
     });
 }
 
-// 🟢 PUT
+//  PUT
 export function usePutData<TOut, TIn = unknown>(resource: string) {
     const queryClient = useQueryClient();
     return useMutation({
@@ -46,7 +46,7 @@ export function usePutData<TOut, TIn = unknown>(resource: string) {
     });
 }
 
-// 🟢 PATCH
+//  PATCH
 export function usePatchData<TOut, TIn = unknown>(resource: string) {
     const queryClient = useQueryClient();
     return useMutation({
@@ -55,7 +55,7 @@ export function usePatchData<TOut, TIn = unknown>(resource: string) {
     });
 }
 
-// 🟢 DELETE
+// 
 export function useDeleteData<TOut = unknown>(resource: string) {
     const queryClient = useQueryClient();
     return useMutation({

@@ -3,6 +3,7 @@ import { useFetchData } from "../../Hooks/useApi";
 import Detail_Venue from "./Detail_Venue";
 import type { Venue } from "../../Types/venue";
 import type { Image } from "../../Types/image";
+import { useNavigate } from "react-router-dom";
 
 interface VenuesProps {
   limit?: number;
@@ -10,20 +11,20 @@ interface VenuesProps {
 
 // Component "khung xương" cho hiệu ứng tải trang chuyên nghiệp
 const VenueCardSkeleton = () => (
-    <div className="bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse border border-gray-200">
-        <div className="w-full h-56 bg-gray-200"></div>
-        <div className="p-5">
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="h-6 bg-gray-300 rounded w-1/2 mb-4"></div>
-            <div className="h-4 bg-gray-300 rounded w-full mb-6"></div>
-            <div className="h-10 bg-gray-300 rounded-lg w-full"></div>
-        </div>
+  <div className="bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse border border-gray-200">
+    <div className="w-full h-56 bg-gray-200"></div>
+    <div className="p-5">
+      <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+      <div className="h-6 bg-gray-300 rounded w-1/2 mb-4"></div>
+      <div className="h-4 bg-gray-300 rounded w-full mb-6"></div>
+      <div className="h-10 bg-gray-300 rounded-lg w-full"></div>
     </div>
+  </div>
 );
 
 
 const List_Venue = ({ limit }: VenuesProps) => {
-  const [selectedVenue, setSelectedVenue] = useState<number | null>(null);
+  const nagvigate = useNavigate();
   const { data: venueData, isLoading, isError } = useFetchData<Venue[]>("venues");
 
   if (isError)
@@ -35,7 +36,7 @@ const List_Venue = ({ limit }: VenuesProps) => {
   return (
     <div>
       <div className="container max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-2 md:px-0">
-        
+
         {isLoading ? (
           // Hiển thị skeleton loader trong khi tải
           Array.from({ length: limit || 4 }).map((_, index) => (
@@ -54,7 +55,7 @@ const List_Venue = ({ limit }: VenuesProps) => {
               >
                 <div className="relative overflow-hidden">
                   <img
-                    onClick={() => setSelectedVenue(venue.id)}
+                    onClick={() => nagvigate(`/venues/${venue.id}`)}
                     src={
                       primaryImage?.url ||
                       "https://via.placeholder.com/400x300?text=BCP+Sports"
@@ -110,7 +111,7 @@ const List_Venue = ({ limit }: VenuesProps) => {
                   </div>
 
                   <button
-                    onClick={() => setSelectedVenue(venue.id)}
+                    onClick={() => nagvigate(`/venues/${venue.id}`)}
                     className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2"
                   >
                     Xem chi tiết
@@ -126,27 +127,7 @@ const List_Venue = ({ limit }: VenuesProps) => {
         )}
       </div>
 
-      {selectedVenue && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={() => setSelectedVenue(null)}
-        >
-          <div
-            className="bg-white w-[95%] max-w-5xl h-[90%] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="absolute top-3 right-4 text-gray-500 hover:text-gray-900 text-3xl font-light z-20"
-              onClick={() => setSelectedVenue(null)}
-            >
-              &times;
-            </button>
-            <div className="flex-grow overflow-y-auto">
-              <Detail_Venue id={selectedVenue} />
-            </div>
-          </div>
-        </div>
-      )}
+   
     </div>
   );
 };

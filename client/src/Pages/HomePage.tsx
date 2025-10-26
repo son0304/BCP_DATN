@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom"
 import List_Venue from "./Venues/List_Venues"
 
 const Content = () => {
@@ -10,7 +11,7 @@ const Content = () => {
                 <div className="absolute top-10 left-10 w-32 h-32 bg-gradient-to-r from-[#348738]/30 to-green-400/30 rounded-full blur-xl"></div>
                 <div className="absolute bottom-10 right-10 w-40 h-40 bg-gradient-to-r from-green-400/30 to-[#348738]/30 rounded-full blur-xl"></div>
             </section>
-            
+
             <section className="container mx-auto max-w-7xl bg-white/95 backdrop-blur-sm md:h-64 h-full md:-mt-20 md:relative md:z-10 rounded-2xl shadow-2xl border border-white/20 p-6">
                 <div className="w-full m-auto">
                     <div className="my-6 text-center">
@@ -89,7 +90,7 @@ const Content = () => {
                     </div>
                 </div>
             </section>
-            
+
             <section className="py-8 md:py-16 from-white to-gray-50">
                 <div className="container max-w-7xl mx-auto px-4">
                     <div className="text-center mb-12">
@@ -100,7 +101,17 @@ const Content = () => {
                         <p className="text-lg text-gray-600">Những sân thể thao được yêu thích nhất</p>
                     </div>
 
-                    <List_Venue limit={4} />
+                    <div >
+                        <div className="flex justify-end">
+                            <Link to={'venues'}>
+                                <button className="h-3 flex items-center gap-2 right-0 mb-5 ml-0">
+                                    <p>Xem thêm</p>
+                                    <i className="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </Link>
+                        </div>
+                        <List_Venue limit={4} />
+                    </div>
                 </div>
             </section>
 
@@ -108,7 +119,7 @@ const Content = () => {
             <section className="py-12 md:py-20 to-green-50">
                 <div className="container mx-auto max-w-7xl px-4">
                     <div className="text-center mb-16">
-                         {/* Tiêu đề xanh lá */}
+                        {/* Tiêu đề xanh lá */}
                         <h1 className="md:text-5xl text-3xl font-bold text-[#2d6a2d] my-4">
                             Tại sao lại chọn chúng tôi
                         </h1>

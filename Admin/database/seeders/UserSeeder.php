@@ -27,6 +27,7 @@ class UserSeeder extends Seeder
                 'lat' => 21.0278,
                 'lng' => 105.8342,
                 'is_active' => true,
+                'avt' => 'default-avatar.png', // thêm avatar mặc định
             ]
         );
 

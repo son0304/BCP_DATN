@@ -40,21 +40,25 @@ Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index'
 // ==============================
 // ====== ADMIN ROUTES ======
 // ==============================
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+    // Dashboard - Admin và Chủ sân đều có thể truy cập
     Route::get('/', [HomeController::class, 'index'])->name('home.index');
 
-    // Quản lý Địa điểm (Venues)
-    Route::resource('brand', BrandController::class);
+    // ====== ADMIN ONLY ROUTES ======
+    Route::middleware(['role:admin'])->group(function () {
+        Route::resource('brand', BrandController::class);
 
-    // Quản lý Sân (Courts) & Lịch (Availabilities)
-    Route::resource('courts', CourtController::class);
-    Route::post('/courts/{court}/availabilities/update', [AvailabilityController::class, 'updateAll'])
-        ->name('courts.updateAvailabilities');
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
 
-    // Quản lý Booking & Ticket
-    Route::resource('bookings', BookingController::class);
+        Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 
-    // Quản lý Người dùng & Đánh giá
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+        Route::resource('bookings', BookingController::class);
+    });
+
+    // ====== VENUE OWNER ROUTES ======
+    Route::middleware(['role:admin,venue_owner'])->group(function () {
+        Route::resource('courts', CourtController::class);
+        Route::post('/courts/{court}/availabilities/update', [AvailabilityController::class, 'updateAll'])
+            ->name('courts.updateAvailabilities');
+    });
 });

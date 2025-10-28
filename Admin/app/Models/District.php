@@ -16,7 +16,7 @@ class District extends Model
     public function venues (){
         return $this->hasMany(Venue::class);
     }
-    public function privince (){
+    public function province (){
         return $this->belongsTo(Province::class, 'province_id');
     }
 }

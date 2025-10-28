@@ -2,6 +2,7 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Admin - Booking Court Prime</title>
     <!-- plugins:css -->
     <link rel="stylesheet" href="{{ asset('dist/assets/vendors/mdi/css/materialdesignicons.min.css') }}">
@@ -12,6 +13,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" />
     <!-- Layout styles -->
     <link rel="stylesheet" href="{{ asset('dist/assets/css/style.css') }}">
+    <!-- User Management Styles -->
+    <link rel="stylesheet" href="{{ asset('css/user-management.css') }}">
     <!-- Favicon -->
     <link rel="shortcut icon" href="{{ asset('dist/assets/images/logo.png') }}" />
   </head>

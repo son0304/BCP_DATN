@@ -1,0 +1,33 @@
+/* Simple search form styling */
+.search-filter-container {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 1.5rem;
+}
+
+.search-filter-container .form-control {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+}
+
+.search-filter-container .form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+.search-filter-container .btn {
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+/* Bootstrap 4 compatibility fixes */
+.me-3 { margin-right: 1rem !important; }
+.me-2 { margin-right: 0.5rem !important; }
+.mr-3 { margin-right: 1rem !important; }
+.mr-2 { margin-right: 0.5rem !important; }
+.mb-1 { margin-bottom: 0.25rem !important; }
+.mb-0 { margin-bottom: 0 !important; }
+.font-weight-bold { font-weight: 700 !important; }
+.d-flex { display: flex !important; }
+.flex-column { flex-direction: column !important; }

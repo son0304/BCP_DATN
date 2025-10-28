@@ -30,7 +30,10 @@ class Venue extends Model
     {
         return $this->hasMany(Image::class);
     }
-
+    public function district()
+    {
+        return $this->belongsTo(District::class);
+    }
     public function courts()
     {
         return $this->hasMany(Court::class);
@@ -60,7 +63,7 @@ class Venue extends Model
     {
         return $this->hasManyThrough(Ticket::class, Court::class, 'venue_id', 'court_id');
     }
-    
+
     public function venueTypes()
     {
         return $this->belongsToMany(

@@ -23,77 +23,77 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Email verification routes
+// Email verification
 Route::get('/verify-email/{token}', [AuthController::class, 'verifyEmail'])->name('verify.email');
 Route::post('/resend-verification', [AuthController::class, 'resendVerification'])->name('resend.verification');
 
-
+// Public pages
+Route::get('/', [HomeController::class, 'index'])->name('home.index');
+Route::get('/courts', [CourtController::class, 'index'])->name('courts.index');
+Route::get('/users', [UserController::class, 'index'])->name('users.index');
+Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 
 // ==============================
 // ====== AUTHENTICATED ROUTES ======
 // ==============================
-
-
 Route::middleware(['auth'])->group(function () {
-    Route::get('/', [HomeController::class, 'index'])->name('home.index');
     Route::get('venue', [VenueController::class, 'index'])->name('venue.index');
-    Route::get('venue/{venue}', [VenueController::class, 'showVenueDetail'])
-        ->name('venue.show');
-    Route::get('venue/{venue}/courts', [CourtController::class, 'indexByVenue'])
-        ->name('venue.courts.index');
+    Route::get('venue/{venue}', [VenueController::class, 'showVenueDetail'])->name('venue.show');
+    Route::get('venue/{venue}/courts', [CourtController::class, 'indexByVenue'])->name('venue.courts.index');
 });
 
+// ==============================
+// ====== ADMIN ROUTES ======
+// ==============================
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
 
-// ====== ADMIN ======
-Route::middleware(['role:admin'])->prefix('admin/venue')->name('admin.venue.')->group(function () {
-    Route::patch('{venue}/update-status', [VenueController::class, 'updateStatus'])
-        ->name('updateStatus');
+    // Dashboard
+    Route::get('/', [HomeController::class, 'index'])->name('home.index');
+
+    // Manage Venues
+    Route::prefix('venue')->name('venue.')->group(function () {
+        Route::patch('{venue}/update-status', [VenueController::class, 'updateStatus'])->name('updateStatus');
+    });
+
+    // Manage Users
+    Route::resource('users', UserController::class);
+    Route::post('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+
+    // Manage Reviews
+    Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
 });
 
-Route::prefix('users')->name('users.')->group(function () {
-    Route::get('/', [UserController::class, 'index'])->name('index');
-    Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
-    Route::put('/{user}', [UserController::class, 'update'])->name('update');
-    Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
-});
+// ==============================
+// ====== VENUE OWNER ROUTES ======
+// ==============================
+Route::middleware(['auth', 'role:venue_owner'])->group(function () {
 
-Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+    // Venue CRUD
+    Route::prefix('venue')->name('venue.')->group(function () {
+        Route::get('create', [VenueController::class, 'create'])->name('create');
+        Route::post('/', [VenueController::class, 'store'])->name('store');
+        Route::get('{venue}/edit', [VenueController::class, 'edit'])->name('edit');
+        Route::put('{venue}', [VenueController::class, 'update'])->name('update');
+        Route::delete('{venue}', [VenueController::class, 'destroy'])->name('destroy');
 
-Route::resource('bookings', BookingController::class);
+        // Courts CRUD nested under venue
+        Route::prefix('{venue}/courts')->name('courts.')->group(function () {
+            Route::get('create', [CourtController::class, 'create'])->name('create');
+            Route::post('/', [CourtController::class, 'store'])->name('store');
+            Route::get('{court}', [CourtController::class, 'show'])->name('show');
+            Route::get('{court}/edit', [CourtController::class, 'edit'])->name('edit');
+            Route::put('{court}', [CourtController::class, 'update'])->name('update');
+            Route::delete('{court}', [CourtController::class, 'destroy'])->name('destroy');
+        });
+    });
 
-
-// ====== VENUE OWNER ======
-Route::middleware(['role:venue_owner'])->group(function () {
-    Route::get('venue/create', [VenueController::class, 'create'])->name('venue.create');
-    Route::post('venue', [VenueController::class, 'store'])->name('venue.store');
-    Route::get('venue/{venue}/edit', [VenueController::class, 'edit'])->name('venue.edit');
-    Route::put('venue/{venue}', [VenueController::class, 'update'])->name('venue.update');
-    Route::delete('venue/{venue}', [VenueController::class, 'destroy'])->name('venue.destroy');
-
-    // --- QUẢN LÝ SÂN (COURTS) ---
-    // Danh sách sân theo venue
-
-    // Form thêm sân mới (có thể nhận venue_id qua query)
-    Route::get('venue/{venue}/courts/create', [CourtController::class, 'create'])->name('courts.create');
-    Route::post('courts', [CourtController::class, 'store'])->name('courts.store');
-    // Chi tiết sân trong venue cụ thể
-    Route::get('venue/{venue}/courts/{court}', [CourtController::class, 'show'])
-        ->name('venue.courts.show');
-    // Form sửa sân (gắn với venue)
-    Route::get('venue/{venue}/courts/{court}/edit', [CourtController::class, 'edit'])
-        ->name('venue.courts.edit');
-    // Cập nhật sân
-    Route::put('venue/{venue}/courts/{court}', [CourtController::class, 'update'])
-        ->name('venue.courts.update');
-    // Xóa sân
-    Route::delete('venue/{venue}/courts/{court}', [CourtController::class, 'destroy'])
-        ->name('venue.courts.destroy');
-    // Cập nhật khung giờ khả dụng
+    // Update court availabilities
     Route::post('courts/{court}/availabilities/update', [AvailabilityController::class, 'updateAll'])
         ->name('courts.updateAvailabilities');
 
+    // Manage Reviews
+    Route::get('reviews', [ReviewController::class, 'index'])->name('reviews.index');
 
-    // Đánh giá & Đơn đặt sân
-    Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+    // Manage Bookings
     Route::resource('bookings', BookingController::class);
 });

@@ -54,8 +54,7 @@
                     </div>
                 @endif
 
-                <form action="{{ route('courts.store') }}" method="POST">
-                    @csrf
+                <form action="{{ route('venue.courts.store', ['venue' => $venue->id]) }}" method="POST"> @csrf
                     <input type="hidden" name="venue_id" value="{{ $venue->id }}">
 
                     <fieldset class="mb-4">
@@ -63,27 +62,33 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label for="name" class="form-label">Tên sân <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="name" name="name" value="{{ old('name') }}" required>
+                                <input type="text" class="form-control" id="name" name="name"
+                                    value="{{ old('name') }}" required>
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label for="venue_type_id" class="form-label">Loại hình <span class="text-danger">*</span></label>
+                                <label for="venue_type_id" class="form-label">Loại hình <span
+                                        class="text-danger">*</span></label>
                                 <select class="form-select" id="venue_type_id" name="venue_type_id" required>
                                     <option value="" disabled selected>-- Chọn loại hình --</option>
                                     @foreach ($venueTypes as $venueType)
-                                        <option value="{{ $venueType->id }}" {{ old('venue_type_id') == $venueType->id ? 'selected' : '' }}>
+                                        <option value="{{ $venueType->id }}"
+                                            {{ old('venue_type_id') == $venueType->id ? 'selected' : '' }}>
                                             {{ $venueType->name }}
                                         </option>
                                     @endforeach
                                 </select>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label for="is_indoor" class="form-label">Loại sân <span class="text-danger">*</span></label>
+                                <label for="is_indoor" class="form-label">Loại sân <span
+                                        class="text-danger">*</span></label>
                                 <select class="form-select" id="is_indoor" name="is_indoor" required>
-                                    <option value="1" {{ old('is_indoor', '1') == '1' ? 'selected' : '' }}>Trong nhà</option>
-                                    <option value="0" {{ old('is_indoor', '0') == '0' ? 'selected' : '' }}>Ngoài trời</option>
+                                    <option value="1" {{ old('is_indoor', '1') == '1' ? 'selected' : '' }}>Trong nhà
+                                    </option>
+                                    <option value="0" {{ old('is_indoor', '0') == '0' ? 'selected' : '' }}>Ngoài trời
+                                    </option>
                                 </select>
                             </div>
                             <div class="col-md-4 mb-3">

@@ -27,7 +27,6 @@ class VenueApiController extends Controller
             'sort' => 'nullable|in:rating_desc,rating_asc',
         ]);
 
-        // --- ĐÃ SỬA: Bỏ các quan hệ không cần thiết cho list view ---
         $query = Venue::with([
             'images:id,venue_id,url,is_primary',
             'courts:id,venue_id',
@@ -35,19 +34,25 @@ class VenueApiController extends Controller
             'venueTypes:id,name',
         ])->withAvg('reviews', 'rating');
 
-        // Filter logic
+        // Lọc chỉ lấy venues active
+        $query->where('is_active', 1);
+
+        // Filter theo loại venue
         if ($request->filled('type_id')) {
-            // --- ĐÃ SỬA: Sửa lại tên quan hệ cho đúng ---
             $query->whereHas('venueTypes', fn($q) => $q->where('venue_types.id', $request->type_id));
         }
+
+        // Filter theo tỉnh
         if ($request->filled('province_id')) {
             $query->where('province_id', $request->province_id);
         }
+
+        // Filter theo quận/huyện
         if ($request->filled('district_id')) {
             $query->where('district_id', $request->district_id);
         }
 
-        // Sort logic
+        // Sắp xếp theo đánh giá
         if ($request->sort === 'rating_desc') {
             $query->orderByDesc('reviews_avg_rating');
         } elseif ($request->sort === 'rating_asc') {
@@ -62,6 +67,7 @@ class VenueApiController extends Controller
             'data' => $venues,
         ]);
     }
+
 
 
     public function show(Request $request, $id)

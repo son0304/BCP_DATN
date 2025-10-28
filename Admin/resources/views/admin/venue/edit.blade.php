@@ -9,13 +9,13 @@
             <p class="text-muted mb-0">Cập nhật thông tin cho: <strong>{{ $venue->name }}</strong></p>
         </div>
         <div>
-            <a href="{{ route('admin.brand.index') }}" class="btn btn-outline-secondary">
+            <a href="{{ route('brand.index') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-1"></i> Quay lại danh sách
             </a>
         </div>
     </div>
 
-    <form action="{{ route('admin.brand.update', $venue) }}" method="POST">
+    <form action="{{ route('brand.update', $venue) }}" method="POST">
         @csrf
         @method('PUT')
 

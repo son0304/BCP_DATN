@@ -1,7 +1,7 @@
 <nav class="sidebar sidebar-offcanvas" id="sidebar">
     <ul class="nav">
-        {{-- Thông tin người quản trị --}}
-        @if(auth()->check())
+        @if (auth()->check())
+            {{-- Profile --}}
             <li class="nav-item nav-profile">
                 <a href="#" class="nav-link">
                     <div class="nav-profile-image">
@@ -18,47 +18,46 @@
 
             {{-- Menu chung --}}
             <li class="nav-item">
-                <a class="nav-link" href="{{ route('admin.home.index') }}">
+                <a class="nav-link" href="{{ route('home.index') }}">
                     <span class="menu-title">Thống kê</span>
                     <i class="mdi mdi-home menu-icon"></i>
                 </a>
             </li>
 
-            {{-- ====== ADMIN ONLY MENU ====== --}}
-            @if(auth()->user()->role->name === 'admin')
+            {{-- Admin menu --}}
+            @if (auth()->user()->role->name === 'admin')
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.users.index') }}">
+                    <a class="nav-link" href="{{ route('users.index') }}">
                         <span class="menu-title">Người dùng</span>
                         <i class="mdi mdi-account menu-icon"></i>
                     </a>
                 </li>
-
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.brand.index') }}">
+                    <a class="nav-link" href="{{ route('venue.index') }}">
                         <span class="menu-title">Quản lý thương hiệu</span>
                         <i class="mdi mdi-store menu-icon"></i>
                     </a>
                 </li>
             @endif
 
-            {{-- ====== VENUE OWNER ONLY MENU ====== --}}
-            @if(auth()->user()->role->name === 'venue_owner')
+            {{-- Venue owner menu --}}
+            @if (auth()->user()->role->name === 'venue_owner')
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.courts.index') }}">
-                        <span class="menu-title">Quản lý sân</span>
-                        <i class="mdi mdi-tennis menu-icon"></i>
+                    <a class="nav-link" href="{{ route('venue.index') }}">
+                        <span class="menu-title">Thương Hiệu</span>
+                        <i class="mdi mdi-store menu-icon"></i>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.reviews.index') }}">
+                    <a class="nav-link" href="{{ route('reviews.index') }}">
                         <span class="menu-title">Đánh giá</span>
                         <i class="mdi mdi-star menu-icon"></i>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.bookings.index') }}">
+                    <a class="nav-link" href="{{ route('bookings.index') }}">
                         <span class="menu-title">Đơn đặt sân</span>
                         <i class="mdi mdi-calendar-check menu-icon"></i>
                     </a>
@@ -66,7 +65,7 @@
             @endif
         @endif
 
-        {{-- Tài liệu --}}
+        {{-- Documentation --}}
         <li class="nav-item">
             <a class="nav-link" href="docs/documentation.html" target="_blank">
                 <span class="menu-title">Tài liệu hướng dẫn</span>

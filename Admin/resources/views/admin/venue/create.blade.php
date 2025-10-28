@@ -9,14 +9,14 @@
             <p class="text-muted mb-0">Nhập thông tin chi tiết cho thương hiệu sân.</p>
         </div>
         <div>
-            <a href="{{ route('admin.brand.index') }}" class="btn btn-outline-secondary">
+            <a href="{{ route('brand.index') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-1"></i> Quay lại danh sách
             </a>
         </div>
     </div>
 
     {{-- Form --}}
-    <form action="{{ route('admin.brand.store') }}" method="POST">
+    <form action="{{ route('brand.store') }}" method="POST">
         @csrf
         <div class="row">
             {{-- Cột trái --}}
@@ -161,35 +161,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const slots = [];
         const start = new Date('2000-01-01 ' + startTime);
         const end = new Date('2000-01-01 ' + endTime);
-        
+
         // Nếu thời gian kết thúc là ngày hôm sau (ví dụ: 23:00 - 01:00)
         if (end <= start) {
             end.setDate(end.getDate() + 1);
         }
-        
+
         let current = new Date(start);
-        
+
         while (current < end) {
             const nextHour = new Date(current);
             nextHour.setHours(nextHour.getHours() + 1);
-            
+
             // Nếu slot tiếp theo vượt quá thời gian kết thúc, dừng lại
             if (nextHour > end) {
                 break;
             }
-            
+
             const slotStart = current.toTimeString().substring(0, 5);
             const slotEnd = nextHour.toTimeString().substring(0, 5);
-            
+
             slots.push({
                 start_time: slotStart,
                 end_time: slotEnd,
                 price: price
             });
-            
+
             current = nextHour;
         }
-        
+
         return slots;
     }
 
@@ -198,12 +198,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.court-item').forEach((courtItem, courtIdx) => {
             const tbody = courtItem.querySelector('tbody');
             const rows = tbody.querySelectorAll('tr');
-            
+
             rows.forEach((row, slotIdx) => {
                 const startInput = row.querySelector('.time-start');
                 const endInput = row.querySelector('.time-end');
                 const priceInput = row.querySelector('.time-price');
-                
+
                 if (startInput) startInput.name = `courts[${courtIdx}][time_slots][${slotIdx}][start_time]`;
                 if (endInput) endInput.name = `courts[${courtIdx}][time_slots][${slotIdx}][end_time]`;
                 if (priceInput) priceInput.name = `courts[${courtIdx}][time_slots][${slotIdx}][price]`;
@@ -335,18 +335,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const startTime = row.querySelector('.time-start').value;
             const endTime = row.querySelector('.time-end').value;
             const price = row.querySelector('.time-price').value;
-            
+
             if (startTime && endTime && price) {
                 const slots = splitTimeIntoHourlySlots(startTime, endTime, price);
-                
+
                 if (slots.length > 1) {
                     const courtItem = row.closest('.court-item');
                     const tbody = courtItem.querySelector('tbody');
                     const courtIdx = Array.from(courtList.children).indexOf(courtItem);
-                    
+
                     // Xóa hàng hiện tại
                     row.remove();
-                    
+
                     // Thêm các slot 1 giờ
                     slots.forEach((slot, slotIdx) => {
                         tbody.insertAdjacentHTML('beforeend', `
@@ -360,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             </tr>
                         `);
                     });
-                    
+
                     updateTimeSlotNames();
                 }
             }

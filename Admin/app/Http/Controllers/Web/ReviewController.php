@@ -8,6 +8,6 @@ use Illuminate\Http\Request;
 class ReviewController extends Controller
 {
     public function index (){
-        return view('reviews.index');
+        return view('venue_owner.reviews.index');
     }
 }

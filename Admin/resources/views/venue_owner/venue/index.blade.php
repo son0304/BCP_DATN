@@ -6,10 +6,10 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-0 fw-bold">Quản lý thương hiệu sân</h1>
-            <p class="text-muted mb-0">Danh sách tất cả các sân trong hệ thống.</p>
+            <p class="text-muted mb-0">Danh sách tất cả các thương hiệu của bạn.</p>
         </div>
-        <a href="{{ route('admin.brand.create') }}" class="btn btn-primary shadow-sm px-4">
-            <i class="fas fa-plus me-2"></i> Thêm sân mới
+        <a href="{{ route('venue.create') }}" class="btn btn-primary shadow-sm px-4">
+            <i class="fas fa-plus me-2"></i> Thêm thương hiệu
         </a>
     </div>
 
@@ -43,7 +43,7 @@
                         <tr>
                             <td class="fw-semibold">{{ $venue->id }}</td>
                             <td>
-                                <strong class="text-dark d-block">{{ $venue->name }}</strong>   
+                                <strong class="text-dark d-block">{{ $venue->name }}</strong>
                             </td>
                             <td>{{ $venue->owner->name ?? 'N/A' }}</td>
                             <td>{{ $venue->province->name ?? 'N/A' }}</td>
@@ -85,10 +85,10 @@
 
                             {{-- Hành động --}}
                             <td class="text-end">
-                                <a href="{{ route('admin.brand.edit', $venue->id) }}" class="btn btn-sm btn-outline-secondary me-2">
-                                    <i class="fas fa-edit"></i> Sửa
+                                <a href="{{ route('venue.show', $venue->id) }}" class="btn btn-sm btn-outline-secondary me-2">
+                                    <i class="fas fa-edit"></i> Show
                                 </a>
-                                <form action="{{ route('admin.brand.destroy', $venue->id) }}" method="POST" class="d-inline" 
+                                <form action="{{ route('venue.destroy', $venue->id) }}" method="POST" class="d-inline"
                                     onsubmit="return confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN sân này? Hành động này không thể hoàn tác!')">
                                     @csrf
                                     @method('DELETE')

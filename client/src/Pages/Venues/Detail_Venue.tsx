@@ -99,6 +99,10 @@ const Detail_Venue = () => {
       showNotification("Vui lòng chọn khung giờ muốn đặt.", "error");
       return;
     }
+    if (!user) {
+      showNotification("Vui lòng đăng nhập để book sân.", "error");
+      return
+    }
 
     const itemsData = selectedItems.map((item) => ({
       court_id: item.court_id,
@@ -118,7 +122,7 @@ const Detail_Venue = () => {
 
     mutate(bookingData, {
       onSuccess: (response) => {
-        const { success, message, data } = response ;
+        const { success, message, data } = response;
         if (success) {
           showNotification("Đặt sân thành công! Chuyển hướng đến chi tiết đơn hàng.", "success");
           navigate(`/booking/${data}`);
@@ -144,7 +148,7 @@ const Detail_Venue = () => {
 
   return (
     <>
-    
+
       <div className="max-w-4xl mx-auto min-h-screen bg-white rounded-xl shadow-2xl overflow-hidden mb-10">
         {/* Hero Section */}
         <div

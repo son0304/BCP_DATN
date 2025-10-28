@@ -3,7 +3,7 @@
 @section('content')
 <div class="container py-4">
     <h2 class="mb-4">Chỉnh sửa Booking #{{ $booking->id }}</h2>
-    
+
     {{-- Thông báo thành công --}}
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -11,7 +11,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
-    
+
     {{-- Hiển thị lỗi --}}
     @if($errors->any())
         <div class="alert alert-danger">
@@ -22,11 +22,11 @@
             </ul>
         </div>
     @endif
-    
-    <form action="{{ route('admin.bookings.update', $booking->id) }}" method="POST">
+
+    <form action="{{ route('bookings.update', $booking->id) }}" method="POST">
         @csrf
         @method('PUT')
-        
+
         <div class="row g-4">
             {{-- Thông tin khách hàng --}}
             <div class="col-md-6">
@@ -41,7 +41,7 @@
                     </div>
                 </div>
             </div>
-            
+
             {{-- Cập nhật trạng thái --}}
             <div class="col-md-6">
                 <div class="card border-0 shadow-sm">
@@ -57,7 +57,7 @@
                                 <option value="cancelled" {{ $booking->status == 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
                             </select>
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="payment_status" class="form-label">Trạng thái thanh toán:</label>
                             <select name="payment_status" id="payment_status" class="form-select">
@@ -70,7 +70,7 @@
                 </div>
             </div>
         </div>
-        
+
         {{-- Chi tiết sân đặt --}}
         <div class="card border-0 shadow-sm mt-4">
             <div class="card-header bg-white">
@@ -103,13 +103,13 @@
                 </div>
             </div>
         </div>
-        
+
         {{-- Nút hành động căn giữa --}}
         <div class="d-flex justify-content-center gap-3 mt-4">
             <button type="submit" class="btn btn-primary px-4">
                 <i class="fas fa-save me-1"></i> Cập nhật
             </button>
-            <a href="{{ route('admin.bookings.show', $booking->id) }}" class="btn btn-secondary px-4">
+            <a href="{{ route('bookings.show', $booking->id) }}" class="btn btn-secondary px-4">
                 <i class="fas fa-times me-1"></i> Hủy
             </a>
         </div>

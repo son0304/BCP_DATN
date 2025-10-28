@@ -3,41 +3,42 @@
 namespace App\Helpers;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class PermissionHelper
 {
 
     public static function isAdmin(User $user = null): bool
     {
-        $user = $user ?? auth()->user();
+        $user = $user ?? Auth::user();
         return $user && $user->role && $user->role->name === 'admin';
     }
 
 
     public static function isVenueOwner(User $user = null): bool
     {
-        $user = $user ?? auth()->user();
+        $user = $user ?? Auth::user();
         return $user && $user->role && $user->role->name === 'venue_owner';
     }
 
 
     public static function isCustomer(User $user = null): bool
     {
-        $user = $user ?? auth()->user();
+        $user = $user ?? Auth::user();
         return $user && $user->role && $user->role->name === 'customer';
     }
 
 
     public static function canManageCourts(User $user = null): bool
     {
-        $user = $user ?? auth()->user();
+        $user = $user ?? Auth::user();
         return self::isAdmin($user) || self::isVenueOwner($user);
     }
 
 
     public static function ownsVenue(int $venueId, User $user = null): bool
     {
-        $user = $user ?? auth()->user();
+        $user = $user ?? Auth::user();
 
         if (self::isAdmin($user)) {
             return true;
@@ -55,7 +56,7 @@ class PermissionHelper
 
     public static function getAccessibleVenues(User $user = null)
     {
-        $user = $user ?? auth()->user();
+        $user = $user ?? Auth::user();
 
         if (self::isAdmin($user)) {
             return \App\Models\Venue::orderBy('name')->get();
@@ -73,7 +74,7 @@ class PermissionHelper
 
     public static function getAccessibleCourts(User $user = null)
     {
-        $user = $user ?? auth()->user();
+        $user = $user ?? Auth::user();
 
         if (self::isAdmin($user)) {
             return \App\Models\Court::with(['venue', 'venueType'])->latest()->get();

@@ -179,7 +179,7 @@ class CourtController extends Controller
 
             DB::commit();
 
-            return redirect()->to('/venue/' . $court->venue_id)
+            return redirect()->to('owner/venues/' . $court->venue_id)
                 ->with('success', 'Thêm sân và tạo lịch hoạt động thành công!');
         } catch (\Exception $e) {
             DB::rollBack();

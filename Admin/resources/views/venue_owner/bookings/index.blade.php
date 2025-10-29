@@ -50,7 +50,7 @@
 
             <div class="d-flex flex-wrap gap-2">
                 @foreach($statusOptions as $key => $data)
-                    <a href="{{ route('bookings.index', array_merge(request()->except('page'), ['status' => $key ?: null])) }}"
+                    <a href="{{ route('owner.bookings.index', array_merge(request()->except('page'), ['status' => $key ?: null])) }}"
                         class="btn {{ $currentStatus === $key ? $data['class'] : 'btn-outline-secondary' }}">
                         {{ $data['label'] }}
                     </a>
@@ -118,7 +118,7 @@
                                         <h3 class="modal-title"><i class="fas fa-ticket-alt me-2"></i>Chi tiết Đơn #{{ $ticket->id }}</h3>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
-                                    <form method="POST" action="{{ route('bookings.update', $ticket->id) }}">
+                                    <form method="POST" action="{{ route('owner.bookings.update', $ticket->id) }}">
                                         @csrf
                                         @method('PUT')
                                         <div class="modal-body bg-light">

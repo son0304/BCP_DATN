@@ -8,7 +8,7 @@
             <h1 class="h3 mb-0 fw-bold">Quản lý thương hiệu sân</h1>
             <p class="text-muted mb-0">Danh sách tất cả các thương hiệu của bạn.</p>
         </div>
-        <a href="{{ route('venue.create') }}" class="btn btn-primary shadow-sm px-4">
+        <a href="{{ route('owner.venues.create') }}" class="btn btn-primary shadow-sm px-4">
             <i class="fas fa-plus me-2"></i> Thêm thương hiệu
         </a>
     </div>
@@ -85,10 +85,10 @@
 
                             {{-- Hành động --}}
                             <td class="text-end">
-                                <a href="{{ route('venue.show', $venue->id) }}" class="btn btn-sm btn-outline-secondary me-2">
+                                <a href="{{ route('owner.venues.show', $venue->id) }}" class="btn btn-sm btn-outline-secondary me-2">
                                     <i class="fas fa-edit"></i> Show
                                 </a>
-                                <form action="{{ route('venue.destroy', $venue->id) }}" method="POST" class="d-inline"
+                                <form action="{{ route('owner.venues.destroy', $venue->id) }}" method="POST" class="d-inline"
                                     onsubmit="return confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN sân này? Hành động này không thể hoàn tác!')">
                                     @csrf
                                     @method('DELETE')

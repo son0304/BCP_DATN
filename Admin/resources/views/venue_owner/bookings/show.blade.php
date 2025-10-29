@@ -83,8 +83,8 @@
 
     <div class="row mt-4">
         <div class="col-12 text-center">
-            <a href="{{ route('bookings.index') }}" class="btn btn-secondary mx-2">Quay lại</a>
-            <a href="{{ route('bookings.edit', $booking->id) }}" class="btn btn-primary mx-2">Chỉnh sửa</a>
+            <a href="{{ route('owner.bookings.index') }}" class="btn btn-secondary mx-2">Quay lại</a>
+            <a href="{{ route('owner.bookings.edit', $booking->id) }}" class="btn btn-primary mx-2">Chỉnh sửa</a>
         </div>
     </div>
 

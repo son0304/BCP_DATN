@@ -75,11 +75,11 @@
                 <p class="text-muted mb-0">{{ $court->venue->name ?? 'N/A' }}</p>
             </div>
             <div>
-                <a href="{{ route('venue.courts.edit', ['venue' => $venue->id, 'court' => $court->id]) }}"
+                <a href="{{ route('owner.venues.courts.edit', ['venue' => $venue->id, 'court' => $court->id]) }}"
                     class="btn btn-warning me-1">
                     <i class="fas fa-edit me-1"></i> Chỉnh sửa
                 </a>
-                <a href="{{ route('courts.index') }}" class="btn btn-secondary">Quay lại</a>
+                {{--  <a href="{{ route('courts.index') }}" class="btn btn-secondary">Quay lại</a>  --}}
             </div>
         </div>
 
@@ -180,7 +180,7 @@
 
             {{-- LỊCH HOẠT ĐỘNG --}}
             <div class="col-lg-6">
-                <form action="{{ route('courts.updateAvailabilities', $court) }}" method="POST">
+                <form action="{{ route('owner.courts.updateAvailabilities', $court) }}" method="POST">
                     @csrf
 
                     <div class="card shadow-sm border-0">

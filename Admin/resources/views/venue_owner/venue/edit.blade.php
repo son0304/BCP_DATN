@@ -33,7 +33,7 @@
                 <p class="text-muted mb-0">Cập nhật thông tin cho: <strong>{{ $venue->name }}</strong></p>
             </div>
             <div>
-                <a href="{{ route('venue.index') }}" class="btn btn-outline-secondary">
+                <a href="{{ route('owner.venues.index') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-1"></i> Quay lại danh sách
                 </a>
             </div>
@@ -50,7 +50,7 @@
             </div>
         @endif
 
-        <form action="{{ route('venue.update', $venue) }}" method="POST">
+        <form action="{{ route('owner.venues.update', $venue) }}" method="POST">
             @csrf
             @method('PUT')
 
@@ -217,7 +217,7 @@
 
             {{-- NÚT LƯU --}}
             <div class="mt-4 text-end">
-                <a href="{{ route('venue.index') }}" class="btn btn-secondary">Hủy bỏ</a>
+                <a href="{{ route('owner.venues.index') }}" class="btn btn-secondary">Hủy bỏ</a>
                 <button type="submit" class="btn btn-primary btn-lg">Lưu thay đổi</button>
             </div>
         </form>

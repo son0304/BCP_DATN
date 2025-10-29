@@ -9,14 +9,14 @@
             <p class="text-muted mb-0">Nhập thông tin chi tiết cho thương hiệu sân.</p>
         </div>
         <div>
-            <a href="{{ route('venue.index') }}" class="btn btn-outline-secondary">
+            <a href="{{ route('owner.venues.index') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-1"></i> Quay lại danh sách
             </a>
         </div>
     </div>
 
     {{-- Form --}}
-    <form action="{{ route('venue.store') }}" method="POST">
+    <form action="{{ route('owner.venues.store') }}" method="POST">
         @csrf
         <div class="row">
             {{-- Cột trái --}}

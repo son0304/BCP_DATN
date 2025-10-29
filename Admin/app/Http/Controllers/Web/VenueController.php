@@ -87,7 +87,7 @@ class VenueController extends Controller
         // Cập nhật trạng thái
         $venue->update(['is_active' => $validatedData['is_active']]);
 
-        return redirect()->route('venue.index')->with('success', 'Cập nhật trạng thái thành công!');
+        return redirect()->route('admin.venues.index')->with('success', 'Cập nhật trạng thái thành công!');
     }
 
     //==============Venue_Owner=================//

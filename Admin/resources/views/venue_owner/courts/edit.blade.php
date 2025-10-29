@@ -40,7 +40,7 @@
                     </div>
                 @endif
 
-                <form action="{{ route('venue.courts.update', ['venue' => $court->venue, 'court' => $court]) }}"
+                <form action="{{ route('owner.venues.courts.update', ['venue' => $court->venue, 'court' => $court]) }}"
                     method="POST"> @csrf
                     @method('PUT')
 
@@ -53,7 +53,7 @@
                                 <input type="text" class="form-control" id="name" name="name"
                                     value="{{ old('name', $court->name) }}" required>
                             </div>
-                          
+
                         </div>
                         <div class="row">
                             <div class="col-md-4 mb-3">
@@ -130,7 +130,7 @@
 
 
                     <div class="card-footer bg-white text-end border-0 px-0 pt-4">
-                        <a href="{{ route('courts.index') }}" class="btn btn-secondary">Hủy bỏ</a>
+                        {{--  <a href="{{ route('courts.index') }}" class="btn btn-secondary">Hủy bỏ</a>  --}}
                         <button type="submit" class="btn btn-primary">Cập nhật</button>
                     </div>
                 </form>

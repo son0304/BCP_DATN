@@ -1,55 +1,100 @@
 @extends('app')
 
 @section('content')
+{{-- Thêm <style> để định nghĩa màu xanh lá/cam --}}
+<style>
+    :root {
+        --bs-primary: #348738;
+        --bs-primary-rgb: 52, 135, 56;
+        --bs-primary-dark: #2d6a2d;
+        --bs-primary-bg-subtle: #e1f3e2;
+        --bs-primary-border-subtle: #d1e7dd;
+
+        --bs-accent: #f97316; /* orange-500 */
+        --bs-accent-dark: #ea580c; /* orange-600 */
+    }
+
+    /* Ghi đè nút Primary */
+    .btn-primary {
+        --bs-btn-bg: var(--bs-primary);
+        --bs-btn-border-color: var(--bs-primary);
+        --bs-btn-hover-bg: var(--bs-primary-dark);
+        --bs-btn-hover-border-color: var(--bs-primary-dark);
+    }
+    .btn-outline-primary {
+        --bs-btn-color: var(--bs-primary);
+        --bs-btn-border-color: var(--bs-primary);
+        --bs-btn-hover-bg: var(--bs-primary);
+        --bs-btn-hover-border-color: var(--bs-primary);
+        --bs-btn-hover-color: #fff;
+    }
+    .text-primary { color: var(--bs-primary) !important; }
+
+    /* Nút Cam (Accent/CTA) */
+    .btn-accent {
+        background-color: var(--bs-accent);
+        border-color: var(--bs-accent);
+        color: #fff;
+    }
+    .btn-accent:hover {
+        background-color: var(--bs-accent-dark);
+        border-color: var(--bs-accent-dark);
+        color: #fff;
+    }
+
+    /* Header bảng màu xanh */
+    .table-primary-green {
+        background-color: var(--bs-primary);
+        color: #fff;
+    }
+</style>
+
 <div class="container-fluid py-4">
-    {{-- Header --}}
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0 fw-bold">Quản lý thương hiệu sân</h1>
-            <p class="text-muted mb-0">Danh sách tất cả các sân trong hệ thống.</p>
-        </div>
-        <a href="{{ route('venue.create') }}" class="btn btn-primary shadow-sm px-4">
-            <i class="fas fa-plus me-2"></i> Thêm sân mới
-        </a>
-    </div>
 
-    {{-- Thông báo thành công --}}
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-
-    {{-- Danh sách sân --}}
     <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h4 mb-0 fw-bold">Quản lý thương hiệu sân</h1>
+                    <p class="text-muted mb-0 small">Danh sách tất cả các sân trong hệ thống.</p>
+                </div>
+                <div>
+                    {{-- Nút "Thêm mới" đã bị xóa theo yêu cầu --}}
+                </div>
+            </div>
+        </div>
+
         <div class="card-body p-0">
+           
+
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                    <thead class="table-primary-green">
                         <tr>
                             <th style="width: 60px;">ID</th>
                             <th>Tên sân</th>
                             <th>Chủ sở hữu</th>
                             <th>Địa điểm</th>
-                            <th class="text-center" style="width: 140px;">Giờ mở cửa</th>
-                            <th class="text-center" style="width: 140px;">Giờ đóng cửa</th>
+                            <th class="text-center" style="width: 130px;">Giờ mở cửa</th>
+                            <th class="text-center" style="width: 130px;">Giờ đóng cửa</th>
                             <th class="text-center" style="width: 140px;">Trạng thái</th>
-                            <th class="text-center" style="width: 180px;">Hành động</th>
+                            <th class="text-end" style="width: 140px;">Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($venues as $venue)
                         <tr>
-                            <td class="fw-semibold">{{ $venue->id }}</td>
-                            <td><strong class="text-dark d-block">{{ $venue->name }}</strong></td>
+                            <td class="fw-semibold">#{{ $venue->id }}</td>
+                            <td>
+                                <strong class="text-dark d-block">{{ $venue->name }}</strong>
+                                <small class="text-muted">{{ $venue->phone ?? 'Chưa có SĐT' }}</small>
+                            </td>
                             <td>{{ $venue->owner->name ?? 'N/A' }}</td>
                             <td>{{ $venue->province->name ?? 'N/A' }}</td>
 
-                            {{-- Giờ mở cửa --}}
                             <td class="text-center">
                                 @if ($venue->start_time)
-                                    <span class="badge bg-info-subtle border border-info-subtle text-info-emphasis rounded-pill px-3 py-2">
+                                    <span class="badge bg-primary-subtle border border-primary-subtle text-primary-emphasis rounded-pill px-3 py-2">
                                         {{ \Carbon\Carbon::parse($venue->start_time)->format('H:i') }}
                                     </span>
                                 @else
@@ -57,7 +102,6 @@
                                 @endif
                             </td>
 
-                            {{-- Giờ đóng cửa --}}
                             <td class="text-center">
                                 @if ($venue->end_time)
                                     <span class="badge bg-warning-subtle border border-warning-subtle text-warning-emphasis rounded-pill px-3 py-2">
@@ -68,7 +112,7 @@
                                 @endif
                             </td>
 
-                            {{-- Trạng thái --}}
+                            {{-- --- ĐÃ SỬA: Chuyển lại thành Badge (nhãn) tĩnh --- --}}
                             <td class="text-center">
                                 @if ($venue->is_active == 1)
                                     <span class="badge bg-success-subtle border border-success-subtle text-success-emphasis rounded-pill px-3 py-2">
@@ -81,10 +125,10 @@
                                 @endif
                             </td>
 
-                            {{-- Hành động --}}
+                            {{-- Hành động (Nút "Xem" màu cam) --}}
                             <td class="text-end">
-                                <a href="{{ route('venue.show', $venue->id) }}" class="btn btn-sm btn-outline-secondary me-2">
-                                    <i class="fas fa-eye"></i> Xem
+                                <a href="{{ route('admin.venues.show', $venue->id) }}" class="btn btn-sm btn-accent me-2">
+                                    <i class="fas fa-eye me-1"></i> Xem
                                 </a>
                             </td>
                         </tr>
@@ -113,3 +157,6 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+@endpush

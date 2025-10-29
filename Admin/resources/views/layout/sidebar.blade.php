@@ -18,46 +18,59 @@
 
             {{-- Menu chung --}}
             <li class="nav-item">
-                <a class="nav-link" href="{{ route('home.index') }}">
-                    <span class="menu-title">Thống kê</span>
-                    <i class="mdi mdi-home menu-icon"></i>
-                </a>
+                @if(auth()->user()->role->name === 'admin')
+                    <a class="nav-link" href="{{ route('admin.dashboard') }}">
+                        <span class="menu-title">Dashboard</span>
+                        <i class="mdi mdi-view-dashboard menu-icon"></i>
+                    </a>
+                @elseif(auth()->user()->role->name === 'venue_owner')
+                    <a class="nav-link" href="{{ route('owner.dashboard') }}">
+                        <span class="menu-title">Dashboard</span>
+                        <i class="mdi mdi-view-dashboard menu-icon"></i>
+                    </a>
+                @endif
             </li>
 
             {{-- Admin menu --}}
             @if (auth()->user()->role->name === 'admin')
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('users.index') }}">
+                    <a class="nav-link" href="{{ route('admin.users.index') }}">
                         <span class="menu-title">Người dùng</span>
                         <i class="mdi mdi-account menu-icon"></i>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('venue.index') }}">
-                        <span class="menu-title">Quản lý thương hiệu</span>
+                    <a class="nav-link" href="{{ route('admin.venues.index') }}">
+                        <span class="menu-title">Quản lý Thương hiệu</span>
                         <i class="mdi mdi-store menu-icon"></i>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('admin.reviews.index') }}">
+                        <span class="menu-title">Đánh giá</span>
+                        <i class="mdi mdi-star menu-icon"></i>
                     </a>
                 </li>
             @endif
 
-            {{-- Venue owner menu --}}
+            {{-- Venue Owner menu --}}
             @if (auth()->user()->role->name === 'venue_owner')
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('venue.index') }}">
+                    <a class="nav-link" href="{{ route('owner.venues.index') }}">
                         <span class="menu-title">Thương Hiệu</span>
                         <i class="mdi mdi-store menu-icon"></i>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('reviews.index') }}">
+                    <a class="nav-link" href="{{ route('owner.reviews.index') }}">
                         <span class="menu-title">Đánh giá</span>
                         <i class="mdi mdi-star menu-icon"></i>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('bookings.index') }}">
+                    <a class="nav-link" href="{{ route('owner.bookings.index') }}">
                         <span class="menu-title">Đơn đặt sân</span>
                         <i class="mdi mdi-calendar-check menu-icon"></i>
                     </a>

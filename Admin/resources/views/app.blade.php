@@ -20,6 +20,7 @@
             </div>
         </div>
     </div>
+    @include('layout.alert')
 
     @include('layout.scrip')
     @stack('scripts')

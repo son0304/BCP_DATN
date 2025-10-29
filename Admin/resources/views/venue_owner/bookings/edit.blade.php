@@ -23,7 +23,7 @@
         </div>
     @endif
 
-    <form action="{{ route('bookings.update', $booking->id) }}" method="POST">
+    <form action="{{ route('owner.bookings.update', $booking->id) }}" method="POST">
         @csrf
         @method('PUT')
 
@@ -109,7 +109,7 @@
             <button type="submit" class="btn btn-primary px-4">
                 <i class="fas fa-save me-1"></i> Cập nhật
             </button>
-            <a href="{{ route('bookings.show', $booking->id) }}" class="btn btn-secondary px-4">
+            <a href="{{ route('owner.bookings.show', $booking->id) }}" class="btn btn-secondary px-4">
                 <i class="fas fa-times me-1"></i> Hủy
             </a>
         </div>

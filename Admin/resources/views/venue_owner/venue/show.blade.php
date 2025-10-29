@@ -48,11 +48,8 @@
                 <p class="text-muted mb-0">Quản lý thông tin cho: <strong>{{ $venue->name }}</strong></p>
             </div>
             <div>
-                <a href="{{ route('venue.courts.index', $venue->id) }}/create" class="btn btn-accent me-2">
-                    <i class="fas fa-plus me-1"></i> Thêm Sân Con Mới
-                </a>
 
-                <a href="{{ route('venue.index') }}" class="btn btn-outline-secondary">
+                <a href="{{ route('owner.venues.index') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-1"></i> Quay lại
                 </a>
             </div>
@@ -102,8 +99,7 @@
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header card-header-green py-3 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 text-primary">Danh sách sân con ({{ $venue->courts->count() }})</h5>
-                        <a href="{{ route('venue.courts.index', $venue->id) }}/create"
-                            class="btn btn-sm btn-outline-primary">
+                        <a href="{{ route('owner.venues.courts.create', $venue->id) }}" class="btn btn-accent me-2">
                             <i class="fas fa-plus me-1"></i> Thêm
                         </a>
                     </div>
@@ -134,7 +130,7 @@
                                                     @endif
                                                 </td>
                                                 <td class="text-end">
-                                                    <a href="{{ route('venue.courts.show', ['venue' => $venue->id, 'court' => $court->id]) }}"
+                                                    <a href="{{ route('owner.venues.courts.show', ['venue' => $venue->id, 'court' => $court->id]) }}"
                                                         class="btn btn-sm btn-outline-primary">
                                                         Xem lịch
                                                     </a>
@@ -160,10 +156,10 @@
                         <h5 class="mb-0 text-primary">Hành động</h5>
                     </div>
                     <div class="card-body d-grid gap-2">
-                        <a href="{{ route('venue.edit', $venue) }}" class="btn btn-warning">
+                        <a href="{{ route('owner.venues.edit', $venue) }}" class="btn btn-warning">
                             <i class="fas fa-edit me-1"></i> Chỉnh sửa thông tin Venue
                         </a>
-                        <a href="{{ route('venue.courts.index', $venue->id) }}/create" class="btn btn-accent">
+                        <a href="{{ route('owner.venues.courts.create', $venue->id) }}" class="btn btn-accent me-2">
                             <i class="fas fa-plus me-1"></i> Thêm Sân Con Mới
                         </a>
                     </div>

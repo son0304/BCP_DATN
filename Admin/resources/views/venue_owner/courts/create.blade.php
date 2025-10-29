@@ -54,7 +54,7 @@
                     </div>
                 @endif
 
-                <form action="{{ route('venue.courts.store', ['venue' => $venue->id]) }}" method="POST"> @csrf
+                <form action="{{ route('owner.venues.courts.store', ['venue' => $venue->id]) }}" method="POST"> @csrf
                     <input type="hidden" name="venue_id" value="{{ $venue->id }}">
 
                     <fieldset class="mb-4">

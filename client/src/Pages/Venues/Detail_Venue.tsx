@@ -69,7 +69,7 @@ const Detail_Venue: React.FC = () => {
           : Array.isArray(res?.data?.data)
             ? res.data.data
             : [];
-        const items = list.filter(v => v.id !== currentId).slice(0, 4);
+        const items = list.filter((v:any) => v.id !== currentId).slice(0, 4);
         setRelatedVenues(items.length ? items : [detail_venue?.data]);
       } catch (err) {
         console.error('loadRelated error:', err);

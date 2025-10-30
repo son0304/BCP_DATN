@@ -7,15 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class Image extends Model
 {
-    /** @use HasFactory<\Database\Factories\ImageFactory> */
     use HasFactory;
-    protected $fillable = ['id', 'venue_id', 'court_id', 'url' , 'description','is_primary'];
-   
-    public function venue()
+
+    protected $fillable = [
+        'url',
+        'description',
+        'is_primary'
+    ];
+
+    public function imageable()
     {
-        return $this->belongsTo(Venue::class , 'venue_id');
-    }
-    public function court (){
-        return $this->belongsTo(Court::class, 'court_id');
+        return $this->morphTo();
     }
 }

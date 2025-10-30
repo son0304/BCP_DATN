@@ -106,14 +106,14 @@ const Content = () => {
                                                     </div>
                                                     <div className="absolute bottom-0 left-0 bg-[#2d6a2d] text-white px-3 py-2 rounded-tr-2xl flex items-center gap-2">
                                                         <span className="bg-white text-[#2d6a2d] text-sm font-semibold px-2 py-0.5 rounded">
-                                                            {venue.reviews_avg_rating?.toFixed(1) ?? "0.0"}
+                                                            {Number(venue.reviews_avg_rating)?.toFixed(1) ?? "0.0"}
                                                         </span>
                                                         <div className="flex items-center gap-1">
                                                             {[...Array(5)].map((_, i) => (
                                                                 <i
                                                                     key={i}
                                                                     className={`fa-star fa-solid text-sm ${i <
-                                                                        Math.round(venue.reviews_avg_rating || 0)
+                                                                        Math.round(Number(venue.reviews_avg_rating) || 0)
                                                                         ? "text-yellow-400"
                                                                         : "text-gray-300"
                                                                         }`}

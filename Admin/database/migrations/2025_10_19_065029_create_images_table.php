@@ -10,8 +10,10 @@ return new class extends Migration
     {
         Schema::create('images', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('venue_id')->nullable()->constrained('venues')->nullOnDelete();
-            $table->foreignId('court_id')->nullable()->constrained('courts')->nullOnDelete();
+
+            // Đây là cặp morph
+            $table->morphs('imageable'); // Tạo imageable_id + imageable_type
+
             $table->string('url');
             $table->text('description')->nullable();
             $table->boolean('is_primary')->default(false);

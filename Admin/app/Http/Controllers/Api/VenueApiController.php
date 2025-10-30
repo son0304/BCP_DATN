@@ -5,9 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Venue;
 use App\Models\Availability;
-use App\Models\Image;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -16,7 +14,6 @@ class VenueApiController extends Controller
 {
     /**
      * Lấy danh sách venue với filter và sort.
-     * Đã tối ưu hóa bằng cách bỏ eager loading không cần thiết.
      */
     public function index(Request $request)
     {
@@ -28,31 +25,27 @@ class VenueApiController extends Controller
         ]);
 
         $query = Venue::with([
-            'images:id,venue_id,url,is_primary',
+            // ✅ Sửa lại vì giờ dùng morphMany → không có venue_id
+            'images:id,imageable_id,url,is_primary,description',
             'courts:id,venue_id',
             'reviews:id,venue_id,rating',
             'venueTypes:id,name',
         ])->withAvg('reviews', 'rating');
 
-        // Lọc chỉ lấy venues active
         $query->where('is_active', 1);
 
-        // Filter theo loại venue
         if ($request->filled('type_id')) {
             $query->whereHas('venueTypes', fn($q) => $q->where('venue_types.id', $request->type_id));
         }
 
-        // Filter theo tỉnh
         if ($request->filled('province_id')) {
             $query->where('province_id', $request->province_id);
         }
 
-        // Filter theo quận/huyện
         if ($request->filled('district_id')) {
             $query->where('district_id', $request->district_id);
         }
 
-        // Sắp xếp theo đánh giá
         if ($request->sort === 'rating_desc') {
             $query->orderByDesc('reviews_avg_rating');
         } elseif ($request->sort === 'rating_asc') {
@@ -68,15 +61,17 @@ class VenueApiController extends Controller
         ]);
     }
 
-
-
+    /**
+     * Lấy chi tiết venue
+     */
     public function show(Request $request, $id)
     {
         $validated = $request->validate(['date' => 'nullable|date_format:Y-m-d']);
         $date = $validated['date'] ?? now()->toDateString();
 
         $venue = Venue::with([
-            'images:id,venue_id,url,is_primary',
+            // ✅ morphMany: không có venue_id
+            'images:id,imageable_id,url,is_primary,description',
             'venueTypes:id,name',
             'courts:id,venue_id,name,surface,is_indoor',
             'courts.timeSlots:id,court_id,label,start_time,end_time',
@@ -85,7 +80,10 @@ class VenueApiController extends Controller
         ])->withAvg('reviews', 'rating')->find($id);
 
         if (!$venue) {
-            return response()->json(['success' => false, 'message' => "Không tìm thấy địa điểm với ID = {$id}"], 404);
+            return response()->json([
+                'success' => false,
+                'message' => "Không tìm thấy địa điểm với ID = {$id}"
+            ], 404);
         }
 
         $courtIds = $venue->courts->pluck('id');
@@ -98,17 +96,10 @@ class VenueApiController extends Controller
 
         foreach ($venue->courts as $court) {
             $courtAvailabilities = $availabilities->get($court->id, collect());
-
             foreach ($court->timeSlots as $slot) {
                 $availability = $courtAvailabilities->get($slot->id);
-
-                if ($availability) {
-                    $slot->status = $availability->status;
-                    $slot->price = $availability->price;
-                } else {
-                    $slot->status = 'unavailable';
-                    $slot->price = null;
-                }
+                $slot->status = $availability->status ?? 'unavailable';
+                $slot->price = $availability->price ?? null;
             }
         }
 
@@ -119,9 +110,11 @@ class VenueApiController extends Controller
         ]);
     }
 
+    /**
+     * Tạo mới venue kèm ảnh upload
+     */
     public function store(Request $request)
     {
-        // Validate dữ liệu
         $validatedData = $request->validate([
             'user_id' => 'required|integer|exists:users,id',
             'name' => 'required|string|max:255',
@@ -133,11 +126,12 @@ class VenueApiController extends Controller
             'end_time' => 'required|date_format:H:i|after:start_time',
             'description' => 'nullable|string',
             'images' => 'required|array|min:1',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:10240', // 10MB
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'mainImageIndex' => 'required|integer|min:0',
         ]);
 
         DB::beginTransaction();
+
         try {
             $venue = Venue::create([
                 'owner_id' => $validatedData['user_id'],
@@ -151,26 +145,33 @@ class VenueApiController extends Controller
                 'is_active' => false,
             ]);
 
-            Log::info('Venue vừa tạo: ', $venue->toArray()); // check ID
-
             $files = $request->file('images');
+
             foreach ($files as $index => $file) {
                 $path = $file->store('uploads/venues', 'public');
                 $url = asset('storage/' . $path);
 
-                Image::create([
-                    'venue_id' => $venue->id,  // đây phải có giá trị
+                // ✅ Dùng quan hệ morphMany
+                $venue->images()->create([
                     'url' => $url,
                     'is_primary' => $index == $validatedData['mainImageIndex'],
                 ]);
             }
 
             DB::commit();
-            return response()->json(['success' => true, 'data' => $venue], 201);
-        } catch (\Throwable $e) {
+
+            return response()->json([
+                'success' => true,
+                'data' => $venue->load('images')
+            ], 201);
+
+        } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Lỗi tạo venue: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 }

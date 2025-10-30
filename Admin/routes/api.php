@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\Api\AuthApiController;
 use App\Http\Controllers\Api\DistrictApiController;
-use App\Http\Controllers\Api\ImgeApiController;
+use App\Http\Controllers\Api\ImageApiController;
 use App\Http\Controllers\Api\ProvinceApiController;
 use App\Http\Controllers\Api\TicketApiController;
 use App\Http\Controllers\Api\TimeSlotApiController;
@@ -33,7 +33,7 @@ Route::post('/tickets', [TicketApiController::class, 'store']);
 
 Route::get('/ticket', [TicketApiController::class, 'store']);
 
-Route::post('/upload', [ImgeApiController::class, 'store']);
+Route::post('/upload', [ImageApiController::class, 'store']);
 
 
 Route::get('/time_slots', [TimeSlotApiController::class, 'index']);
@@ -41,3 +41,5 @@ Route::get('/time_slots', [TimeSlotApiController::class, 'index']);
 
 Route::get('/provinces', [ProvinceApiController::class, 'index']);
 Route::get('/provinces/{id}', [ProvinceApiController::class, 'show']);
+
+Route::get('/districts', [DistrictApiController::class, 'index']);

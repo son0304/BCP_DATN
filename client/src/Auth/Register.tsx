@@ -50,6 +50,8 @@ const Register = () => {
     (d) => d.province_id.toString() === selectedProvinceId
   );
 
+  console.log(selectedProvinceId, filteredDistricts);
+  
   const { mutate, isPending } = usePostData('register');
 
   const onSubmit = (data: FormData) => {

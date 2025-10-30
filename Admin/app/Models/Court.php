@@ -34,7 +34,7 @@ class Court extends Model
 
     public function images()
     {
-        return $this->hasMany(Image::class, 'court_id');
+        return $this->hasMany(Image::class, 'imageable', );
     }
 
     public function venue()

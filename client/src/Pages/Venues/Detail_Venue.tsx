@@ -1,11 +1,14 @@
+// Detail_Venue.tsx
 import React, { useEffect, useState } from 'react';
 import { useFetchDataById, usePostData } from '../../Hooks/useApi';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { Venue, EnrichedTimeSlot } from '../../Types/venue';
+import type { Venue } from '../../Types/venue';
 import type { Image } from '../../Types/image';
 import type { Court } from '../../Types/court';
 import type { ApiResponse } from '../../Types/api';
 import { useNotification } from '../../Components/Notification';
+import { fetchData } from '../../Api/fetchApi';
+
 type SelectedItem = {
   court_id: number;
   name: string;
@@ -16,30 +19,36 @@ type SelectedItem = {
   price: number;
 };
 
-const Detail_Venue = () => {
-  const user = JSON.parse(String(localStorage.getItem('user')))
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+const Detail_Venue: React.FC = () => {
+  const user = JSON.parse(String(localStorage.getItem('user')));
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<number>(0);
   const [isActiveCourtId, setIsActiveCourtId] = useState<number | null>(null);
-  const { showNotification } = useNotification();
+  const [galleryIndex, setGalleryIndex] = useState<number>(0);
+  const [relatedVenues, setRelatedVenues] = useState<Venue[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState<boolean>(false);
 
+  const { showNotification } = useNotification();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const idVenue = Number(id);
   const { data: detail_venue, isLoading, refetch } = useFetchDataById<Venue>('venue', idVenue, { date: selectedDate });
   const { mutate } = usePostData<ApiResponse<number>, any>('tickets');
 
+  // Recalculate total whenever selectedItems change
   useEffect(() => {
     const total = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
     setSelectedPrice(total);
   }, [selectedItems]);
 
+  // Refetch when date changes (existing logic)
   useEffect(() => {
     refetch();
     setSelectedItems([]);
   }, [selectedDate, refetch]);
 
+  // Sync active court when detail_venue loads/changes
   useEffect(() => {
     if (detail_venue?.data?.courts?.length && isActiveCourtId === null) {
       setIsActiveCourtId(detail_venue.data.courts[0].id);
@@ -47,19 +56,60 @@ const Detail_Venue = () => {
       setIsActiveCourtId(detail_venue.data.courts[0].id);
     }
   }, [detail_venue]);
-  // Loading state display
+
+  // Fetch a few venues (not strictly related), exclude current
+  useEffect(() => {
+    const loadRelated = async () => {
+      try {
+        setRelatedLoading(true);
+        const currentId = detail_venue?.data?.id;
+        const res = await fetchData<any>('venues'); // thử 'venues' nếu API danh sách
+        const list = Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.data?.data)
+            ? res.data.data
+            : [];
+        const items = list.filter(v => v.id !== currentId).slice(0, 4);
+        setRelatedVenues(items.length ? items : [detail_venue?.data]);
+      } catch (err) {
+        console.error('loadRelated error:', err);
+        setRelatedVenues([]);
+      } finally {
+        setRelatedLoading(false);
+      }
+    };
+    loadRelated();
+  }, [detail_venue?.data?.id]);
+
+
+  // Loading state
   if (isLoading || !detail_venue) {
     return (
-      <div className="flex items-center justify-center h-full min-h-[500px] bg-gray-50 rounded-xl shadow-inner">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#348738]"></div>
+      <div className="flex items-center justify-center h-full min-h-[560px] bg-gray-50 rounded-xl shadow-inner">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#348738]" />
         <p className="ml-4 text-[#348738] font-semibold">Đang tải lịch sân...</p>
       </div>
     );
   }
 
+  // Data
   const venue: Venue = detail_venue.data;
-  const primaryImage = venue.images?.find((img: Image) => img.is_primary === 1);
+  const images: Image[] = (venue as any).images ?? (venue as any).photos ?? [];
+  const primaryImage = images.find((img: Image) => img.is_primary === 1) ?? images[0] ?? { url: 'https://placehold.co/1200x700/348738/ffffff?text=BCP+Sports' };
+  const gallery = images.length > 0 ? images : [primaryImage];
   const courts = venue.courts ?? [];
+
+  // Placeholders for fields that may not exist yet on venue
+  const services = (venue as any).services ?? ['Bãi gửi xe', 'Cho thuê dụng cụ', 'WC & phòng thay đồ', 'Nước uống'];
+  const reviews = (venue as any).reviews ?? {
+    avg_rating: (venue as any).reviews_avg_rating ?? 4.6,
+    total: (venue as any).reviews_count ?? 18,
+    breakdown: [
+      { title: 'Chất lượng sân', score: 4.6 },
+      { title: 'Dịch vụ', score: 4.4 },
+      { title: 'Vị trí', score: 4.7 },
+    ],
+  };
 
   const handleChangeDate = (e: React.ChangeEvent<HTMLInputElement>) => setSelectedDate(e.target.value);
 
@@ -71,13 +121,10 @@ const Detail_Venue = () => {
           : status === 'maintenance'
             ? 'Khung giờ này đang được bảo trì. Vui lòng chọn khung giờ khác.'
             : 'Khung giờ này hiện không khả dụng để đặt.';
-
       showNotification(message, 'error');
       return;
     }
 
-    // Logic để đảm bảo người dùng chỉ chọn 1 slot mỗi sân trong giỏ hàng (optional, but good practice)
-    // Dựa trên logic gốc, cho phép chọn nhiều slot trên nhiều sân
     const isSelected = selectedItems.some(
       (item) => item.court_id === clickedItem.court_id && item.time_slot_id === clickedItem.time_slot_id
     );
@@ -96,12 +143,12 @@ const Detail_Venue = () => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (selectedItems.length === 0) {
-      showNotification("Vui lòng chọn khung giờ muốn đặt.", "error");
+      showNotification('Vui lòng chọn khung giờ muốn đặt.', 'error');
       return;
     }
     if (!user) {
-      showNotification("Vui lòng đăng nhập để book sân.", "error");
-      return
+      showNotification('Vui lòng đăng nhập để book sân.', 'error');
+      return;
     }
 
     const itemsData = selectedItems.map((item) => ({
@@ -118,274 +165,420 @@ const Detail_Venue = () => {
       bookings: itemsData,
     };
 
-    showNotification("Đang tiến hành đặt sân...", "success"); // Show pending notification
+    showNotification('Đang tiến hành đặt sân...', 'success');
 
     mutate(bookingData, {
       onSuccess: (response) => {
         const { success, message, data } = response;
         if (success) {
-          showNotification("Đặt sân thành công! Chuyển hướng đến chi tiết đơn hàng.", "success");
+          showNotification('Đặt sân thành công! Chuyển hướng đến chi tiết đơn hàng.', 'success');
           navigate(`/booking/${data}`);
         } else {
-          showNotification(
-            message || "Một hoặc nhiều slot đã được đặt. Vui lòng thử lại.",
-            "error"
-          );
-          refetch(); // Tải lại lịch
+          showNotification(message || 'Một hoặc nhiều slot đã được đặt. Vui lòng thử lại.', 'error');
+          refetch();
         }
       },
       onError: (error: Error) => {
-        showNotification(`Đã xảy ra lỗi: ${error.message}`, "error");
+        showNotification(`Đã xảy ra lỗi: ${error.message}`, 'error');
         console.error(error);
       },
     });
   };
 
-  // Helper function to format price
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('vi-VN') + '₫';
-  };
+  const formatPrice = (price: number) => price.toLocaleString('vi-VN') + '₫';
+
+  // derive price range if possible
+  const priceRange = (() => {
+    const prices: number[] = [];
+    courts.forEach(c => c.time_slots?.forEach((t: any) => { if (t.price) prices.push(Number(t.price)); }));
+    if (prices.length === 0) return null;
+    const min = Math.min(...prices), max = Math.max(...prices);
+    return min === max ? `${formatPrice(min)}` : `${formatPrice(min)} - ${formatPrice(max)}`;
+  })();
 
   return (
-    <>
+    <div className="max-w-6xl mx-auto my-8 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
+      {/* Top: Hero + right summary */}
+      <div className="md:flex">
+        <div className="md:w-2/3 relative">
+          <div
+            className="h-72 md:h-[460px] bg-cover bg-center"
+            style={{ backgroundImage: `url(${primaryImage.url})` }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+            <div className="absolute bottom-6 left-6 text-white">
+              <h1 className="text-3xl md:text-4xl font-extrabold leading-tight">{venue.name}</h1>
+              <div className="mt-2 flex flex-wrap gap-4 text-sm opacity-90">
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-star text-yellow-400" />
+                  <span className="font-semibold">{Number(reviews.avg_rating ?? 0).toFixed(1)}/5.0</span>
+                  <span className="text-gray-200">({reviews.total})</span>
+                </div>
 
-      <div className="max-w-4xl mx-auto min-h-screen bg-white rounded-xl shadow-2xl overflow-hidden mb-10">
-        {/* Hero Section */}
-        <div
-          className="relative h-64 md:h-80 bg-cover bg-center bg-no-repeat rounded-t-xl"
-          style={{ backgroundImage: `url(${primaryImage?.url || 'https://placehold.co/800x300/348738/ffffff?text=BCP+Sports'})` }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-          <div className="absolute bottom-6 left-6 right-6 text-white">
-            <h1 className="text-3xl md:text-5xl font-extrabold mb-2 leading-tight">{venue.name}</h1>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-              <div className="flex items-center gap-1">
-                <i className="fa-solid fa-star text-yellow-400"></i>
-                <span className="font-semibold">{Number(venue.reviews_avg_rating ?? 0).toFixed(1)}/5.0</span>
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-location-dot text-orange-400" />
+                  <span>{(venue as any).address_detail ?? (venue as any).address ?? 'Địa chỉ đang cập nhật'}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <i className="fa-solid fa-phone text-green-300" />
+                  <span>{venue.phone ?? 'Chưa có'}</span>
+                </div>
+
+                {/* Start/End time from your logic */}
+                {venue.start_time && venue.end_time && (
+                  <div className="flex items-center gap-2">
+                    <i className="fa-regular fa-clock text-[#2d6a2d]" />
+                    <span className="font-medium">{venue.start_time.slice(0, 5)} - {venue.end_time.slice(0, 5)}</span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-1">
-                <i className="fa-solid fa-phone text-orange-400"></i>
-                <span>{venue?.phone}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <i className="fa-solid fa-location-dot text-orange-400"></i>
-                <span>{venue.address_detail}</span>
-              </div>
+            </div>
+          </div>
+
+          {/* Gallery thumbnails */}
+          <div className="p-4 md:p-5 border-t border-gray-100 bg-white">
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {gallery.map((img: any, idx: number) => (
+                <button
+                  key={idx}
+                  onClick={() => setGalleryIndex(idx)}
+                  className={`flex-shrink-0 w-28 h-16 rounded-lg overflow-hidden border ${galleryIndex === idx ? 'ring-2 ring-offset-1 ring-[#348738]' : 'border-gray-200'}`}
+                >
+                  <img src={img.url} alt={`${venue.name}-img-${idx}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Main Content & Booking Form */}
-        <div className="p-6 lg:p-10 space-y-10">
-          {/* Venue Types */}
-          {venue.venueTypes && (
+        {/* Right summary */}
+        <aside className="md:w-1/3 p-6 border-l border-gray-100 bg-gradient-to-b from-white to-gray-50">
+          <div className="space-y-4">
             <div>
-              <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Các loại hình sân</h3>
-              <div className="flex flex-wrap gap-3">
-                {venue.venueTypes.length > 0 ? (
-                  venue.venueTypes.map((type) => (
-                    <span
-                      key={type.id}
-                      className="px-4 py-2 bg-[#348738]/10 text-[#348738] text-sm font-medium rounded-full border border-[#348738]/30 transition duration-200 hover:bg-[#348738] hover:text-white"
-                    >
-                      {type.name}
-                    </span>
-                  ))
-                ) : (
-                  <span className="px-4 py-2 bg-gray-100 text-gray-500 text-sm font-medium rounded-full">
-                    Chưa có loại sân
-                  </span>
-                )}
+              <p className="text-sm text-gray-500">Giá tham khảo</p>
+              <h3 className="text-2xl font-bold text-[#2d6a2d]">{priceRange ?? 'Liên hệ'}</h3>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Giờ mở cửa</p>
+              {venue.start_time && venue.end_time ? (
+                <p className="mt-1 font-medium">{venue.start_time.slice(0, 5)} - {venue.end_time.slice(0, 5)}</p>
+              ) : (
+                <p className="mt-1 font-medium">Đang cập nhật</p>
+              )}
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Dịch vụ</p>
+              <ul className="mt-2 grid grid-cols-1 gap-1 text-sm text-gray-700">
+                {services.map((s: string, i: number) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <i className="fa-solid fa-check text-green-400 text-xs" />
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Liên hệ nhanh</p>
+              <div className="mt-2 flex gap-2">
+                <button className="flex-1 inline-flex items-center justify-center gap-2 py-2 rounded-lg bg-[#348738] text-white font-semibold">
+                  <i className="fa-solid fa-phone" />
+                  <span>{venue.phone ?? 'Chưa có'}</span>
+                </button>
+                <button
+                  onClick={() => showNotification('Chức năng chat (placeholder).')}
+                  className="px-4 py-2 rounded-lg border border-gray-200"
+                >
+                  Chat
+                </button>
               </div>
             </div>
-          )}
+          </div>
+        </aside>
+      </div>
 
-          {/* Court & Slot Selection */}
-          {courts.length > 0 ? (
-            <div>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 mb-6 border-gray-200">
-                <h3 className="text-2xl font-extrabold text-[#2d6a2d] mb-4 sm:mb-0">Chọn lịch sân</h3>
+      {/* Main booking + info area */}
+      <div className="p-8 lg:p-10 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left: description, price table, reviews, related */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Court list */}
+            <section className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-semibold mb-3">Danh sách sân con</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500">
+                      <th className="py-2">Sân</th>
+                      <th className="py-2">Số khung giờ mở</th>
+                      <th className="py-2">Giá từ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {courts.length === 0 && (
+                      <tr className="border-t">
+                        <td className="py-3 text-gray-500" colSpan={3}>Chưa có sân nào.</td>
+                      </tr>
+                    )}
+                    {courts.map((c: any) => {
+                      const slots = (c.time_slots ?? []) as any[];
+                      const openSlots = slots.filter(s => s.status === 'open');
+                      const prices = slots.map(s => Number(s.price)).filter(p => !isNaN(p));
+                      const minPrice = prices.length ? Math.min(...prices) : null;
+                      return (
+                        <tr key={c.id} className="border-t">
+                          <td className="py-2 font-medium">{c.name}</td>
+                          <td className="py-2">{openSlots.length}</td>
+                          <td className="py-2">{minPrice !== null ? formatPrice(minPrice) : '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* Reviews */}
+            <section className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Đánh giá</h3>
+                <div className="text-sm text-gray-600">
+                  <span className="font-bold text-[#2d6a2d] mr-1">{Number(reviews.avg_rating ?? 0).toFixed(1)}</span>
+                  <span> / 5 ({reviews.total})</span>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                {reviews.breakdown.map((r: any, idx: number) => (
+                  <div key={idx} className="p-3 rounded-lg bg-gray-50">
+                    <p className="text-sm text-gray-600">{r.title}</p>
+                    <p className="mt-2 font-semibold">{(r.score ?? 0).toFixed(1)}/5</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4">
+                {/* sample comment */}
+                <div className="border-t pt-4 text-sm text-gray-700">
+                  <p className="font-medium">Nguyễn A</p>
+                  <p className="text-xs text-gray-500">2 tuần trước</p>
+                  <p className="mt-2">Sân mới, nhân viên thân thiện. Rất thích!</p>
+                </div>
+                <button onClick={() => showNotification('Xem tất cả đánh giá (placeholder)')} className="mt-3 text-sm underline text-[#348738]">
+                  Xem tất cả đánh giá
+                </button>
+              </div>
+            </section>
+
+            {/* Related venues */}
+            <section className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+              <h3 className="text-lg font-semibold mb-3">Sân liên quan</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {relatedLoading && (
+                  <div className="col-span-full text-sm text-gray-500">Đang tải sân liên quan...</div>
+                )}
+                {!relatedLoading && relatedVenues.length === 0 && (
+                  <div className="col-span-full text-sm text-gray-500">Chưa có sân liên quan.</div>
+                )}
+                {!relatedLoading &&
+                  relatedVenues.map((r) => {
+                    const images: Image[] =
+                      (r as any).images ?? (r as any).photos ?? [];
+                    const primaryImage =
+                      images.find((img: Image) => img.is_primary === 1) ??
+                      images[0] ??
+                      { url: 'https://placehold.co/300x200/348738/ffffff?text=S%C3%A2n' };
+
+                    return (
+                      <button
+                        key={r.id}
+                        onClick={() => navigate(`/venues/${r.id}`)}
+                        className="flex items-start gap-3 p-3 border rounded-lg text-left hover:border-[#348738] transition-all hover:shadow-sm"
+                      >
+                        {/* Hình ảnh đại diện sân */}
+                        <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100">
+                          <img
+                            src={primaryImage.url}
+                            alt={r.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        {/* Thông tin sân */}
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-800 line-clamp-1">{r.name || 'Địa điểm'}</p>
+                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                            {(r as any).address_detail || 'Địa chỉ đang cập nhật'}
+                          </p>
+                          {r.phone && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              <i className="fa-solid fa-phone text-[#348738] mr-1" />
+                              {r.phone}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+              </div>
+            </section>
+
+          </div>
+
+          {/* Right: booking controls (sticky) */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow sticky top-24">
+              <h4 className="text-lg font-semibold mb-3">Đặt sân</h4>
+              <div className="mb-3">
+                <label className="text-sm text-gray-600">Chọn ngày</label>
                 <input
                   type="date"
+                  className="w-full mt-2 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#348738]"
                   value={selectedDate}
                   onChange={handleChangeDate}
-                  min={new Date().toISOString().slice(0, 10)} // Only allow today and future dates
-                  className="px-4 py-2 text-gray-700 border-2 rounded-xl border-gray-300 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition duration-200"
+                  min={new Date().toISOString().slice(0, 10)}
                 />
               </div>
 
-              <div>
-                {/* --- Thanh chọn sân --- */}
-                <div className="flex flex-wrap gap-2 md:gap-4 mb-6 p-2 bg-gray-100 rounded-lg shadow-inner">
+              <div className="mb-4">
+                <label className="text-sm text-gray-600">Chọn sân</label>
+                <div className="mt-2 flex flex-wrap gap-2">
                   {courts.map((court: Court) => (
                     <button
                       key={court.id}
                       onClick={() => setIsActiveCourtId(court.id)}
-                      className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 transform hover:scale-105
-                                              ${isActiveCourtId === court.id
-                          ? 'court-button-active shadow-md'
-                          : 'bg-white text-gray-700 court-button-inactive'
-                        }`}
+                      className={`px-3 py-2 rounded-lg text-sm border ${isActiveCourtId === court.id ? 'bg-[#348738] text-white' : 'bg-white'}`}
                     >
                       {court.name}
                     </button>
                   ))}
                 </div>
+              </div>
 
-                {/* --- Hiển thị time slot của sân được chọn --- */}
-                <div className="mt-8">
+              {/* Time slots for active court */}
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Khung giờ ({selectedItems.length} đã chọn)</p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {courts
-                    .filter((court) => court.id === isActiveCourtId)
-                    .map((court: Court & { time_slots?: EnrichedTimeSlot[] }) => (
-                      <div key={court.id} className="bg-white border border-gray-100 rounded-xl p-6 shadow-xl">
-                        <h4 className="text-xl font-bold text-gray-800 border-b pb-3 mb-4">{court.name}</h4>
-                        <div className="text-sm text-gray-600 space-y-1 mb-6 flex flex-wrap gap-x-8">
-                          <p><span className="font-medium text-gray-700">Mặt sân:</span> {court.surface}</p>
-                          <p><span className="font-medium text-gray-700">Loại:</span> {court.is_indoor ? 'Trong nhà' : 'Ngoài trời'}</p>
-                        </div>
+                    .filter(c => c.id === isActiveCourtId)
+                    .flatMap((court: any) => court.time_slots?.map((time: any) => ({ court, time })) ?? [])
+                    .map(({ court, time }: any) => {
+                      const isSelected = selectedItems.some((it) => it.court_id === court.id && it.time_slot_id === time.id);
+                      let base = 'text-xs p-2 rounded-md font-semibold';
+                      let cls = time.status === 'open'
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : time.status === 'booked'
+                          ? 'bg-red-50 text-red-600 cursor-not-allowed'
+                          : time.status === 'maintenance'
+                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                            : 'bg-yellow-50 text-yellow-700 cursor-not-allowed';
+                      if (isSelected) cls = 'bg-orange-500 text-white ring-2 ring-orange-300';
+                      return (
+                        <button
+                          key={`${court.id}-${time.id}`}
+                          onClick={() =>
+                            handleSelectItem(
+                              {
+                                court_id: court.id,
+                                name: court.name,
+                                time_slot_id: time.id,
+                                start_time: time.start_time,
+                                end_time: time.end_time,
+                                date: selectedDate,
+                                price: time.price || 0,
+                              },
+                              time.status
+                            )
+                          }
+                          disabled={time.status !== 'open'}
+                          className={`${base} ${cls}`}
+                        >
+                          <div>{time.label ?? `${time.start_time?.slice(0, 5)} - ${time.end_time?.slice(0, 5)}`}</div>
+                          <div className="text-[10px] mt-1">{time.price ? formatPrice(time.price) : '-'}</div>
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
 
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                          {court.time_slots?.map((time) => {
-                            const isSelected = selectedItems.some(
-                              (item) => item.court_id === court.id && item.time_slot_id === time.id
-                            );
+              <form onSubmit={handleSubmit}>
+                <div className="mt-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm text-gray-600">Tổng</p>
+                      <p className="text-xl font-bold text-orange-600">{formatPrice(selectedPrice)}</p>
+                    </div>
+                    <div>
+                      <button
+                        type="submit"
+                        disabled={selectedItems.length === 0}
+                        className={`px-4 py-2 rounded-lg font-bold text-white ${selectedItems.length === 0 ? 'bg-gray-300' : 'bg-gradient-to-r from-[#348738] to-green-700'}`}
+                      >
+                        Đặt ngay
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+            {/* Địa điểm / Liên lạc */}
+            <div className="bg-white rounded-xl shadow-md p-5 mt-6 border border-gray-100">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-semibold text-gray-700">
+                  Địa điểm / Liên lạc
+                </h2>
+              </div>
 
-                            let timeClass = '';
-                            let tooltipText = '';
-                            switch (time.status) {
-                              case 'maintenance':
-                                timeClass = 'bg-gray-200 text-gray-500 cursor-not-allowed opacity-70';
-                                tooltipText = 'Đang bảo trì';
-                                break;
-                              case 'booked':
-                                timeClass = 'bg-red-500/10 text-red-600 cursor-not-allowed';
-                                tooltipText = 'Đã có người đặt';
-                                break;
-                              case 'closed':
-                                timeClass = 'bg-yellow-500/10 text-yellow-600 cursor-not-allowed';
-                                tooltipText = 'Đã đóng cửa';
-                                break;
-                              case 'open':
-                                timeClass = 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 cursor-pointer shadow-sm';
-                                tooltipText = 'Sẵn sàng đặt';
-                                break;
-                              default:
-                                timeClass = 'bg-gray-100 text-gray-400 cursor-not-allowed';
-                                tooltipText = 'Không khả dụng';
-                            }
+              <div className="border-t border-gray-100 pt-3 space-y-3 text-sm">
+                {/* Địa chỉ */}
+                {venue.address_detail && (
+                  <div className="flex flex-wrap items-start">
+                    <i className="fa-solid fa-location-dot text-[#348738] w-5 mt-0.5"></i>
+                    <span className="font-semibold text-gray-700 mr-2 whitespace-nowrap">
+                      Địa chỉ:
+                    </span>
+                    <span className="text-gray-600 break-words flex-1 min-w-[200px]">
+                      {venue.address_detail}
+                    </span>
+                  </div>
+                )}
 
-                            if (isSelected) {
-                              timeClass = 'bg-orange-500 text-white ring-2 ring-offset-2 ring-orange-300 shadow-md cursor-pointer hover:bg-orange-600';
-                            }
+                {/* Phone */}
+                {venue.phone && (
+                  <div className="flex items-start">
+                    <i className="fa-solid fa-phone text-[#348738] w-5 mt-0.5"></i>
+                    <span className="font-semibold text-gray-700 mr-2">Phone:</span>
+                    <span className="text-gray-600">{venue.phone}</span>
+                  </div>
+                )}
 
-                            return (
-                              <div key={time.id} className="text-center group relative">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleSelectItem(
-                                      {
-                                        court_id: court.id,
-                                        name: court.name,
-                                        time_slot_id: time.id,
-                                        start_time: time.start_time,
-                                        end_time: time.end_time,
-                                        date: selectedDate,
-                                        price: time.price || 0,
-                                      },
-                                      time.status
-                                    )
-                                  }
-                                  className={`w-full h-full p-3 rounded-xl transition-all duration-200 font-semibold flex flex-col justify-center items-center ${timeClass}`}
-                                  title={tooltipText}
-                                >
-                                  <span className="text-sm">{time.label ?? ''}</span>
-                                  <span className="text-xs font-medium opacity-90">
-                                    {time.price ? formatPrice(time.price) : '-'}
-                                  </span>
-                                </button>
-                                {/* Only show line-through for non-open slots */}
-                                {time.status !== 'open' && !isSelected && (
-                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                    <div className="w-full h-0.5 bg-red-400 transform rotate-12"></div>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="mt-6 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
-                          <p className="font-semibold mb-2">Chú thích trạng thái:</p>
-                          <ul className="grid grid-cols-2 gap-2">
-                            <li><span className="inline-block w-3 h-3 bg-green-50 border border-green-200 rounded-full mr-2"></span>Khung giờ mở</li>
-                            <li><span className="inline-block w-3 h-3 bg-red-500/10 rounded-full mr-2"></span>Đã được đặt</li>
-                            <li><span className="inline-block w-3 h-3 bg-yellow-500/10 rounded-full mr-2"></span>Đã đóng cửa</li>
-                            <li><span className="inline-block w-3 h-3 bg-gray-200 rounded-full mr-2"></span>Đang bảo trì</li>
-                            <li><span className="inline-block w-3 h-3 bg-orange-500 rounded-full mr-2"></span>Đang chọn</li>
-                          </ul>
-                        </div>
-                      </div>
-                    ))}
+                {/* Chủ sân */}
+                <div className="flex items-start">
+                  <i className="fa-solid fa-user-tie text-[#348738] w-5 mt-0.5"></i>
+                  <span className="font-semibold text-gray-700 mr-2">Chủ sân:</span>
+                  <span className="text-gray-600">{venue.name}</span>
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-12 bg-orange-50 rounded-xl border border-orange-200">
-              <i className="fa-solid fa-triangle-exclamation text-orange-500 text-3xl mb-4"></i>
-              <p className="text-gray-700 font-medium">Rất tiếc, địa điểm này chưa có sân nào được tạo hoặc không có lịch vào ngày đã chọn.</p>
+
+
+            {/* Small tips / rules */}
+            <div className="bg-white rounded-xl p-4 border border-gray-100 text-sm text-gray-600">
+              <p className="font-semibold mb-2">Lưu ý</p>
+              <ul className="list-disc ml-5 space-y-1">
+                <li>Vui lòng đến trước 10 phút để chuẩn bị.</li>
+                <li>Quy định hủy: hủy trước 24 giờ hoàn tiền 100% (placeholder).</li>
+                <li>Liên hệ hotline để hỗ trợ đặt số lượng lớn.</li>
+              </ul>
             </div>
-          )}
-        </div>
-
-        {/* Booking Summary & Action (Sticky Footer) */}
-        <div className="sticky bottom-0 bg-white p-6 shadow-top z-10 border-t border-gray-100">
-          <form onSubmit={handleSubmit}>
-            <h2 className="font-bold text-xl text-gray-800 mb-4 flex justify-between items-center">
-              <span>Giỏ hàng của bạn ({selectedItems.length} slot)</span>
-              <span className="text-3xl font-extrabold text-orange-600 ml-4">{formatPrice(selectedPrice)}</span>
-            </h2>
-
-            <div className="space-y-3 mb-6 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-              {selectedItems.length === 0 ? (
-                <div className="text-center text-gray-500 py-4 italic border-dashed border-2 border-gray-200 rounded-lg">
-                  <p>Vui lòng chọn khung giờ muốn đặt ở trên.</p>
-                </div>
-              ) : (
-                selectedItems.map((item) => (
-                  <div key={`${item.court_id}-${item.time_slot_id}`} className="p-3 rounded-lg border border-orange-200 bg-orange-50 flex justify-between items-center transition duration-200">
-                    <div className="flex items-center gap-3">
-                      <i className="fa-solid fa-circle-check text-orange-500"></i>
-                      <div>
-                        <p className="font-semibold text-gray-800">{item.name}</p>
-                        <p className="text-sm text-gray-600">
-                          {item.start_time.slice(0, 5)} - {item.end_time.slice(0, 5)} ({item.date})
-                        </p>
-                      </div>
-                    </div>
-                    <p className="font-bold text-lg text-orange-600">
-                      {formatPrice(item.price)}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={selectedItems.length === 0}
-              className={`w-full font-bold py-4 px-6 rounded-xl shadow-xl flex items-center justify-center gap-2 transition-all duration-300 uppercase tracking-wider
-                              ${selectedItems.length === 0
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-orange-500 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-orange-300'
-                }`}
-            >
-              <i className="fa-solid fa-arrow-right-to-bracket"></i>
-              <span>Thanh toán và Đặt sân ngay</span>
-            </button>
-          </form>
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

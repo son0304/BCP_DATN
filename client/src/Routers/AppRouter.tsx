@@ -10,7 +10,6 @@ import Login from '../Auth/Login'
 import Register from '../Auth/Register'
 import VerifyEmail from '../Pages/Mail/VerifyEmail'
 import List_Venue from '../Pages/Venues/List_Venues'
-import Index_Venues from '../Pages/Venues/Index_Venues'
 import Detail_Venue from '../Pages/Venues/Detail_Venue'
 
 const AppRouter = () => {
@@ -28,10 +27,8 @@ const AppRouter = () => {
             {/* Content */}
             <Route path='/' element={<App />}>
                 <Route index element={<Content />} />
-                <Route path='venues' element={<Index_Venues />}>
-                    <Route index element={<List_Venue />} />
-                    <Route path=':id' element={<Detail_Venue />} />
-                </Route>
+                <Route path='venues' element={<List_Venue />} />
+                <Route path='venues/:id' element={<Detail_Venue />} />
                 <Route path='booking/:id' element={<Ticket />} />
                 <Route path='profile' element={<Detail_User />} />
                 <Route path='partner' element={<Home_Partner />}>

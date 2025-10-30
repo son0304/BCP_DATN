@@ -91,6 +91,8 @@ const Header = () => {
         <nav className="hidden md:flex gap-8">
           <NavLink to="/" className={getNavLinkClass}>Trang Chủ</NavLink>
           <NavLink to="/partner" className={getNavLinkClass}>Dành cho đối tác</NavLink>
+          <NavLink to="/blog" className={getNavLinkClass}>Tin tức</NavLink>
+
         </nav>
 
         <div className="hidden md:flex items-center gap-4">

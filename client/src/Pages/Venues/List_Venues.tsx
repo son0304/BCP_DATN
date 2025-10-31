@@ -30,8 +30,8 @@ const List_Venue = ({ limit }: VenuesProps) => {
   const displayedVenues = filteredVenues
     ? filteredVenues
     : limit
-    ? venues.slice(0, limit)
-    : venues;
+      ? venues.slice(0, limit)
+      : venues;
 
   const handleSearch = () => {
     let filtered = venues;
@@ -80,7 +80,7 @@ const List_Venue = ({ limit }: VenuesProps) => {
 
         <button
           onClick={handleSearch}
-          className="min-w-[120px] px-5 py-2 bg-[#2d6a2d] text-white rounded-lg hover:bg-[#256026] transition-all flex items-center"
+          className="min-w-[120px] px-5 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all flex items-center"
         >
           <i className="fa-solid fa-magnifying-glass mr-2"></i>
           Tìm kiếm
@@ -122,12 +122,19 @@ const List_Venue = ({ limit }: VenuesProps) => {
                     />
 
                     {/* Nút “Mở cửa” */}
-                    <div className="absolute top-3 right-3 bg-green-600 text-white text-sm px-3 py-1 rounded-full shadow-md">
-                      Mở cửa
+                    <div className="absolute top-3 right-3 bg-orange-500 text-white text-sm px-3 py-1 rounded-full shadow-md">
+                      {
+                        venue.start_time && venue.end_time ? (
+                          <span className="text-white font-medium">{venue.start_time.slice(0, 5)} - {venue.end_time.slice(0, 5)}</span>
+                        ) : (
+                          <span className="text-white font-medium">Chưa có giờ hoạt động</span>
+
+                        )
+                      }
                     </div>
 
                     {/* Đánh giá */}
-                    <div className="absolute bottom-0 left-0 bg-[#2d6a2d] text-white px-3 py-2 rounded-tr-2xl flex items-center gap-2">
+                    <div className="absolute bottom-0 left-0 bg-orange-500 text-white px-3 py-2 rounded-tr-2xl flex items-center gap-2">
                       <span className="bg-white text-[#2d6a2d] text-sm font-semibold px-2 py-0.5 rounded">
                         {Number(venue.reviews_avg_rating)?.toFixed(1) ?? "0.0"}
                       </span>
@@ -135,11 +142,10 @@ const List_Venue = ({ limit }: VenuesProps) => {
                         {[...Array(5)].map((_, i) => (
                           <i
                             key={i}
-                            className={`fa-star fa-solid text-sm ${
-                              i < Math.round(Number(venue.reviews_avg_rating)|| 0)
-                                ? "text-yellow-400"
-                                : "text-gray-300"
-                            }`}
+                            className={`fa-star fa-solid text-sm ${i < Math.round(Number(venue.reviews_avg_rating) || 0)
+                              ? "text-yellow-400"
+                              : "text-white"
+                              }`}
                           ></i>
                         ))}
                       </div>
@@ -157,19 +163,6 @@ const List_Venue = ({ limit }: VenuesProps) => {
                       <div className="flex items-center text-gray-600 text-sm mb-2">
                         <i className="fa-solid fa-phone text-[#2d6a2d] mr-2"></i>
                         {venue.phone}
-                      </div>
-                    )}
-
-                    {venue.start_time && venue.end_time ? (
-                      <div className="flex items-center text-sm text-gray-500 mt-auto">
-                        <i className="fa-regular fa-clock text-[#2d6a2d] mr-2"></i>
-                        <span className="font-semibold text-gray-800">Mở cửa:</span>&nbsp;
-                        <span className="text-[#348738] font-medium">{venue.start_time.slice(0, 5)} - {venue.end_time.slice(0, 5)}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center text-sm text-gray-400 italic mt-auto">
-                        <i className="fa-regular fa-clock text-gray-400 mr-2"></i>
-                        Chưa có giờ hoạt động
                       </div>
                     )}
 

@@ -70,7 +70,7 @@ const Header = () => {
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) => {
     const baseClasses =
       "relative group px-4 py-2 rounded-lg hover:bg-green-50 transition-all duration-300 font-medium text-[#348738]";
-    return isActive ? `${baseClasses} border-b-2 border-[#348738]` : baseClasses;
+    return isActive ? `${baseClasses} focus:bg-[#348738] focus:text-white border-b-2 border-orange-500` : baseClasses;
   };
 
   const getMobileNavLinkClass = ({ isActive }: { isActive: boolean }) => {
@@ -98,8 +98,8 @@ const Header = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex gap-8">
-          <NavLink to="/venues" className={getNavLinkClass}>
-            Tìm kiếm sân
+          <NavLink to="/" className={getNavLinkClass}>
+            Trang chủ
           </NavLink>
           <NavLink to="/partner" className={getNavLinkClass}>
             Dành cho đối tác

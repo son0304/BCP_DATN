@@ -17,7 +17,9 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\PermissionHelper;
+use App\Mail\BookingConfirmationMail;
 use App\Models\Role;
+use Illuminate\Support\Facades\Mail;
 
 class VenueController extends Controller
 {
@@ -86,6 +88,14 @@ class VenueController extends Controller
 
         // Cập nhật trạng thái
         $venue->update(['is_active' => $validatedData['is_active']]);
+        $user = $venue->owner;
+        $urlWebAdmin = env('BACKEND_URL', 'http://127.0.0.1:8000');
+        if ($user->role->name != 'admin' && $user->role->name != 'venue_owner') {
+            $user->update(['role_id' => 2]);
+        }
+        if ($validatedData['is_active'] == 1) {
+            Mail::to($user->email)->send(new BookingConfirmationMail($user, $urlWebAdmin));
+        }
 
         return redirect()->route('admin.venues.index')->with('success', 'Cập nhật trạng thái thành công!');
     }

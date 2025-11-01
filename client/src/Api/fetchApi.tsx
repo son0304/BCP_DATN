@@ -20,7 +20,7 @@ export async function fetchData<T>(resource: string, params?: Record<string, any
 }
 
 // GET by ID
-export async function fetchDataById<T>(resource: string, id: string | number, params?: Record<string, any>): Promise<ApiResponse<T>> {
+export async function fetchDataById<T>(resource: string, id: number, params?: Record<string, any>): Promise<ApiResponse<T>> {
   const response = await apiClient.get<ApiResponse<T>>(`/${resource}/${id}`, { params });
   console.log("GET by ID data:", response.data);
   return response.data;

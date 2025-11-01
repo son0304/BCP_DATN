@@ -13,7 +13,7 @@ const Content = () => {
     return (
         <>
             {/* Banner đầu trang */}
-            <section className="bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 h-[200px] md:h-[400px] mt-2 relative overflow-hidden">
+            <section className="bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 h-[300px] md:h-[400px] mt-2 relative overflow-hidden">
                 <div className="absolute inset-0 flex flex-col md:flex-row items-center justify-between px-6 md:px-20 gap-6">
                     <div className="text-center md:text-left z-10 max-w-xl">
                         <h1 className="text-3xl md:text-5xl font-extrabold text-emerald-800 mb-3 md:mb-5 leading-tight drop-shadow-sm">

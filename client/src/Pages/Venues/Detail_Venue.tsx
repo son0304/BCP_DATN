@@ -1,8 +1,8 @@
 // Detail_Venue.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useFetchDataById, usePostData } from '../../Hooks/useApi';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { Venue } from '../../Types/venue';
+import type { Venue, EnrichedTimeSlot } from '../../Types/venue';
 import type { Image } from '../../Types/image';
 import type { Court } from '../../Types/court';
 import type { ApiResponse } from '../../Types/api';
@@ -20,7 +20,16 @@ type SelectedItem = {
 };
 
 const Detail_Venue: React.FC = () => {
-  const user = JSON.parse(String(localStorage.getItem('user')));
+  // safe parse user
+  const rawUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+  const user = useMemo(() => {
+    try {
+      return rawUser ? JSON.parse(rawUser) : null;
+    } catch {
+      return null;
+    }
+  }, [rawUser]);
+
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<number>(0);
@@ -33,16 +42,20 @@ const Detail_Venue: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const idVenue = Number(id);
+
   const { data: detail_venue, isLoading, refetch } = useFetchDataById<Venue>('venue', idVenue, { date: selectedDate });
   const { mutate } = usePostData<ApiResponse<number>, any>('tickets');
+  if (detail_venue) {
+    console.log(detail_venue);
 
+  }
   // Recalculate total whenever selectedItems change
   useEffect(() => {
     const total = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
     setSelectedPrice(total);
   }, [selectedItems]);
 
-  // Refetch when date changes (existing logic)
+  // Refetch when date changes and clear selection
   useEffect(() => {
     refetch();
     setSelectedItems([]);
@@ -52,25 +65,21 @@ const Detail_Venue: React.FC = () => {
   useEffect(() => {
     if (detail_venue?.data?.courts?.length && isActiveCourtId === null) {
       setIsActiveCourtId(detail_venue.data.courts[0].id);
-    } else if (detail_venue?.data?.courts?.length && !detail_venue.data.courts.some(c => c.id === isActiveCourtId)) {
+    } else if (detail_venue?.data?.courts?.length && !detail_venue.data.courts.some((c: any) => c.id === isActiveCourtId)) {
       setIsActiveCourtId(detail_venue.data.courts[0].id);
     }
-  }, [detail_venue]);
+  }, [detail_venue, isActiveCourtId]);
 
-  // Fetch a few venues (not strictly related), exclude current
+  // Load related venues (best-effort, not critical)
   useEffect(() => {
     const loadRelated = async () => {
       try {
         setRelatedLoading(true);
         const currentId = detail_venue?.data?.id;
-        const res = await fetchData<any>('venues'); // thử 'venues' nếu API danh sách
-        const list = Array.isArray(res?.data)
-          ? res.data
-          : Array.isArray(res?.data?.data)
-            ? res.data.data
-            : [];
-        const items = list.filter((v:any) => v.id !== currentId).slice(0, 4);
-        setRelatedVenues(items.length ? items : [detail_venue?.data]);
+        const res = await fetchData<any>('venues');
+        const list = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+        const items = list.filter((v: any) => v.id !== currentId).slice(0, 4);
+        setRelatedVenues(items.length ? items : (detail_venue?.data ? [detail_venue.data] : []));
       } catch (err) {
         console.error('loadRelated error:', err);
         setRelatedVenues([]);
@@ -81,8 +90,6 @@ const Detail_Venue: React.FC = () => {
     loadRelated();
   }, [detail_venue?.data?.id]);
 
-
-  // Loading state
   if (isLoading || !detail_venue) {
     return (
       <div className="flex items-center justify-center h-full min-h-[560px] bg-gray-50 rounded-xl shadow-inner">
@@ -92,14 +99,14 @@ const Detail_Venue: React.FC = () => {
     );
   }
 
-  // Data
+  // Data normalization
   const venue: Venue = detail_venue.data;
   const images: Image[] = (venue as any).images ?? (venue as any).photos ?? [];
   const primaryImage = images.find((img: Image) => img.is_primary === 1) ?? images[0] ?? { url: 'https://placehold.co/1200x700/348738/ffffff?text=BCP+Sports' };
   const gallery = images.length > 0 ? images : [primaryImage];
   const courts = venue.courts ?? [];
 
-  // Placeholders for fields that may not exist yet on venue
+  // Placeholder services/reviews structure if API doesn't provide
   const services = (venue as any).services ?? ['Bãi gửi xe', 'Cho thuê dụng cụ', 'WC & phòng thay đồ', 'Nước uống'];
   const reviews = (venue as any).reviews ?? {
     avg_rating: (venue as any).reviews_avg_rating ?? 4.6,
@@ -131,9 +138,7 @@ const Detail_Venue: React.FC = () => {
 
     if (isSelected) {
       setSelectedItems((prev) =>
-        prev.filter(
-          (item) => !(item.court_id === clickedItem.court_id && item.time_slot_id === clickedItem.time_slot_id)
-        )
+        prev.filter((item) => !(item.court_id === clickedItem.court_id && item.time_slot_id === clickedItem.time_slot_id))
       );
     } else {
       setSelectedItems((prev) => [...prev, clickedItem]);
@@ -155,7 +160,7 @@ const Detail_Venue: React.FC = () => {
       court_id: item.court_id,
       time_slot_id: item.time_slot_id,
       date: item.date,
-      unit_price: item.price,
+      unit_price: Number(item.price), // ensure numeric
     }));
 
     const bookingData = {
@@ -178,8 +183,10 @@ const Detail_Venue: React.FC = () => {
           refetch();
         }
       },
-      onError: (error: Error) => {
-        showNotification(`Đã xảy ra lỗi: ${error.message}`, 'error');
+      onError: (error: any) => {
+        // Axios error may carry response data
+        const msg = error?.response?.data?.message ?? error?.message ?? 'Đã xảy ra lỗi.';
+        showNotification(`Đã xảy ra lỗi: ${msg}`, 'error');
         console.error(error);
       },
     });
@@ -190,7 +197,7 @@ const Detail_Venue: React.FC = () => {
   // derive price range if possible
   const priceRange = (() => {
     const prices: number[] = [];
-    courts.forEach(c => c.time_slots?.forEach((t: any) => { if (t.price) prices.push(Number(t.price)); }));
+    courts.forEach((c: any) => c.time_slots?.forEach((t: any) => { if (t.price) prices.push(Number(t.price)); }));
     if (prices.length === 0) return null;
     const min = Math.min(...prices), max = Math.max(...prices);
     return min === max ? `${formatPrice(min)}` : `${formatPrice(min)} - ${formatPrice(max)}`;
@@ -198,7 +205,7 @@ const Detail_Venue: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto my-8 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100">
-      {/* Top: Hero + right summary */}
+      {/* Top hero + summary */}
       <div className="md:flex">
         <div className="md:w-2/3 relative">
           <div
@@ -225,7 +232,6 @@ const Detail_Venue: React.FC = () => {
                   <span>{venue.phone ?? 'Chưa có'}</span>
                 </div>
 
-                {/* Start/End time from your logic */}
                 {venue.start_time && venue.end_time && (
                   <div className="flex items-center gap-2">
                     <i className="fa-regular fa-clock text-[#2d6a2d]" />
@@ -236,7 +242,7 @@ const Detail_Venue: React.FC = () => {
             </div>
           </div>
 
-          {/* Gallery thumbnails */}
+          {/* gallery thumbnails */}
           <div className="p-4 md:p-5 border-t border-gray-100 bg-white">
             <div className="flex gap-3 overflow-x-auto pb-1">
               {gallery.map((img: any, idx: number) => (
@@ -252,7 +258,7 @@ const Detail_Venue: React.FC = () => {
           </div>
         </div>
 
-        {/* Right summary */}
+        {/* Right summary & sticky booking (sidebar) */}
         <aside className="md:w-1/3 p-6 border-l border-gray-100 bg-gradient-to-b from-white to-gray-50">
           <div className="space-y-4">
             <div>
@@ -303,9 +309,8 @@ const Detail_Venue: React.FC = () => {
       {/* Main booking + info area */}
       <div className="p-8 lg:p-10 space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left: description, price table, reviews, related */}
+          {/* Left content (description, courts, reviews, related) */}
           <div className="lg:col-span-2 space-y-6">
-
             {/* Court list */}
             <section className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
               <h3 className="text-lg font-semibold mb-3">Danh sách sân con</h3>
@@ -362,7 +367,6 @@ const Detail_Venue: React.FC = () => {
               </div>
 
               <div className="mt-4">
-                {/* sample comment */}
                 <div className="border-t pt-4 text-sm text-gray-700">
                   <p className="font-medium">Nguyễn A</p>
                   <p className="text-xs text-gray-500">2 tuần trước</p>
@@ -384,55 +388,35 @@ const Detail_Venue: React.FC = () => {
                 {!relatedLoading && relatedVenues.length === 0 && (
                   <div className="col-span-full text-sm text-gray-500">Chưa có sân liên quan.</div>
                 )}
-                {!relatedLoading &&
-                  relatedVenues.map((r) => {
-                    const images: Image[] =
-                      (r as any).images ?? (r as any).photos ?? [];
-                    const primaryImage =
-                      images.find((img: Image) => img.is_primary === 1) ??
-                      images[0] ??
-                      { url: 'https://placehold.co/300x200/348738/ffffff?text=S%C3%A2n' };
-
-                    return (
-                      <button
-                        key={r.id}
-                        onClick={() => navigate(`/venues/${r.id}`)}
-                        className="flex items-start gap-3 p-3 border rounded-lg text-left hover:border-[#348738] transition-all hover:shadow-sm"
-                      >
-                        {/* Hình ảnh đại diện sân */}
-                        <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100">
-                          <img
-                            src={primaryImage.url}
-                            alt={r.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-
-                        {/* Thông tin sân */}
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-800 line-clamp-1">{r.name || 'Địa điểm'}</p>
-                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                            {(r as any).address_detail || 'Địa chỉ đang cập nhật'}
-                          </p>
-                          {r.phone && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              <i className="fa-solid fa-phone text-[#348738] mr-1" />
-                              {r.phone}
-                            </p>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
+                {!relatedLoading && relatedVenues.map((r: any) => {
+                  const images: Image[] = (r as any).images ?? (r as any).photos ?? [];
+                  const primary = images.find((img: Image) => img.is_primary === 1) ?? images[0] ?? { url: 'https://placehold.co/300x200/348738/ffffff?text=S%C3%A2n' };
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => navigate(`/venues/${r.id}`)}
+                      className="flex items-start gap-3 p-3 border rounded-lg text-left hover:border-[#348738] transition-all hover:shadow-sm"
+                    >
+                      <div className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100">
+                        <img src={primary.url} alt={r.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-800 line-clamp-1">{r.name || 'Địa điểm'}</p>
+                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">{(r as any).address_detail || 'Địa chỉ đang cập nhật'}</p>
+                        {r.phone && <p className="text-xs text-gray-500 mt-1"><i className="fa-solid fa-phone text-[#348738] mr-1" />{r.phone}</p>}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </section>
-
           </div>
 
-          {/* Right: booking controls (sticky) */}
+          {/* Right: booking controls (sticky sidebar) */}
           <div className="space-y-6">
             <div className="bg-white rounded-xl p-6 border border-gray-100 shadow sticky top-24">
               <h4 className="text-lg font-semibold mb-3">Đặt sân</h4>
+
               <div className="mb-3">
                 <label className="text-sm text-gray-600">Chọn ngày</label>
                 <input
@@ -489,7 +473,7 @@ const Detail_Venue: React.FC = () => {
                                 start_time: time.start_time,
                                 end_time: time.end_time,
                                 date: selectedDate,
-                                price: time.price || 0,
+                                price: Number(time.price) || 0,
                               },
                               time.status
                             )
@@ -498,7 +482,7 @@ const Detail_Venue: React.FC = () => {
                           className={`${base} ${cls}`}
                         >
                           <div>{time.label ?? `${time.start_time?.slice(0, 5)} - ${time.end_time?.slice(0, 5)}`}</div>
-                          <div className="text-[10px] mt-1">{time.price ? formatPrice(time.price) : '-'}</div>
+                          <div className="text-[10px] mt-1">{time.price ? formatPrice(Number(time.price)) : '-'}</div>
                         </button>
                       );
                     })}
@@ -525,46 +509,37 @@ const Detail_Venue: React.FC = () => {
                 </div>
               </form>
             </div>
-            {/* Địa điểm / Liên lạc */}
+
+            {/* Contact / location box */}
             <div className="bg-white rounded-xl shadow-md p-5 mt-6 border border-gray-100">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-semibold text-gray-700">
-                  Địa điểm / Liên lạc
-                </h2>
+                <h2 className="text-lg font-semibold text-gray-700">Địa điểm / Liên lạc</h2>
               </div>
 
               <div className="border-t border-gray-100 pt-3 space-y-3 text-sm">
-                {/* Địa chỉ */}
                 {venue.address_detail && (
                   <div className="flex flex-wrap items-start">
-                    <i className="fa-solid fa-location-dot text-[#348738] w-5 mt-0.5"></i>
-                    <span className="font-semibold text-gray-700 mr-2 whitespace-nowrap">
-                      Địa chỉ:
-                    </span>
-                    <span className="text-gray-600 break-words flex-1 min-w-[200px]">
-                      {venue.address_detail}
-                    </span>
+                    <i className="fa-solid fa-location-dot text-[#348738] w-5 mt-0.5" />
+                    <span className="font-semibold text-gray-700 mr-2 whitespace-nowrap">Địa chỉ:</span>
+                    <span className="text-gray-600 break-words flex-1 min-w-[200px]">{venue.address_detail}</span>
                   </div>
                 )}
 
-                {/* Phone */}
                 {venue.phone && (
                   <div className="flex items-start">
-                    <i className="fa-solid fa-phone text-[#348738] w-5 mt-0.5"></i>
+                    <i className="fa-solid fa-phone text-[#348738] w-5 mt-0.5" />
                     <span className="font-semibold text-gray-700 mr-2">Phone:</span>
                     <span className="text-gray-600">{venue.phone}</span>
                   </div>
                 )}
 
-                {/* Chủ sân */}
                 <div className="flex items-start">
-                  <i className="fa-solid fa-user-tie text-[#348738] w-5 mt-0.5"></i>
+                  <i className="fa-solid fa-user-tie text-[#348738] w-5 mt-0.5" />
                   <span className="font-semibold text-gray-700 mr-2">Chủ sân:</span>
                   <span className="text-gray-600">{venue.name}</span>
                 </div>
               </div>
             </div>
-
 
             {/* Small tips / rules */}
             <div className="bg-white rounded-xl p-4 border border-gray-100 text-sm text-gray-600">

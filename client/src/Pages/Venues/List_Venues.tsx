@@ -50,25 +50,25 @@ const List_Venue = ({ limit }: VenuesProps) => {
   };
 
   return (
-    <div className="w-full bg-gray-50 py-6">
-      <h1 className="md:text-3xl text-2xl font-bold text-[#2d6a2d] my-4 text-center">
+    <div className="w-full bg-gray-50 py-8">
+      <h1 className="text-2xl md:text-3xl font-extrabold text-[#2d6a2d] my-6 text-center">
         Danh sách sân thể thao
       </h1>
 
       {/* Hàng lọc: tên sân + select địa chỉ + button */}
-      <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-3 px-4 mb-6">
+      <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-4 px-4 mb-8">
         <input
           type="text"
           placeholder="Nhập tên sân..."
           value={searchName}
           onChange={(e) => setSearchName(e.target.value)}
-          className="flex-1 min-w-[150px] flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2d6a2d] transition-all"
+          className="flex-1 min-w-[150px] px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2d6a2d] transition duration-300"
         />
 
         <select
           value={selectedAddress}
           onChange={(e) => setSelectedAddress(e.target.value)}
-          className="flex-1 min-w-[150px] flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2d6a2d] transition-all"
+          className="flex-1 min-w-[150px] px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2d6a2d] transition duration-300"
         >
           <option value="">Chọn địa chỉ...</option>
           {addressOptions.map((addr, idx) => (
@@ -80,7 +80,7 @@ const List_Venue = ({ limit }: VenuesProps) => {
 
         <button
           onClick={handleSearch}
-          className="min-w-[120px] px-5 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all flex items-center"
+          className="min-w-[120px] px-5 py-2 bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 transition duration-300 flex items-center justify-center shadow-md"
         >
           <i className="fa-solid fa-magnifying-glass mr-2"></i>
           Tìm kiếm
@@ -88,12 +88,12 @@ const List_Venue = ({ limit }: VenuesProps) => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {isLoading ? (
             Array.from({ length: limit || 4 }).map((_, index) => (
               <div
                 key={index}
-                className="bg-white rounded-3xl shadow-md animate-pulse overflow-hidden border border-gray-200 h-full flex flex-col"
+                className="bg-white rounded-2xl shadow-md animate-pulse overflow-hidden border border-gray-200 h-full flex flex-col"
               >
                 <div className="w-full h-64 bg-gray-200"></div>
                 <div className="p-5 space-y-3">
@@ -110,7 +110,7 @@ const List_Venue = ({ limit }: VenuesProps) => {
               return (
                 <div
                   key={venue.id}
-                  className="relative bg-white rounded-3xl shadow-lg hover:shadow-2xl overflow-hidden border border-gray-100 transition-all duration-500 group hover:-translate-y-2 h-full flex flex-col"
+                  className="relative bg-white rounded-3xl shadow-lg hover:shadow-2xl overflow-hidden border border-gray-100 transition-transform duration-500 hover:-translate-y-2 flex flex-col h-full"
                 >
                   {/* Ảnh sân */}
                   <div className="relative">
@@ -118,19 +118,16 @@ const List_Venue = ({ limit }: VenuesProps) => {
                       onClick={() => navigate(`/venues/${venue.id}`)}
                       src={primaryImage?.url || "https://via.placeholder.com/400x300?text=BCP+Sports"}
                       alt={venue.name}
-                      className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500 cursor-pointer"
+                      className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-110 cursor-pointer"
                     />
 
                     {/* Nút “Mở cửa” */}
-                    <div className="absolute top-3 right-3 bg-orange-500 text-white text-sm px-3 py-1 rounded-full shadow-md">
-                      {
-                        venue.start_time && venue.end_time ? (
-                          <span className="text-white font-medium">{venue.start_time.slice(0, 5)} - {venue.end_time.slice(0, 5)}</span>
-                        ) : (
-                          <span className="text-white font-medium">Chưa có giờ hoạt động</span>
-
-                        )
-                      }
+                    <div className="absolute top-3 right-3 bg-orange-500 text-white text-sm px-3 py-1 rounded-full shadow">
+                      {venue.start_time && venue.end_time ? (
+                        <span className="font-medium">{venue.start_time.slice(0, 5)} - {venue.end_time.slice(0, 5)}</span>
+                      ) : (
+                        <span className="font-medium">Chưa có giờ hoạt động</span>
+                      )}
                     </div>
 
                     {/* Đánh giá */}
@@ -138,27 +135,34 @@ const List_Venue = ({ limit }: VenuesProps) => {
                       <span className="bg-white text-[#2d6a2d] text-sm font-semibold px-2 py-0.5 rounded">
                         {Number(venue.reviews_avg_rating)?.toFixed(1) ?? "0.0"}
                       </span>
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <i
-                            key={i}
-                            className={`fa-star fa-solid text-sm ${i < Math.round(Number(venue.reviews_avg_rating) || 0)
-                              ? "text-yellow-400"
-                              : "text-white"
-                              }`}
-                          ></i>
-                        ))}
-                      </div>
+                      <span><i className="fa-star fa-solid text-sm text-yellow-300"></i></span>
                     </div>
                   </div>
 
                   {/* Nội dung */}
                   <div className="p-5 flex-1 flex flex-col">
                     <h3 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-1">{venue.name}</h3>
+
+                    {/* Hiển thị loại sân */}
+                    <div className="mb-2 text-sm text-gray-700">
+                      <div className="flex flex-wrap gap-2">
+                        {venue.venue_types &&
+                          Array.from(new Set(venue.venue_types.map((vt) => vt.name))).map((name, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium"
+                            >
+                              {name}
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+
                     <div className="flex items-start text-gray-600 text-sm mb-2">
                       <i className="fa-solid fa-location-dot text-[#2d6a2d] mt-1 mr-2"></i>
                       <span className="line-clamp-2">{venue.address_detail}</span>
                     </div>
+
                     {venue.phone && (
                       <div className="flex items-center text-gray-600 text-sm mb-2">
                         <i className="fa-solid fa-phone text-[#2d6a2d] mr-2"></i>
@@ -192,11 +196,14 @@ const List_Venue = ({ limit }: VenuesProps) => {
               );
             })
           ) : (
-            <p className="col-span-full text-center text-gray-500 italic py-10">Không có sân nào được tìm thấy.</p>
+            <p className="col-span-full text-center text-gray-500 italic py-10">
+              Không có sân nào được tìm thấy.
+            </p>
           )}
         </div>
       </div>
     </div>
+
   );
 };
 

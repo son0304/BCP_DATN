@@ -7,6 +7,7 @@ use App\Http\Requests\StorePromotionRequest;
 use App\Http\Requests\UpdatePromotionRequest;
 use App\Models\Promotion;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -22,7 +23,7 @@ class PromotionController extends Controller
         // Search functionality
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('code', 'like', "%{$search}%");
             });
         }
@@ -39,12 +40,12 @@ class PromotionController extends Controller
             if ($request->status === 'active') {
                 // Voucher đang hoạt động: đã bắt đầu và chưa hết hạn
                 $query->where('start_at', '<=', $now)
-                      ->where('end_at', '>=', $now);
+                    ->where('end_at', '>=', $now);
             } elseif ($request->status === 'expired') {
                 // Voucher đã hết hạn: đã qua ngày kết thúc HOẶC chưa đến ngày bắt đầu
-                $query->where(function($q) use ($now) {
+                $query->where(function ($q) use ($now) {
                     $q->where('end_at', '<', $now)
-                      ->orWhere('start_at', '>', $now);
+                        ->orWhere('start_at', '>', $now);
                 });
             }
         }
@@ -72,7 +73,7 @@ class PromotionController extends Controller
             // Convert datetime-local (VN timezone) về UTC để lưu vào database
             $startAt = \Carbon\Carbon::parse($request->start_at, 'Asia/Ho_Chi_Minh')->utc();
             $endAt = \Carbon\Carbon::parse($request->end_at, 'Asia/Ho_Chi_Minh')->utc();
-            
+
             Promotion::create([
                 'code' => strtoupper($request->code),
                 'value' => $request->value,
@@ -81,7 +82,7 @@ class PromotionController extends Controller
                 'end_at' => $endAt->format('Y-m-d H:i:s'),
                 'usage_limit' => $request->usage_limit ?? 0,
                 'used_count' => 0,
-                'created_by' => auth()->id(), // Lưu ID của admin đang tạo voucher
+                'created_by' => Auth::user()->id, // Lưu ID của admin đang tạo voucher
             ]);
 
             DB::commit();
@@ -129,7 +130,7 @@ class PromotionController extends Controller
             // Convert datetime-local (VN timezone) về UTC để lưu vào database
             $startAt = \Carbon\Carbon::parse($request->start_at, 'Asia/Ho_Chi_Minh')->utc();
             $endAt = \Carbon\Carbon::parse($request->end_at, 'Asia/Ho_Chi_Minh')->utc();
-            
+
             $promotion->update([
                 'code' => strtoupper($request->code),
                 'value' => $request->value,
@@ -174,4 +175,3 @@ class PromotionController extends Controller
         }
     }
 }
-

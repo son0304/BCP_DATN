@@ -29,7 +29,7 @@ class CourtApiController extends Controller
     {
         $court = Court::with([
             // ✅ Chỉ giữ lại các cột thực tế có trong bảng images
-            'images:id,imageable_id,url,is_primary,description',
+            'images:id,imageable_id,imageable_type,url,is_primary,description',
 
             'venue:id,name,address_detail,phone,start_time,end_time,province_id,district_id,owner_id',
             'venue.province:id,name',

@@ -32,7 +32,7 @@ class TicketFactory extends Factory
             'subtotal' => $subtotal,
             'discount_amount' => $discount,
             'total_amount' => $total,
-            'status' => $this->faker->randomElement(['pending', 'confirmed', 'cancelled']),
+            'status' => $this->faker->randomElement(['pending', 'confirmed', 'cancelled', 'completed']),
             'payment_status' => $this->faker->randomElement(['unpaid', 'paid']),
             'notes' => $this->faker->boolean(30) ? $this->faker->sentence(6) : null,
         ];

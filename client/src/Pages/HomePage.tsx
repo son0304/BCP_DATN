@@ -2,6 +2,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useFetchData } from "../Hooks/useApi";
 import type { Venue } from "../Types/venue";
 import type { Image } from "../Types/image";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 const Content = () => {
     const navigate = useNavigate();
@@ -10,37 +12,119 @@ const Content = () => {
     const venues: Venue[] = (venueData?.data as Venue[]) || [];
     const displayedVenues = venues.slice(0, 4);
 
+    const banners = [
+        {
+            image:
+                "https://cdn.prod.website-files.com/6390c2d9fbb8357ffc404b63/6612f97cff3fd2e80bcb5b1c_What%20is%20Pickleball.png",
+            title: (
+                <>
+                    Đặt sân thể thao dễ dàng <br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-teal-100">
+                        Mọi lúc – Mọi nơi
+                    </span>
+                </>
+            ),
+            desc: "Khám phá hàng trăm sân bóng, cầu lông, pickleball… Đặt lịch nhanh chóng và nhận ưu đãi cực hấp dẫn chỉ với vài cú nhấp.",
+        },
+        {
+            image:
+                "https://images.unsplash.com/photo-1551958219-acbc608c6377?q=80&w=1470&auto=format&fit=crop",
+            title: (
+                <>
+                    Sân bóng chất lượng <br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-teal-100">
+                        Gần bạn nhất
+                    </span>
+                </>
+            ),
+            desc: "Đặt sân bóng đá nhanh chóng, dễ dàng, với hệ thống tiện ích và ưu đãi hấp dẫn mỗi ngày.",
+        },
+        {
+            image:
+                "https://lh7-rt.googleusercontent.com/docsz/AD_4nXdilipWIRDONHYvGLHnlQgJ8AlNWegmZQL6JyUH-aZOnk5YrXILOeHEFwgYEOhegCxtPhk_ZOVMKrqwy4IS2v3OpM91ZSD8Z7QlGi5rNvFMbw-XY1I78SydXAGlVkp2uNtKw5bA?key=arrkdHtwmhcmPHr4YSqemok2",
+            title: (
+                <>
+                    Trải nghiệm thể thao <br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-teal-100">
+                        Cùng bạn bè
+                    </span>
+                </>
+            ),
+            desc: "Đặt sân cầu lông, pickleball và nhiều môn khác — chỉ trong vài giây.",
+        },
+    ];
+
+    const [index, setIndex] = useState(0);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setIndex((prev) => (prev + 1) % banners.length);
+        }, 3000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const banner = banners[index];
+
     return (
         <>
             {/* Banner đầu trang */}
-            <section className="bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 h-[200px] md:h-[400px] mt-2 relative overflow-hidden">
-                <div className="absolute inset-0 flex flex-col md:flex-row items-center justify-between px-6 md:px-20 gap-6">
-                    <div className="text-center md:text-left z-10 max-w-xl">
-                        <h1 className="text-3xl md:text-5xl font-extrabold text-emerald-800 mb-3 md:mb-5 leading-tight drop-shadow-sm">
-                            Đặt sân thể thao <br />
-                            <span className="text-emerald-600">Nhanh chóng & Tiện lợi</span>
-                        </h1>
-                        <p className="text-emerald-700 text-sm md:text-base mb-5 md:mb-8 leading-relaxed">
-                            Tìm và đặt sân bóng, cầu lông, pickleball... chỉ trong vài cú nhấp!
-                            Theo dõi lịch đặt và khuyến mãi dễ dàng trên mọi thiết bị.
-                        </p>
-                    </div>
+            <section className="relative h-[300px] md:h-[480px] flex items-center justify-center mt-2 pb-32 md:pb-40">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={index}
+                        initial={{ opacity: 0, scale: 1.1 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 1 }}
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ backgroundImage: `url(${banner.image})` }}
+                    />
+                </AnimatePresence>
 
-                    <div className="relative flex justify-center md:justify-end w-full md:w-auto">
-                        <img
-                            src="/logo.png"
-                            alt="Logo Booking Sân"
-                            className="w-[160px] md:w-[300px] drop-shadow-2xl rounded-xl bg-white/70 backdrop-blur-sm p-4 hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute -bottom-4 -left-6 w-10 h-10 bg-green-500 rounded-full blur-md animate-bounce opacity-70"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/70 via-emerald-800/50 to-teal-600/40"></div>
+
+                <motion.div
+                    key={index + "-content"}
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="relative z-10 flex flex-col items-center text-center w-full max-w-4xl px-6"
+                >
+                    <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-4 md:mb-6 text-white drop-shadow-lg">
+                        {banner.title}
+                    </h1>
+                    <p className="text-sm md:text-lg text-emerald-100 mb-6 md:mb-8 leading-relaxed max-w-2xl">
+                        {banner.desc}
+                    </p>
+                </motion.div>
+
+                <motion.div
+                    initial={{ opacity: 0, y: 60 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6, duration: 0.8 }}
+                    className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 w-full max-w-6xl px-6 z-20"
+                >
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        {[
+                            { name: "Pickleball", color: "from-green-100 to-green-200" },
+                            { name: "Cầu lông", color: "from-green-100 to-green-200" },
+                            { name: "Bóng đá", color: "from-green-100 to-green-200" },
+                        ].map((item, i) => (
+                            <motion.div
+                                key={i}
+                                whileHover={{ scale: 1.05, y: -6 }}
+                                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                                className={`bg-gradient-to-br ${item.color} rounded-xl py-10 text-center font-semibold text-2xl text-emerald-900 shadow-lg hover:brightness-110 transition-all duration-300 cursor-pointer`}
+                            >
+                                {item.name}
+                            </motion.div>
+                        ))}
                     </div>
-                </div>
-                <div className="absolute -bottom-16 -left-10 w-72 h-72 bg-emerald-300 opacity-30 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute top-0 -right-16 w-80 h-80 bg-teal-200 opacity-40 rounded-full blur-3xl animate-pulse delay-200"></div>
+                </motion.div>
             </section>
 
             {/* Gợi ý sân */}
-            <section className="py-8 md:py-16 from-white to-gray-50">
+            <section className="py-8 md:py-16 from-white to-gray-50 mt-10 md:mt-16">
                 <div className="container max-w-7xl mx-auto px-4">
                     <div className="flex items-center justify-between mb-6">
                         <div>

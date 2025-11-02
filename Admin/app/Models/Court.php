@@ -34,7 +34,7 @@ class Court extends Model
 
     public function images()
     {
-        return $this->hasMany(Image::class, 'imageable', );
+        return $this->morphMany(Image::class, 'imageable');
     }
 
     public function venue()

@@ -1,4 +1,6 @@
 @charset "UTF-8";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 
 /*-------------------------------------------------------------------
   ===== Table of Contents =====
@@ -9383,7 +9385,7 @@
     --bs-font-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     --bs-font-monospace: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --bs-gradient: linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0));
-    --bs-body-font-family: var(--bs-font-sans-serif);
+    --bs-body-font-family: 'Inter', sans-serif;
     --bs-body-font-size: 1rem;
     --bs-body-font-weight: 400;
     --bs-body-line-height: 1.5;
@@ -9432,6 +9434,8 @@
     --bs-form-valid-border-color: #198754;
     --bs-form-invalid-color: #dc3545;
     --bs-form-invalid-border-color: #dc3545;
+
+
 }
 
 [data-bs-theme=dark] {
@@ -9495,6 +9499,8 @@
 *::after {
     box-sizing: border-box;
 }
+
+
 
 @media (prefers-reduced-motion: no-preference) {
     :root {
@@ -29821,47 +29827,40 @@ dl li {
 /* Sidebar */
 .sidebar {
     min-height: calc(100vh - 70px);
-    background: #ffffff;
+    background: #F9FAFB;
     font-family: "ubuntu-regular", sans-serif;
     padding: 0;
     width: 260px;
     z-index: 11;
     transition: width 0.25s ease, background 0.25s ease;
-    -webkit-transition: width 0.25s ease, background 0.25s ease;
-    -moz-transition: width 0.25s ease, background 0.25s ease;
-    -ms-transition: width 0.25s ease, background 0.25s ease;
 }
 
 /* === Cố định sidebar === */
 .sidebar {
     position: fixed;
     top: 70px;
-    /* chiều cao của navbar */
     left: 0;
     height: calc(100vh - 70px);
-    /* trừ phần header */
     overflow-y: auto;
     z-index: 100;
-    /* để nổi trên content */
 }
 
-/* Ẩn thanh cuộn mặc định (tùy chọn) */
+/* Ẩn thanh cuộn mặc định */
 .sidebar::-webkit-scrollbar {
     width: 6px;
 }
 
 .sidebar::-webkit-scrollbar-thumb {
-    background: #ccc;
+    background: #E5E7EB;
     border-radius: 3px;
 }
 
-/* === Đẩy nội dung sang phải để không bị che === */
+/* Đẩy nội dung sang phải */
 .main-panel {
     margin-left: 260px;
-    /* chiều rộng sidebar */
 }
 
-/* === Cố định header === */
+/* Cố định header */
 .navbar {
     position: fixed;
     top: 0;
@@ -29879,12 +29878,8 @@ dl li {
 
 .sidebar .nav .nav-item {
     padding: 0 2.25rem;
-    -webkit-transition-duration: 0.25s;
-    -moz-transition-duration: 0.25s;
-    -o-transition-duration: 0.25s;
     transition-duration: 0.25s;
     transition-property: background;
-    -webkit-transition-property: background;
 }
 
 .sidebar .nav .nav-item .collapse {
@@ -29892,19 +29887,13 @@ dl li {
 }
 
 .sidebar .nav .nav-item .nav-link {
-    display: -webkit-flex;
     display: flex;
-    -webkit-align-items: center;
     align-items: center;
     white-space: nowrap;
-    padding: 1.125rem 0 1.125rem 0;
-    color: #3e4b5b;
-    -webkit-transition-duration: 0.45s;
-    -moz-transition-duration: 0.45s;
-    -o-transition-duration: 0.45s;
+    padding: 1.125rem 0;
+    color: #4B5563;
     transition-duration: 0.45s;
     transition-property: color;
-    -webkit-transition-property: color;
 }
 
 .sidebar .nav .nav-item .nav-link i {
@@ -29915,7 +29904,7 @@ dl li {
     font-size: 1.125rem;
     line-height: 1;
     margin-left: auto;
-    color: rgba(187, 168, 191, 0.9607843137);
+    color: #6B7280;
 }
 
 .rtl .sidebar .nav .nav-item .nav-link i.menu-icon {
@@ -29923,16 +29912,12 @@ dl li {
     margin-right: auto;
 }
 
-.sidebar .nav .nav-item .nav-link i.menu-icon:before {
-    vertical-align: middle;
-}
-
 .sidebar .nav .nav-item .nav-link i.menu-arrow {
     font: normal normal normal 24px/1 "Material Design Icons";
     line-height: 1;
     font-size: 1.125rem;
     margin-left: auto;
-    color: #9e9da0;
+    color: #6B7280;
 }
 
 .rtl .sidebar .nav .nav-item .nav-link i.menu-arrow {
@@ -29940,58 +29925,34 @@ dl li {
     margin-right: auto;
 }
 
-.sidebar .nav .nav-item .nav-link i.menu-arrow:before {
-    content: "\f0141";
-    font-size: inherit;
-    color: inherit;
-}
-
-.rtl .sidebar .nav .nav-item .nav-link i.menu-arrow:before {
-    content: "\f0142";
-}
-
-.sidebar .nav .nav-item .nav-link i.menu-arrow+.menu-icon {
-    margin-left: 0.25rem;
-}
-
-.rtl .sidebar .nav .nav-item .nav-link i.menu-arrow+.menu-icon {
-    margin-left: 0;
-    margin-right: 0.25rem;
-}
-
 .sidebar .nav .nav-item .nav-link .menu-title {
     color: inherit;
     display: inline-block;
     font-size: 0.875rem;
     line-height: 1;
-    vertical-align: middle;
     white-space: normal;
-}
-
-.sidebar .nav .nav-item .nav-link .badge {
-    margin-right: auto;
-    margin-left: 1rem;
 }
 
 .sidebar .nav .nav-item .nav-link[aria-expanded=true] .menu-arrow:before {
     content: "\f0140";
+    color: #10B981;
 }
 
 .sidebar .nav .nav-item.active {
-    background: #ffffff;
+    background: #FFFFFF;
 }
 
 .sidebar .nav .nav-item.active>.nav-link .menu-title {
-    color: #b66dff;
+    color: #10B981;
     font-family: "ubuntu-medium", sans-serif;
 }
 
 .sidebar .nav .nav-item.active>.nav-link i {
-    color: #b66dff;
+    color: #10B981;
 }
 
 .sidebar .nav .nav-item:hover {
-    background: #fcfcfc;
+    background: #FFFFFF;
 }
 
 .sidebar .nav .nav-item.nav-profile .nav-link {
@@ -29999,11 +29960,6 @@ dl li {
     line-height: 1;
     border-top: 0;
     padding: 1.25rem 0;
-}
-
-.sidebar .nav .nav-item.nav-profile .nav-link .nav-profile-image {
-    width: 44px;
-    height: 44px;
 }
 
 .sidebar .nav .nav-item.nav-profile .nav-link .nav-profile-image img {
@@ -30014,31 +29970,12 @@ dl li {
 
 .sidebar .nav .nav-item.nav-profile .nav-link .nav-profile-text {
     margin-left: 1rem;
-}
-
-.rtl .sidebar .nav .nav-item.nav-profile .nav-link .nav-profile-text {
-    margin-left: auto;
-    margin-right: 1rem;
+    color: #11182C;
 }
 
 .sidebar .nav .nav-item.nav-profile .nav-link .nav-profile-badge {
     font-size: 1.125rem;
     margin-left: auto;
-}
-
-.rtl .sidebar .nav .nav-item.nav-profile .nav-link .nav-profile-badge {
-    margin-left: 0;
-    margin-right: auto;
-}
-
-.sidebar .nav .nav-item.sidebar-actions {
-    margin-top: 1rem;
-}
-
-.sidebar .nav .nav-item.sidebar-actions .nav-link {
-    border-top: 0;
-    display: block;
-    height: auto;
 }
 
 .sidebar .nav .nav-item.sidebar-actions:hover {
@@ -30050,140 +29987,55 @@ dl li {
 }
 
 .sidebar .nav:not(.sub-menu)>.nav-item:hover:not(.nav-category):not(.nav-profile)>.nav-link {
-    color: #29323d;
-}
-
-.sidebar .nav.sub-menu {
-    margin-bottom: 20px;
-    margin-top: 0;
-    list-style: none;
-}
-
-.sidebar .nav.sub-menu .nav-item {
-    padding: 0;
+    color: #11182C;
 }
 
 .sidebar .nav.sub-menu .nav-item .nav-link {
-    color: #888;
-    padding: 0.75rem 2rem 0.75rem 2rem;
-    position: relative;
+    color: #6B7280;
+    padding: 0.75rem 2rem;
     font-size: 0.8125rem;
-    line-height: 1;
-    height: auto;
-    border-top: 0;
 }
 
 .sidebar .nav.sub-menu .nav-item .nav-link:before {
     content: "\f0054";
     font-family: "Material Design Icons";
-    display: block;
     position: absolute;
-    left: 0px;
+    left: 0;
     top: 50%;
-    -moz-transform: translateY(-50%);
-    -o-transform: translateY(-50%);
-    -ms-transform: translateY(-50%);
-    -webkit-transform: translateY(-50%);
     transform: translateY(-50%);
-    color: #a2a2a2;
+    color: #6B7280;
     font-size: 0.75rem;
 }
 
-.rtl .sidebar .nav.sub-menu .nav-item .nav-link:before {
-    content: "\f04d";
-    left: auto;
-    right: 0;
-}
-
 .sidebar .nav.sub-menu .nav-item .nav-link.active {
-    color: #b66dff;
+    color: #10B981;
     background: transparent;
 }
 
 .sidebar .nav.sub-menu .nav-item .nav-link:hover {
-    color: #555555;
-}
-
-.sidebar .nav.sub-menu .nav-item:hover {
-    background: transparent;
+    color: #11182C;
 }
 
 .sidebar-dark .sidebar {
-    background: #18151e;
+    background: #11182C;
 }
 
 .sidebar-dark .sidebar .nav .nav-item .nav-link {
-    color: #ffffff;
-}
-
-.sidebar-dark .sidebar .nav .nav-item .nav-link i {
-    color: inherit;
-}
-
-.sidebar-dark .sidebar .nav .nav-item .nav-link i.menu-icon {
-    color: rgba(187, 168, 191, 0.9607843137);
-}
-
-.sidebar-dark .sidebar .nav .nav-item .nav-link i.menu-arrow {
-    color: #9e9da0;
-}
-
-.sidebar-dark .sidebar .nav .nav-item .nav-link i.menu-arrow:before {
-    color: inherit;
-}
-
-.sidebar-dark .sidebar .nav .nav-item .nav-link .menu-title {
-    color: inherit;
-}
-
-.sidebar-dark .sidebar .nav .nav-item.active {
-    background: #282037;
+    color: #F9FAFB;
 }
 
 .sidebar-dark .sidebar .nav .nav-item.active>.nav-link .menu-title {
-    color: #b3b3b3;
+    color: #10B981;
 }
 
 .sidebar-dark .sidebar .nav .nav-item.active>.nav-link i {
-    color: #b66dff;
+    color: #10B981;
 }
 
 .sidebar-dark .sidebar .nav .nav-item:hover {
-    background: #302a3c;
+    background: #10B98133;
 }
 
-.sidebar-dark .sidebar .nav .nav-item.sidebar-actions:hover {
-    background: initial;
-}
-
-.sidebar-dark .sidebar .nav .nav-item.sidebar-actions:hover .nav-link {
-    color: initial;
-}
-
-.sidebar-dark .sidebar .nav:not(.sub-menu)>.nav-item:hover:not(.nav-category):not(.nav-profile)>.nav-link {
-    color: #ffffff;
-}
-
-.sidebar-dark .sidebar .nav.sub-menu .nav-item .nav-link {
-    color: #ffffff;
-}
-
-.sidebar-dark .sidebar .nav.sub-menu .nav-item .nav-link:before {
-    color: white;
-}
-
-.sidebar-dark .sidebar .nav.sub-menu .nav-item .nav-link.active {
-    color: #b3b3b3;
-    background: transparent;
-}
-
-.sidebar-dark .sidebar .nav.sub-menu .nav-item .nav-link:hover {
-    color: #b3b3b3;
-}
-
-.sidebar-dark .sidebar .nav.sub-menu .nav-item:hover {
-    background: transparent;
-}
 
 /* style for off-canvas menu*/
 @media screen and (max-width: 991px) {
@@ -30634,7 +30486,7 @@ dl li {
 }
 
 .content-wrapper {
-    background: #f2edf3;
+    background: white;
     padding: 2.75rem 2.25rem;
     width: 100%;
     -webkit-flex-grow: 1;

@@ -6,6 +6,9 @@ import type { Image } from '../../Types/image';
 import type { ApiResponse } from '../../Types/api';
 import { useNotification } from '../../Components/Notification';
 import { fetchData } from '../../Api/fetchApi';
+import type { Province } from '../../Types/province';
+import type { District } from '../../Types/district';
+import type { User } from '../../Types/user';
 
 type SelectedItem = {
   court_id: number;
@@ -41,6 +44,10 @@ const Detail_Venue: React.FC = () => {
   const idVenue = Number(id);
 
   const { data: detail_venue, isLoading, refetch } = useFetchDataById<Venue>('venue', idVenue, { date: selectedDate });
+  const { data: province } = useFetchDataById<Province>('province', Number(detail_venue?.data.province_id));
+  const { data: district } = useFetchDataById<District>('district', Number(detail_venue?.data.district_id))
+  const { data: owner } = useFetchDataById<User>('district', Number(detail_venue?.data.owner_id));
+
   const { mutate } = usePostData<ApiResponse<number>, any>('tickets');
 
   useEffect(() => {
@@ -213,7 +220,7 @@ const Detail_Venue: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <i className="fa-solid fa-location-dot text-[#F59E0B]" />
-                  <span className="text-gray-200">{(venue as any).address_detail ?? 'Địa chỉ đang cập nhật'}</span>
+                  <span className="text-gray-200">{venue.address_detail + '-' + district?.data.name + '-' + province?.data.name ?? 'Địa chỉ đang cập nhật'}</span>
                 </div>
               </div>
             </div>
@@ -243,6 +250,12 @@ const Detail_Venue: React.FC = () => {
           <h4 className="text-xl font-bold text-[#11182C]">Thông tin cơ bản</h4>
 
           <div className="space-y-4 text-sm text-[#6B7280]">
+
+            <div>
+              <i className="fa-solid fa-user w-5 text-center"></i>
+              <span>Chủ sân: <span className="font-bold text-[#F59E0B]">{owner?.data.name ?? "Kh có thông tin"}</span></span>
+            </div>
+
             <div className="flex items-center gap-2">
               <i className="fa-solid fa-clock w-5 text-center text-[#10B981]" />
               <span>Giờ mở cửa: <span className="font-semibold text-[#11182C]">{venue.start_time?.slice(0, 5) ?? '—'} - {venue.end_time?.slice(0, 5) ?? '—'}</span></span>

@@ -17,4 +17,6 @@
     <link rel="stylesheet" href="{{ asset('css/user-management.css') }}">
     <!-- Favicon -->
     <link rel="shortcut icon" href="{{ asset('dist/assets/images/logo.png') }}" />
+    <link rel="stylesheet" href="{{ asset('css/customCss.css') }}">
+
   </head>

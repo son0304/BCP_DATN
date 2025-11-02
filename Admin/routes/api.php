@@ -40,6 +40,7 @@ Route::get('/time_slots', [TimeSlotApiController::class, 'index']);
 
 
 Route::get('/provinces', [ProvinceApiController::class, 'index']);
-Route::get('/provinces/{id}', [ProvinceApiController::class, 'show']);
+Route::get('/province/{id}', [ProvinceApiController::class, 'show']);
 
 Route::get('/districts', [DistrictApiController::class, 'index']);
+Route::get('/district/{id}', [DistrictApiController::class, 'show']);

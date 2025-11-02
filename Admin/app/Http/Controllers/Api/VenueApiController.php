@@ -26,7 +26,7 @@ class VenueApiController extends Controller
 
         $query = Venue::with([
             // ✅ Sửa lại vì giờ dùng morphMany → không có venue_id
-            'images:id,imageable_id,url,is_primary,description',
+            'images:id,imageable_id,imageable_type,url,is_primary,description',
             'courts:id,venue_id',
             'reviews:id,venue_id,rating',
             'venueTypes:id,name',
@@ -71,7 +71,7 @@ class VenueApiController extends Controller
 
         $venue = Venue::with([
             // ✅ morphMany: không có venue_id
-            'images:id,imageable_id,url,is_primary,description',
+            'images:id,imageable_id,imageable_type,url,is_primary,description',
             'venueTypes:id,name',
             'courts:id,venue_id,name,surface,is_indoor',
             'courts.timeSlots:id,court_id,label,start_time,end_time',

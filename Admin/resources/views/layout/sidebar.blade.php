@@ -18,7 +18,7 @@
 
             {{-- Menu chung --}}
             <li class="nav-item">
-                @if(auth()->user()->role->name === 'admin')
+                @if (auth()->user()->role->name === 'admin')
                     <a class="nav-link" href="{{ route('admin.dashboard') }}">
                         <span class="menu-title">Dashboard</span>
                         <i class="mdi mdi-view-dashboard menu-icon"></i>
@@ -48,6 +48,13 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('admin.reviews.index') }}">
                         <span class="menu-title">Đánh giá</span>
+                        <i class="mdi mdi-star menu-icon"></i>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('admin.promotions.index') }}">
+                        <span class="menu-title">Voucher</span>
                         <i class="mdi mdi-star menu-icon"></i>
                     </a>
                 </li>

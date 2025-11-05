@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\TicketApiController;
 use App\Http\Controllers\Api\TimeSlotApiController;
 use App\Http\Controllers\Api\VenueApiController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Web\LocationController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthApiController::class, 'register']);
@@ -17,7 +18,7 @@ Route::post('/verify-email', [AuthApiController::class, 'verifyEmail']);
 
 
 
-
+Route::get('/districts/{province}', [LocationController::class, 'getDistrictsByProvince']);
 
 Route::get('/venues', [VenueApiController::class, 'index']);
 Route::post('/venues', [VenueApiController::class, 'store']);

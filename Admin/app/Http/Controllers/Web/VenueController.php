@@ -97,17 +97,23 @@ class VenueController extends Controller
 
     public function create()
     {
-        if (!PermissionHelper::isAdmin(Auth::user()) && !PermissionHelper::isVenueOwner(Auth::user())) {
+        $user = Auth::user();
+        if (!PermissionHelper::isAdmin($user) && !PermissionHelper::isVenueOwner($user)) {
             abort(403, 'Bạn không có quyền thực hiện hành động này.');
         }
 
-        $owners = User::orderBy('name')->get();
+        $owners = [];
+        // CHỈ LẤY DANH SÁCH NẾU LÀ ADMIN
+        if (PermissionHelper::isAdmin($user)) {
+            $owners = User::orderBy('name')->get();
+        }
+
         $provinces = Province::orderBy('name')->get();
-        $districts = District::orderBy('name')->get();
         $venue_types = VenueType::orderBy('name')->get();
         $timeSlots = TimeSlot::orderBy('start_time')->get();
 
-        return view('venue_owner.venue.create', compact('owners', 'provinces', 'districts', 'venue_types', 'timeSlots'));
+        // Bỏ 'districts' ra khỏi compact, vì nó sẽ được load bằng AJAX
+        return view('venue_owner.venue.create', compact('owners', 'provinces', 'venue_types', 'timeSlots'));
     }
     public function store(Request $request)
     {
@@ -115,7 +121,11 @@ class VenueController extends Controller
 
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
-            'owner_id' => 'required|exists:users,id',
+            'owner_id' => [
+                'sometimes',
+                'required_if:' . (PermissionHelper::isAdmin($user)),
+                'exists:users,id'
+            ],
             'province_id' => 'required|exists:provinces,id',
             'district_id' => 'required|exists:districts,id',
             'address_detail' => 'required|string',
@@ -218,7 +228,7 @@ class VenueController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('admin.venue.index')->with('success', 'Đăng ký thương hiệu và sân thành công!');
+            return redirect()->route('owner.venues.index')->with('success', 'Đăng ký thương hiệu và sân thành công!');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Venue store error: ' . $e->getMessage(), [
@@ -287,7 +297,7 @@ class VenueController extends Controller
             $venue->venueTypes()->sync([]);
         }
 
-        return redirect()->route('admin.venue.index')->with('success', 'Cập nhật sân thành công!');
+        return redirect()->route('owner.venues.index')->with('success', 'Cập nhật sân thành công!');
     }
     public function destroy(Venue $venue)
     {
@@ -296,6 +306,6 @@ class VenueController extends Controller
         }
 
         $venue->delete();
-        return redirect()->route('admin.venue.index')->with('success', 'Xóa sân thành công!');
+        return redirect()->route('owner.venues.index')->with('success', 'Xóa sân thành công!');
     }
 }

@@ -1,5 +1,17 @@
 @extends('app')
+<style>
+    .custom-input {
+        padding: 0.94rem 18px !important;
+    }
 
+    .custom-checkbox {
+        margin-left: 0 !important;
+    }
+
+    .custom-checkbox2 {
+        margin-left: 21px !important;
+    }
+</style>
 @section('content')
     <div class="container-fluid py-4">
         {{-- Header --}}
@@ -15,13 +27,11 @@
             </div>
         </div>
 
-        {{-- Form --}}
+
         <form action="{{ route('owner.venues.store') }}" method="POST">
             @csrf
             <div class="row">
-                {{-- Cột trái --}}
                 <div class="col-lg-8">
-                    {{-- Thông tin cơ bản --}}
                     <div class="card shadow-sm mb-4">
                         <div class="card-header">
                             <h5 class="card-title mb-0">Thông tin cơ bản</h5>
@@ -29,7 +39,8 @@
                         <div class="card-body">
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Tên thương hiệu (sân)</label>
-                                <input type="text" name="name" class="form-control" required>
+                                <input type="text" name="name" class="form-control" value="{{ old('name') }}"
+                                    required>
                             </div>
 
                             <div class="mb-3">
@@ -59,10 +70,14 @@
                                     <select name="province_id" id="province_id" class="form-select" required>
                                         <option value="">-- Chọn Tỉnh/Thành --</option>
                                         @foreach ($provinces as $province)
-                                            <option value="{{ $province->id }}">{{ $province->name }}</option>
+                                            <option value="{{ $province->id }}"
+                                                {{ old('province_id') == $province->id ? 'selected' : '' }}>
+                                                {{ $province->name }}
+                                            </option>
                                         @endforeach
                                     </select>
                                 </div>
+
 
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Quận/Huyện</label>
@@ -74,7 +89,8 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Địa chỉ chi tiết</label>
-                                <input type="text" name="address_detail" class="form-control" required>
+                                <input type="text" name="address_detail" value="{{ old('address_detail') }}"
+                                    class="form-control" required>
                             </div>
                         </div>
                     </div>
@@ -88,7 +104,136 @@
                             </button>
                         </div>
                         <div class="card-body" id="court-list">
-                            {{-- Các sân sẽ được thêm động tại đây --}}
+                            @if (old('courts'))
+                                @foreach (old('courts') as $courtIndex => $court)
+                                    <div class="border rounded p-3 mb-3 court-item" data-index="{{ $courtIndex }}">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h6 class="mb-0 fw-bold">Sân #<span
+                                                    class="court-number">{{ $courtIndex + 1 }}</span></h6>
+                                            <button type="button" class="btn btn-sm btn-danger remove-court"><i
+                                                    class="fas fa-times"></i></button>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Tên sân</label>
+                                                <input type="text" name="courts[{{ $courtIndex }}][name]"
+                                                    value="{{ $court['name'] ?? '' }}"
+                                                    class="form-control @error("courts.{$courtIndex}.name") is-invalid @enderror"
+                                                    required>
+                                                @error("courts.{$courtIndex}.name")
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Loại sân</label>
+                                                <select name="courts[{{ $courtIndex }}][venue_type_id]"
+                                                    class="form-select court-type-select @error("courts.{$courtIndex}.venue_type_id") is-invalid @enderror"
+                                                    required>
+                                                    <option value="">-- Chọn loại hình --</option>
+                                                    @foreach ($venue_types as $type)
+                                                        <option value="{{ $type->id }}"
+                                                            {{ ($court['venue_type_id'] ?? '') == $type->id ? 'selected' : '' }}>
+                                                            {{ $type->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                                @error("courts.{$courtIndex}.venue_type_id")
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Mặt sân</label>
+                                                <input type="text" name="courts[{{ $courtIndex }}][surface]"
+                                                    value="{{ $court['surface'] ?? '' }}"
+                                                    class="form-control @error("courts.{$courtIndex}.surface") is-invalid @enderror"
+                                                    placeholder="Cỏ nhân tạo, cỏ tự nhiên...">
+                                                @error("courts.{$courtIndex}.surface")
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Trong nhà / Ngoài trời</label>
+                                                <select name="courts[{{ $courtIndex }}][is_indoor]"
+                                                    class="form-select @error("courts.{$courtIndex}.is_indoor") is-invalid @enderror">
+                                                    <option value="0"
+                                                        {{ ($court['is_indoor'] ?? '0') == '0' ? 'selected' : '' }}>Ngoài
+                                                        trời</option>
+                                                    <option value="1"
+                                                        {{ ($court['is_indoor'] ?? '0') == '1' ? 'selected' : '' }}>Trong
+                                                        nhà</option>
+                                                </select>
+                                                @error("courts.{$courtIndex}.is_indoor")
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+
+                                        <h6 class="fw-bold mt-3 d-flex justify-content-between align-items-center">
+                                            <span>Khung giờ và giá</span>
+                                            <button type="button" class="btn btn-sm btn-outline-success add-time-slot"><i
+                                                    class="fas fa-plus"></i> Thêm khung giờ</button>
+                                        </h6>
+                                        <div class="table-responsive mt-2">
+                                            <table class="table table-bordered table-sm align-middle time-slot-table">
+                                                <thead>
+                                                    <tr class="bg-light">
+                                                        <th>Giờ bắt đầu</th>
+                                                        <th>Giờ kết thúc</th>
+                                                        <th>Giá (VNĐ)</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @if (!empty($court['time_slots']))
+                                                        @foreach ($court['time_slots'] as $slotIndex => $slot)
+                                                            <tr
+                                                                class="@if ($errors->has("courts.{$courtIndex}.time_slots.{$slotIndex}.*")) table-danger @endif">
+                                                                <td>
+                                                                    <input type="time"
+                                                                        name="courts[{{ $courtIndex }}][time_slots][{{ $slotIndex }}][start_time]"
+                                                                        value="{{ $slot['start_time'] ?? '' }}"
+                                                                        class="form-control form-control-sm time-start @error("courts.{$courtIndex}.time_slots.{$slotIndex}.start_time") is-invalid @enderror"
+                                                                        required>
+                                                                    @error("courts.{$courtIndex}.time_slots.{$slotIndex}.start_time")
+                                                                        <div class="invalid-feedback">{{ $message }}
+                                                                        </div>
+                                                                    @enderror
+                                                                </td>
+                                                                <td>
+                                                                    <input type="time"
+                                                                        name="courts[{{ $courtIndex }}][time_slots][{{ $slotIndex }}][end_time]"
+                                                                        value="{{ $slot['end_time'] ?? '' }}"
+                                                                        class="form-control form-control-sm time-end @error("courts.{$courtIndex}.time_slots.{$slotIndex}.end_time") is-invalid @enderror"
+                                                                        required>
+                                                                    @error("courts.{$courtIndex}.time_slots.{$slotIndex}.end_time")
+                                                                        <div class="invalid-feedback">{{ $message }}
+                                                                        </div>
+                                                                    @enderror
+                                                                </td>
+                                                                <td>
+                                                                    <input type="number"
+                                                                        name="courts[{{ $courtIndex }}][time_slots][{{ $slotIndex }}][price]"
+                                                                        value="{{ $slot['price'] ?? '' }}"
+                                                                        class="form-control form-control-sm time-price @error("courts.{$courtIndex}.time_slots.{$slotIndex}.price") is-invalid @enderror"
+                                                                        required>
+                                                                    @error("courts.{$courtIndex}.time_slots.{$slotIndex}.price")
+                                                                        <div class="invalid-feedback">{{ $message }}
+                                                                        </div>
+                                                                    @enderror
+                                                                </td>
+                                                                <td class="text-center"><button type="button"
+                                                                        class="btn btn-sm btn-outline-danger remove-slot"><i
+                                                                            class="fas fa-trash"></i></button></td>
+                                                            </tr>
+                                                        @endforeach
+                                                    @endif
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -102,28 +247,36 @@
                         <div class="card-body">
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Số điện thoại</label>
-                                <input type="tel" name="phone" class="form-control" placeholder="09xxxxxxxx">
+                                <input type="tel" name="phone" value="{{ old('phone') }}" class="form-control"
+                                    placeholder="09xxxxxxxx">
                             </div>
 
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-bold">Giờ mở cửa</label>
-                                    <input type="time" name="start_time" class="form-control" value="06:00">
+                                    <input type="time" name="start_time" class="form-control custom-input"
+                                        value="06:00">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-bold">Giờ đóng cửa</label>
-                                    <input type="time" name="end_time" class="form-control" value="22:00">
+                                    <input type="time" name="end_time" class="form-control custom-input"
+                                        value="22:00">
                                 </div>
                             </div>
-
                             <label class="form-label fw-bold d-block">Loại hình sân</label>
                             @foreach ($venue_types as $type)
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input venue-type-checkbox" type="checkbox" name="venue_types[]"
-                                        value="{{ $type->id }}">
-                                    <label class="form-check-label">{{ $type->name }}</label>
+                                    <input class="form-check-input venue-type-checkbox custom-checkbox" type="checkbox"
+                                        name="venue_types[]" id="venue_type_{{ $type->id }}"
+                                        value="{{ $type->id }}"
+                                        {{ is_array(old('venue_types')) && in_array($type->id, old('venue_types')) ? 'checked' : '' }}>
+                                    <label class="form-check-label custom-checkbox2"
+                                        for="venue_type_{{ $type->id }}">
+                                        {{ $type->name }}
+                                    </label>
                                 </div>
                             @endforeach
+
                         </div>
                     </div>
                 </div>
@@ -400,7 +553,6 @@
                 if (provinceId) {
                     // Gửi yêu cầu AJAX đến server
                     $.ajax({
-                        // URL này chúng ta sẽ tạo ở Bước 3
                         url: '/api/districts/' + provinceId,
                         type: 'GET',
                         dataType: 'json',
@@ -417,14 +569,12 @@
                             });
                         },
                         error: function() {
-                            // Nếu có lỗi
                             districtSelect.html(
                                 '<option value="">-- Có lỗi xảy ra --</option>');
                             console.error('Lỗi khi tải danh sách quận/huyện.');
                         }
                     });
                 } else {
-                    // Nếu người dùng chọn lại "-- Chọn Tỉnh/Thành --"
                     districtSelect.html('<option value="">-- Vui lòng chọn Tỉnh/Thành trước --</option>');
                     districtSelect.prop('disabled', true);
                 }

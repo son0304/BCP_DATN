@@ -17,7 +17,7 @@ Route::post('/logout', [AuthApiController::class, 'logout']);
 Route::post('/verify-email', [AuthApiController::class, 'verifyEmail']);
 
 
-
+// lay quan huyen
 Route::get('/districts/{province}', [LocationController::class, 'getDistrictsByProvince']);
 
 Route::get('/venues', [VenueApiController::class, 'index']);

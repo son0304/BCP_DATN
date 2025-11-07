@@ -10,11 +10,11 @@ import Login from '../Auth/Login'
 import Register from '../Auth/Register'
 import VerifyEmail from '../Pages/Mail/VerifyEmail'
 import List_Venue from '../Pages/Venues/List_Venues'
-import Detail_Venue from '../Pages/Venues/Detail_Venue'
 // Blog
 import Home_Blog from '../Pages/Blog/Home_Blog';
 import Index_Blog from '../Pages/Blog/Index_Blog';
 import Detail_Blog from '../Pages/Blog/Detail_Blog';
+import Index_Detail_Venue from '../Pages/Venues/Detail_Venue/Index_Detail_Venue'
 const AppRouter = () => {
     return (
         <Routes>
@@ -28,7 +28,7 @@ const AppRouter = () => {
                 {/* Trang chủ */}
                 <Route index element={<Content />} />
                 <Route path='venues' element={<List_Venue />} />
-                <Route path='venues/:id' element={<Detail_Venue />} />
+                <Route path='venues/:id' element={<Index_Detail_Venue />} />
                 <Route path='booking/:id' element={<Ticket />} />
                 <Route path='profile' element={<Detail_User />} />
                 <Route path='partner' element={<Home_Partner />}>

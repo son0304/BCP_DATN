@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthApiController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DistrictApiController;
 use App\Http\Controllers\Api\ImageApiController;
+use App\Http\Controllers\Api\PromotionApiController;
 use App\Http\Controllers\Api\ProvinceApiController;
 use App\Http\Controllers\Api\ReviewApiController;
 use App\Http\Controllers\Api\TicketApiController;
@@ -34,6 +35,8 @@ Route::get('/province/{id}', [ProvinceApiController::class, 'show']);
 
 Route::get('/districts', [DistrictApiController::class, 'index']);
 Route::get('/district/{id}', [DistrictApiController::class, 'show']);
+
+Route::get('/promotions', [PromotionApiController::class, 'index']);
 
 Route::apiResource('reviews', ReviewApiController::class)
     ->only(['index', 'show', 'store', 'update', 'destroy']);

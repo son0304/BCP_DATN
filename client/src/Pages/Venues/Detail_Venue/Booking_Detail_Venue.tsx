@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNotification } from '../../../Components/Notification';
 import type { Venue } from '../../../Types/venue';
-import { fetchData } from '../../../Api/fetchApi';
 import type { User } from '../../../Types/user';
 import { usePostData } from '../../../Hooks/useApi';
 import type { ApiResponse } from '../../../Types/api';
@@ -22,11 +21,10 @@ type SelectedItem = {
 export type Voucher = {
   id: number;
   code: string;
-  discount: number;
-  type: 'percentage' | 'fixed';
+  value: number;
+  type: '%' | 'VND';
   expires_at: string | null;
 };
-
 type BookingDetailVenueProps = {
   venue: Venue;
   user: User;
@@ -35,48 +33,53 @@ type BookingDetailVenueProps = {
   setSelectedDate: React.Dispatch<React.SetStateAction<string>>;
 };
 
-const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({ venue, user, refetch, selectedDate, setSelectedDate, }) => {
+const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
+  venue,
+  user,
+  refetch,
+  selectedDate,
+  setSelectedDate
+}) => {
   const [isActiveCourtId, setIsActiveCourtId] = useState<number | null>(null);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<number>(0);
-  const [voucherData, setVoucherData] = useState<Voucher | null>(null);
+  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
 
   const { showNotification } = useNotification();
   const { mutate } = usePostData<ApiResponse<number>, any>('tickets');
   const navigate = useNavigate();
   const courts = venue.courts ?? [];
 
-  const formatPrice = (price: number) =>
-    !price || isNaN(price) ? '0₫' : price.toLocaleString('vi-VN') + '₫';
+  // ===== Format tiền
+  const formatPrice = (price: number | string) => {
+    const value = Number(price) || 0;
+    return value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+  };
 
-  // ======= Tính tổng tiền =======
+  // ===== Tính tổng tiền
   useEffect(() => {
     const total = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
     let finalPrice = total;
-    if (voucherData) {
-      if (voucherData.type === 'percentage') finalPrice -= (total * voucherData.discount) / 100;
-      else finalPrice -= voucherData.discount;
-      finalPrice = Math.max(0, finalPrice);
+    if (selectedVoucher) {
+      if (selectedVoucher.type === '%') finalPrice -= (total * selectedVoucher.value) / 100;
+      else finalPrice -= selectedVoucher.value;
     }
-    setSelectedPrice(finalPrice);
-  }, [selectedItems, voucherData]);
+    setSelectedPrice(Math.max(0, finalPrice));
+  }, [selectedItems, selectedVoucher]);
 
-  // ======= Khi đổi ngày => refetch =======
+  // ===== Khi đổi ngày => reset selectedItems
   useEffect(() => {
     refetch();
     setSelectedItems([]);
   }, [selectedDate, refetch]);
 
-  // ======= Sân con mặc định =======
+  // ===== Sân con mặc định
   useEffect(() => {
     if (venue?.courts?.length && isActiveCourtId === null)
       setIsActiveCourtId(venue.courts[0].id);
   }, [venue, isActiveCourtId]);
 
-  // ======= Đổi ngày =======
-  const handleChangeDate = (e: React.ChangeEvent<HTMLInputElement>) => setSelectedDate(e.target.value);
-
-  // ======= Chọn slot =======
+  // ===== Chọn slot
   const handleSelectItem = (clickedItem: SelectedItem, status: string | null | undefined) => {
     if (status !== 'open') {
       const message =
@@ -96,16 +99,13 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({ venue, user, 
     setSelectedItems((prev) =>
       isSelected
         ? prev.filter(
-          (item) =>
-            !(item.court_id === clickedItem.court_id && item.time_slot_id === clickedItem.time_slot_id)
+          (item) => !(item.court_id === clickedItem.court_id && item.time_slot_id === clickedItem.time_slot_id)
         )
         : [...prev, clickedItem]
     );
   };
 
-
-
-  // ======= Đặt sân =======
+  // ===== Submit booking
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (selectedItems.length === 0) return showNotification('Chọn ít nhất 1 khung giờ.', 'error');
@@ -120,14 +120,14 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({ venue, user, 
 
     const total = selectedItems.reduce((s, i) => s + i.price, 0);
     const discount =
-      voucherData?.type === 'percentage'
-        ? (total * voucherData.discount) / 100
-        : voucherData?.discount || 0;
+      selectedVoucher?.type === '%'
+        ? (total * selectedVoucher.value) / 100
+        : selectedVoucher?.value || 0;
 
     mutate(
       {
         user_id: user.id,
-        promotion_id: voucherData?.id || null,
+        promotion_id: selectedVoucher?.id || null,
         discount_amount: discount,
         bookings,
       },
@@ -146,7 +146,6 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({ venue, user, 
     );
   };
 
-  // ======= Render =======
   return (
     <div className="space-y-6 lg:col-span-2 order-1 lg:order-2">
       <div className="bg-white rounded-xl p-6 border border-[#E5E7EB] shadow-2xl lg:sticky lg:top-8">
@@ -161,12 +160,12 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({ venue, user, 
             type="date"
             className="w-full mt-2 px-3 py-2 border border-[#E5E7EB] rounded-lg focus:ring-2 focus:ring-[#10B981] outline-none text-[#4B5563]"
             value={selectedDate}
-            onChange={handleChangeDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
             min={new Date().toISOString().slice(0, 10)}
           />
         </div>
 
-        {/* Chọn sân con */}
+        {/* Sân con */}
         <div className="mb-4">
           <label className="text-base font-semibold text-[#4B5563]">Chọn sân con</label>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -200,14 +199,15 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({ venue, user, 
                 const isSelected = selectedItems.some(
                   (it) => it.court_id === court.id && it.time_slot_id === time.id
                 );
+
                 let cls =
                   time.status === 'open'
                     ? 'bg-green-50 text-green-800 border border-green-200'
                     : time.status === 'booked'
                       ? 'bg-red-100 text-red-600 cursor-not-allowed opacity-60'
                       : 'bg-gray-100 text-gray-500 cursor-not-allowed';
-                if (isSelected)
-                  cls = 'bg-[#10B981] text-white ring-2 ring-green-300 shadow-md';
+                if (isSelected) cls = 'bg-[#10B981] text-white ring-2 ring-green-300 shadow-md';
+
                 return (
                   <button
                     key={`${court.id}-${time.id}`}
@@ -238,7 +238,7 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({ venue, user, 
 
         {/* Form tổng tiền */}
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <Voucher_Detail_Venue />
+          <Voucher_Detail_Venue onVoucherApply={setSelectedVoucher} />
 
           <div className="pt-4 border-t border-gray-200">
             <div className="flex justify-between">

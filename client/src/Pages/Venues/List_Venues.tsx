@@ -12,6 +12,13 @@ const List_Venue = ({ limit }: VenuesProps) => {
   const navigate = useNavigate();
   const { data: venueData, isLoading, isError } = useFetchData<Venue[]>("venues");
 
+if (venueData) {
+  console.log("venueData:", venueData);
+
+} else {
+  console.log("Lỗi kh lấy được data");
+
+}
   const [searchName, setSearchName] = useState("");
   const [selectedAddress, setSelectedAddress] = useState("");
   const [filteredVenues, setFilteredVenues] = useState<Venue[] | null>(null);
@@ -29,8 +36,8 @@ const List_Venue = ({ limit }: VenuesProps) => {
   const displayedVenues = filteredVenues
     ? filteredVenues
     : limit
-    ? venues.slice(0, limit)
-    : venues;
+      ? venues.slice(0, limit)
+      : venues;
 
   const handleSearch = () => {
     let filtered = venues;
@@ -92,19 +99,19 @@ const List_Venue = ({ limit }: VenuesProps) => {
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
           {isLoading
             ? Array.from({ length: limit || 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-white rounded-xl shadow-md animate-pulse border border-gray-200"
-                >
-                  <div className="w-full h-28 sm:h-36 bg-gray-200"></div>
-                  <div className="p-3 space-y-2">
-                    <div className="h-4 bg-gray-300 w-3/4 rounded"></div>
-                    <div className="h-3 bg-gray-200 w-2/3 rounded"></div>
-                  </div>
+              <div
+                key={i}
+                className="bg-white rounded-xl shadow-md animate-pulse border border-gray-200"
+              >
+                <div className="w-full h-28 sm:h-36 bg-gray-200"></div>
+                <div className="p-3 space-y-2">
+                  <div className="h-4 bg-gray-300 w-3/4 rounded"></div>
+                  <div className="h-3 bg-gray-200 w-2/3 rounded"></div>
                 </div>
-              ))
+              </div>
+            ))
             : displayedVenues.length > 0
-            ? displayedVenues.map((venue) => {
+              ? displayedVenues.map((venue) => {
                 const primaryImage = venue.images?.find(
                   (img: Image) => img.is_primary === 1
                 );
@@ -175,11 +182,11 @@ const List_Venue = ({ limit }: VenuesProps) => {
                   </div>
                 );
               })
-            : (
-              <p className="col-span-full text-center text-gray-500 italic py-10">
-                Không có sân nào được tìm thấy.
-              </p>
-            )}
+              : (
+                <p className="col-span-full text-center text-gray-500 italic py-10">
+                  Không có sân nào được tìm thấy.
+                </p>
+              )}
         </div>
       </div>
     </div>

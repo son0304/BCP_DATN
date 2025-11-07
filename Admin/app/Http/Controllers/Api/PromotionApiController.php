@@ -10,15 +10,19 @@ class PromotionApiController extends Controller
 {
     public function index(Request $request)
     {
-        // Validate input
-        $request->validate([
-            'code' => 'required|string'
-        ]);
-
         $code = $request->input('code');
+
+        // Nếu không có code → trả về data = null, tránh lỗi 422
+        if (!$code) {
+            return response()->json([
+                'success' => true,
+                'data' => null
+            ]);
+        }
 
         $voucher = Promotion::where('code', $code)->first();
 
+        // Không tìm thấy
         if (!$voucher) {
             return response()->json([
                 'success' => false,
@@ -26,19 +30,27 @@ class PromotionApiController extends Controller
             ], 404);
         }
 
-        if ($voucher->expires_at && now()->greaterThan($voucher->expires_at)) {
+        // Hết hạn
+        if ($voucher->end_at && now()->greaterThan($voucher->end_at)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Mã giảm giá đã hết hạn.'
             ], 400);
         }
 
-        // Nếu hợp lệ
+        // Chuẩn hoá data theo type Voucher trên FE
+        $result = [
+            'id' => $voucher->id,
+            'code' => $voucher->code,
+            'value' => floatval($voucher->value),
+            'type' => $voucher->type === '%' ? '%' : 'VND',
+            'expires_at' => $voucher->end_at
+        ];
+
         return response()->json([
             'success' => true,
             'message' => 'Mã giảm giá hợp lệ.',
-            'discount' => $voucher->discount,
-            'data' => $voucher
+            'data' => $result
         ]);
     }
 }

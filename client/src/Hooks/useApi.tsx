@@ -14,6 +14,8 @@ export function useFetchData<T>(resource: string, params?: Record<string, any>) 
     return useQuery<ApiResponse<T>>({
         queryKey: [resource, params],
         queryFn: () => fetchData<T>(resource, params),
+        retry: false
+
     });
 }
 
@@ -21,8 +23,9 @@ export function useFetchData<T>(resource: string, params?: Record<string, any>) 
 export function useFetchDataById<T>(resource: string, id: string | number, params?: Record<string, any>) {
     return useQuery<ApiResponse<T>>({
         queryKey: [resource, id, params],
-        queryFn: () => fetchDataById<T>(resource, id, params),
+        queryFn: () => fetchDataById<T>(resource, Number(id), params),
         enabled: !!id,
+        retry: false
     });
 }
 

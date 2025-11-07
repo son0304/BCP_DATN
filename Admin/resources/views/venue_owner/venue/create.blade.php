@@ -291,14 +291,14 @@
         </form>
     </div>
 
-    {{-- ✅ JS: Thêm sân + khung giờ + tự động cập nhật loại sân --}}
+    {{-- ✅ JS: Thêm sân + khung giờ + tự động cập nhật loại sân  --}}
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             let courtIndex = 0;
             const courtList = document.getElementById('court-list');
             const addCourtBtn = document.getElementById('add-court-btn');
 
-            // 👉 Lấy danh sách loại hình sân được tick
+
             function getSelectedVenueTypes() {
                 const checkedBoxes = document.querySelectorAll('.venue-type-checkbox:checked');
                 return Array.from(checkedBoxes).map(cb => ({
@@ -307,7 +307,7 @@
                 }));
             }
 
-            // 👉 Sinh danh sách <option> loại sân
+
             function renderVenueTypeOptions(selectedTypes) {
                 if (selectedTypes.length === 0) {
                     return `<option value="">-- Chưa chọn loại hình sân ở trên --</option>`;
@@ -315,13 +315,15 @@
                 return selectedTypes.map(type => `<option value="${type.id}">${type.name}</option>`).join('');
             }
 
-            // 👉 Hàm chia thời gian thành các slot 1 giờ
             function splitTimeIntoHourlySlots(startTime, endTime, price) {
+                // CẤU HÌNH GIỜ VÀNG
+                const GOLDEN_HOUR_START = 17;
+                const GOLDEN_HOUR_MULTIPLIER = 1.5;
                 const slots = [];
                 const start = new Date('2000-01-01 ' + startTime);
                 const end = new Date('2000-01-01 ' + endTime);
+                const basePrice = Number(price);
 
-                // Nếu thời gian kết thúc là ngày hôm sau (ví dụ: 23:00 - 01:00)
                 if (end <= start) {
                     end.setDate(end.getDate() + 1);
                 }
@@ -337,13 +339,24 @@
                         break;
                     }
 
+
+                    let currentPrice;
+                    // Kiểm tra xem giờ bắt đầu của slot có phải là giờ vàng không
+                    if (current.getHours() >= GOLDEN_HOUR_START) {
+                        // Nếu đúng, nhân giá với hệ số 1.5
+                        currentPrice = basePrice * GOLDEN_HOUR_MULTIPLIER;
+                    } else {
+                        // Nếu không, giữ nguyên giá gốc
+                        currentPrice = basePrice;
+                    }
+                    currentPrice = Math.round(currentPrice);
                     const slotStart = current.toTimeString().substring(0, 5);
                     const slotEnd = nextHour.toTimeString().substring(0, 5);
 
                     slots.push({
                         start_time: slotStart,
                         end_time: slotEnd,
-                        price: price
+                        price: currentPrice
                     });
 
                     current = nextHour;
@@ -352,7 +365,8 @@
                 return slots;
             }
 
-            // 👉 Hàm cập nhật tên input cho time slots
+
+            // Hàm cập nhật tên input cho time slots
             function updateTimeSlotNames() {
                 document.querySelectorAll('.court-item').forEach((courtItem, courtIdx) => {
                     const tbody = courtItem.querySelector('tbody');
@@ -373,72 +387,72 @@
                 });
             }
 
-            // 👉 Thêm sân mới
+            //  Thêm sân mới
             addCourtBtn.addEventListener('click', () => {
                 const options = renderVenueTypeOptions(getSelectedVenueTypes());
 
                 const newCourt = `
-        <div class="border rounded p-3 mb-3 court-item">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="mb-0 fw-bold">Sân #${courtIndex + 1}</h6>
-                <button type="button" class="btn btn-sm btn-danger remove-court">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Tên sân</label>
-                    <input type="text" name="courts[${courtIndex}][name]" class="form-control" required>
+            <div class="border rounded p-3 mb-3 court-item">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0 fw-bold">Sân #${courtIndex + 1}</h6>
+                    <button type="button" class="btn btn-sm btn-danger remove-court">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Loại sân</label>
-                    <select name="courts[${courtIndex}][venue_type_id]" class="form-select court-type-select" required>
-                        ${options}
-                    </select>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Tên sân</label>
+                        <input type="text" name="courts[${courtIndex}][name]" class="form-control" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Loại sân</label>
+                        <select name="courts[${courtIndex}][venue_type_id]" class="form-select court-type-select" required>
+                            ${options}
+                        </select>
+                    </div>
                 </div>
-            </div>
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Mặt sân</label>
-                    <input type="text" name="courts[${courtIndex}][surface]" class="form-control" placeholder="Cỏ nhân tạo, cỏ tự nhiên...">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Mặt sân</label>
+                        <input type="text" name="courts[${courtIndex}][surface]" class="form-control" placeholder="Cỏ nhân tạo, cỏ tự nhiên...">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Trong nhà</label>
+                        <select name="courts[${courtIndex}][is_indoor]" class="form-select">
+                            <option value="0">Ngoài trời</option>
+                            <option value="1">Trong nhà</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Trong nhà</label>
-                    <select name="courts[${courtIndex}][is_indoor]" class="form-select">
-                        <option value="0">Ngoài trời</option>
-                        <option value="1">Trong nhà</option>
-                    </select>
+
+                <h6 class="fw-bold mt-3 d-flex justify-content-between align-items-center">
+                    <span>Khung giờ và giá</span>
+                    <button type="button" class="btn btn-sm btn-outline-success add-time-slot">
+                        <i class="fas fa-plus"></i> Thêm khung giờ
+                    </button>
+                </h6>
+
+                <div class="table-responsive mt-2">
+                    <table class="table table-bordered table-sm align-middle time-slot-table">
+                        <thead>
+                            <tr class="bg-light">
+                                <th>Giờ bắt đầu</th>
+                                <th>Giờ kết thúc</th>
+                                <th>Giá (VNĐ)</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
-            </div>
-
-            <h6 class="fw-bold mt-3 d-flex justify-content-between align-items-center">
-                <span>Khung giờ và giá</span>
-                <button type="button" class="btn btn-sm btn-outline-success add-time-slot">
-                    <i class="fas fa-plus"></i> Thêm khung giờ
-                </button>
-            </h6>
-
-            <div class="table-responsive mt-2">
-                <table class="table table-bordered table-sm align-middle time-slot-table">
-                    <thead>
-                        <tr class="bg-light">
-                            <th>Giờ bắt đầu</th>
-                            <th>Giờ kết thúc</th>
-                            <th>Giá (VNĐ)</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>`;
+            </div>`;
                 courtList.insertAdjacentHTML('beforeend', newCourt);
                 courtIndex++;
                 updateTimeSlotNames();
             });
 
-            // 👉 Tự động cập nhật dropdown loại sân khi thay đổi checkbox
+            // Tự động cập nhật dropdown loại sân khi thay đổi checkbox
             document.querySelectorAll('.venue-type-checkbox').forEach(cb => {
                 cb.addEventListener('change', () => {
                     const selectedTypes = getSelectedVenueTypes();
@@ -460,7 +474,7 @@
                 });
             });
 
-            // 👉 Quản lý thêm/xóa khung giờ và sân
+            // Quản lý thêm/xóa khung giờ và sân
             document.addEventListener('click', e => {
                 if (e.target.closest('.add-time-slot')) {
                     const courtItem = e.target.closest('.court-item');
@@ -469,15 +483,15 @@
                     const timeSlotIndex = tbody.children.length;
 
                     tbody.insertAdjacentHTML('beforeend', `
-                <tr>
-                    <td><input type="time" class="form-control form-control-sm time-start" required></td>
-                    <td><input type="time" class="form-control form-control-sm time-end" required></td>
-                    <td><input type="number" class="form-control form-control-sm time-price" required></td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `);
+                    <tr>
+                        <td><input type="time" class="form-control form-control-sm time-start" required></td>
+                        <td><input type="time" class="form-control form-control-sm time-end" required></td>
+                        <td><input type="number" class="form-control form-control-sm time-price" required></td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `);
                     updateTimeSlotNames();
                 }
 
@@ -491,7 +505,7 @@
                 }
             });
 
-            // 👉 Sự kiện thay đổi thời gian - tự động chia slot
+            // Sự kiện thay đổi thời gian - tự động chia slot
             document.addEventListener('change', e => {
                 if (e.target.classList.contains('time-start') || e.target.classList.contains('time-end') ||
                     e.target.classList.contains('time-price')) {
@@ -508,21 +522,20 @@
                             const tbody = courtItem.querySelector('tbody');
                             const courtIdx = Array.from(courtList.children).indexOf(courtItem);
 
-                            // Xóa hàng hiện tại
                             row.remove();
 
                             // Thêm các slot 1 giờ
                             slots.forEach((slot, slotIdx) => {
                                 tbody.insertAdjacentHTML('beforeend', `
-                            <tr>
-                                <td><input type="time" class="form-control form-control-sm time-start" value="${slot.start_time}" required></td>
-                                <td><input type="time" class="form-control form-control-sm time-end" value="${slot.end_time}" required></td>
-                                <td><input type="number" class="form-control form-control-sm time-price" value="${slot.price}" required></td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>
-                        `);
+                                <tr>
+                                    <td><input type="time" class="form-control form-control-sm time-start" value="${slot.start_time}" required></td>
+                                    <td><input type="time" class="form-control form-control-sm time-end" value="${slot.end_time}" required></td>
+                                    <td><input type="number" class="form-control form-control-sm time-price" value="${slot.price}" required></td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                            `);
                             });
 
                             updateTimeSlotNames();
@@ -531,7 +544,6 @@
                 }
             });
 
-            // 👉 Sự kiện submit form - cập nhật tên input cuối cùng
             document.querySelector('form').addEventListener('submit', () => {
                 updateTimeSlotNames();
             });

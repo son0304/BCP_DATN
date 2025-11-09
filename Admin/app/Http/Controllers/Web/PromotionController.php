@@ -79,9 +79,10 @@ class PromotionController extends Controller
                 'type' => $request->type,
                 'start_at' => $startAt->format('Y-m-d H:i:s'),
                 'end_at' => $endAt->format('Y-m-d H:i:s'),
-                'usage_limit' => $request->usage_limit ?? 0,
+                'usage_limit' => $request->usage_limit,
                 'used_count' => 0,
                 'created_by' => auth()->id(), // Lưu ID của admin đang tạo voucher
+                'max_discount_amount' => $request->type === '%' ? ($request->max_discount_amount ?? 0) : null,
             ]);
 
             DB::commit();
@@ -117,12 +118,7 @@ class PromotionController extends Controller
      */
     public function update(UpdatePromotionRequest $request, Promotion $promotion)
     {
-        // Kiểm tra usage_limit không được nhỏ hơn used_count
-        $usageLimit = $request->usage_limit ?? 0;
-        if ($usageLimit > 0 && $usageLimit < $promotion->used_count) {
-            return back()->withInput()
-                ->with('error', 'Giới hạn sử dụng (' . $usageLimit . ') không thể nhỏ hơn số lần đã sử dụng (' . $promotion->used_count . ').');
-        }
+        // Kiểm tra usage_limit không được nhỏ hơn used_count (validation đã xử lý trong UpdatePromotionRequest)
 
         DB::beginTransaction();
         try {
@@ -136,7 +132,8 @@ class PromotionController extends Controller
                 'type' => $request->type,
                 'start_at' => $startAt->format('Y-m-d H:i:s'),
                 'end_at' => $endAt->format('Y-m-d H:i:s'),
-                'usage_limit' => $usageLimit,
+                'usage_limit' => $request->usage_limit,
+                'max_discount_amount' => $request->type === '%' ? ($request->max_discount_amount ?? $promotion->max_discount_amount) : null,
             ]);
 
             DB::commit();

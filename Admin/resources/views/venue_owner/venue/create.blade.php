@@ -1,5 +1,17 @@
 @extends('app')
+<style>
+    .custom-input {
+        padding: 0.94rem 18px !important;
+    }
 
+    .custom-checkbox {
+        margin-left: 0 !important;
+    }
+
+    .custom-checkbox2 {
+        margin-left: 21px !important;
+    }
+</style>
 @section('content')
     <div class="container-fluid py-5">
         {{-- Header --}}
@@ -193,11 +205,19 @@
                 }
 
                 let current = new Date(start);
+                let current = new Date(start);
 
                 while (current < end) {
                     const nextHour = new Date(current);
                     nextHour.setHours(nextHour.getHours() + 1);
+                while (current < end) {
+                    const nextHour = new Date(current);
+                    nextHour.setHours(nextHour.getHours() + 1);
 
+                    // Nếu slot tiếp theo vượt quá thời gian kết thúc, dừng lại
+                    if (nextHour > end) {
+                        break;
+                    }
                     // Nếu slot tiếp theo vượt quá thời gian kết thúc, dừng lại
                     if (nextHour > end) {
                         break;
@@ -214,7 +234,11 @@
 
                     current = nextHour;
                 }
+                    current = nextHour;
+                }
 
+                return slots;
+            }
                 return slots;
             }
 
@@ -228,7 +252,20 @@
                         const startInput = row.querySelector('.time-start');
                         const endInput = row.querySelector('.time-end');
                         const priceInput = row.querySelector('.time-price');
+                    rows.forEach((row, slotIdx) => {
+                        const startInput = row.querySelector('.time-start');
+                        const endInput = row.querySelector('.time-end');
+                        const priceInput = row.querySelector('.time-price');
 
+                        if (startInput) startInput.name =
+                            `courts[${courtIdx}][time_slots][${slotIdx}][start_time]`;
+                        if (endInput) endInput.name =
+                            `courts[${courtIdx}][time_slots][${slotIdx}][end_time]`;
+                        if (priceInput) priceInput.name =
+                            `courts[${courtIdx}][time_slots][${slotIdx}][price]`;
+                    });
+                });
+            }
                         if (startInput) startInput.name =
                             `courts[${courtIdx}][time_slots][${slotIdx}][start_time]`;
                         if (endInput) endInput.name =
@@ -264,26 +301,26 @@
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Mặt sân</label>
-                    <input type="text" name="courts[${courtIndex}][surface]" class="form-control" placeholder="Cỏ nhân tạo, cỏ tự nhiên...">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Mặt sân</label>
+                        <input type="text" name="courts[${courtIndex}][surface]" class="form-control" placeholder="Cỏ nhân tạo, cỏ tự nhiên...">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Trong nhà</label>
+                        <select name="courts[${courtIndex}][is_indoor]" class="form-select">
+                            <option value="0">Ngoài trời</option>
+                            <option value="1">Trong nhà</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Trong nhà</label>
-                    <select name="courts[${courtIndex}][is_indoor]" class="form-select">
-                        <option value="0">Ngoài trời</option>
-                        <option value="1">Trong nhà</option>
-                    </select>
-                </div>
-            </div>
 
-            <h6 class="fw-bold mt-3 d-flex justify-content-between align-items-center">
-                <span>Khung giờ và giá</span>
-                <button type="button" class="btn btn-sm btn-outline-success add-time-slot">
-                    <i class="fas fa-plus"></i> Thêm khung giờ
-                </button>
-            </h6>
+                <h6 class="fw-bold mt-3 d-flex justify-content-between align-items-center">
+                    <span>Khung giờ và giá</span>
+                    <button type="button" class="btn btn-sm btn-outline-success add-time-slot">
+                        <i class="fas fa-plus"></i> Thêm khung giờ
+                    </button>
+                </h6>
 
             <div class="table-responsive mt-2">
                 <table class="table table-bordered table-sm align-middle time-slot-table">
@@ -313,7 +350,21 @@
                     document.querySelectorAll('.court-type-select').forEach(select => {
                         const currentValue = select.value;
                         select.innerHTML = options;
+                    document.querySelectorAll('.court-type-select').forEach(select => {
+                        const currentValue = select.value;
+                        select.innerHTML = options;
 
+                        // Nếu lựa chọn hiện tại vẫn còn trong danh sách, giữ nguyên
+                        const stillExists = selectedTypes.some(type => type.id ===
+                            currentValue);
+                        if (stillExists) {
+                            select.value = currentValue;
+                        } else {
+                            select.value = '';
+                        }
+                    });
+                });
+            });
                         // Nếu lựa chọn hiện tại vẫn còn trong danh sách, giữ nguyên
                         const stillExists = selectedTypes.some(type => type.id ===
                             currentValue);
@@ -351,7 +402,15 @@
                     e.target.closest('tr').remove();
                     updateTimeSlotNames();
                 }
+                if (e.target.closest('.remove-slot')) {
+                    e.target.closest('tr').remove();
+                    updateTimeSlotNames();
+                }
 
+                if (e.target.closest('.remove-court')) {
+                    e.target.closest('.court-item').remove();
+                }
+            });
                 if (e.target.closest('.remove-court')) {
                     e.target.closest('.court-item').remove();
                 }
@@ -368,7 +427,13 @@
 
                     if (startTime && endTime && price) {
                         const slots = splitTimeIntoHourlySlots(startTime, endTime, price);
+                    if (startTime && endTime && price) {
+                        const slots = splitTimeIntoHourlySlots(startTime, endTime, price);
 
+                        if (slots.length > 1) {
+                            const courtItem = row.closest('.court-item');
+                            const tbody = courtItem.querySelector('tbody');
+                            const courtIdx = Array.from(courtList.children).indexOf(courtItem);
                         if (slots.length > 1) {
                             const courtItem = row.closest('.court-item');
                             const tbody = courtItem.querySelector('tbody');
@@ -391,6 +456,11 @@
                         `);
                             });
 
+                            updateTimeSlotNames();
+                        }
+                    }
+                }
+            });
                             updateTimeSlotNames();
                         }
                     }

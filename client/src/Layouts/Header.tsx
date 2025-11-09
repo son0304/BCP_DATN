@@ -26,7 +26,6 @@ const Header = () => {
   const [isPopUser, setIsPopUser] = useState(false);
   const { showNotification } = useNotification();
 
-
   const popoverRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -34,7 +33,11 @@ const Header = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(target) && !target.parentElement?.closest('.mobile-menu-button')) {
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(target) &&
+        !target.parentElement?.closest(".mobile-menu-button")
+      ) {
         setIsOpen(false);
       }
     };
@@ -55,143 +58,188 @@ const Header = () => {
   });
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     setUser(null);
     setIsPopUser(false);
     setIsOpen(false);
-    showNotification('Đã đăng xuất', 'success')
-    navigate('/');
+    showNotification("Đã đăng xuất", "success");
+    navigate("/");
   };
 
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) => {
-    const baseClasses = "relative group px-4 py-2 rounded-lg hover:bg-white/10 transition-all duration-300 font-medium focus:outline-none";
-    return isActive ? `${baseClasses} border-b-2 border-orange-500` : baseClasses;
+    const baseClasses =
+      "relative group px-4 py-2 rounded-lg hover:bg-green-50 transition-all duration-300 font-medium text-[#348738]";
+    return isActive ? `${baseClasses} focus:bg-[#10B981] focus:text-white border-b-2 border-[#F59E0B]` : baseClasses;
   };
 
   const getMobileNavLinkClass = ({ isActive }: { isActive: boolean }) => {
-    const baseClasses = "flex items-center gap-3 hover:text-green-200 transition-colors duration-300 p-2 rounded-lg hover:bg-white/10";
-    return isActive ? `${baseClasses} bg-white/20 font-semibold` : baseClasses;
-  }
+    const baseClasses =
+      "flex items-center gap-3 hover:text-green-700 transition-colors duration-300 p-2 rounded-lg hover:bg-green-50 text-[#11182C]";
+    return isActive ? `${baseClasses} bg-green-100 font-semibold` : baseClasses;
+  };
 
   return (
-    <header className="bg-gradient-to-r from-[#2d6a2d] to-[#348738] text-white shadow-xl sticky top-0 z-40">
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400"></div>
-
-      <div className="container max-w-7xl mx-auto flex justify-between items-center px-4 py-3 relative z-10">
+    <header className="bg-[#FFFFFF] shadow-md sticky top-0 z-40">
+      <div className="max-w-7xl mx-auto flex justify-between items-center px-4 py-3 relative z-10">
+        {/* Logo */}
         <Link to="/" className="flex items-center space-x-3">
-          <img src="/logo.png" alt="Logo" className="w-16 h-16 bg-white rounded-full shadow-lg p-1" />
+          <img src="/logo.png" alt="Logo" className="w-14 h-14 rounded-full shadow p-1 bg-white" />
           <div className="hidden sm:block">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-white to-green-200 bg-clip-text text-transparent">BCP Sports</h1>
-            <p className="text-xs text-green-200">Đặt sân thể thao</p>
+            <h1 className="text-xl font-bold text-[#11182C]">BCP Sports</h1>
+            <p className="text-xs text-[#10B981]">Đặt sân thể thao</p>
           </div>
         </Link>
 
+        {/* Desktop Menu */}
         <nav className="hidden md:flex gap-8">
-          <NavLink to="/" className={getNavLinkClass}>Trang Chủ</NavLink>
-          <NavLink to="/partner" className={getNavLinkClass}>Dành cho đối tác</NavLink>
+          <NavLink to="/" className={getNavLinkClass}>Trang chủ</NavLink>
+          <NavLink to="/partner" className={getNavLinkClass}>Đối tác</NavLink>
+          <NavLink to="/blog" className={getNavLinkClass}>Tin tức</NavLink>
+          <NavLink to="/contacts" className={getNavLinkClass}>Liên hệ</NavLink>
+          <NavLink to="/tournaments" className={getNavLinkClass}>Giải đấu</NavLink>
+
         </nav>
 
-        <div className="hidden md:flex items-center gap-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Tìm kiếm sân..."
-              className="w-64 px-4 py-3 pl-10 rounded-full text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-300 bg-white/95 backdrop-blur-sm"
-            />
-            <i className="fa-solid fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-          </div>
-
-          <div className="relative" ref={popoverRef}>
-            {user ? (
+        {/* User or Auth */}
+        <div className="hidden md:flex items-center gap-4" ref={popoverRef}>
+          {user ? (
+            <>
               <button
                 onClick={() => setIsPopUser(!isPopUser)}
-                className="relative group rounded-full transition-all duration-300 w-12 h-12 flex items-center justify-center bg-white ring-2 ring-offset-2 ring-transparent hover:ring-orange-400"
+                className="w-11 h-11 rounded-full bg-[#10B981] hover:bg-[#059669] transition flex items-center justify-center"
               >
-                <img src={user.avt || `https://ui-avatars.com/api/?name=${user.name.charAt(0)}&background=random&color=fff`} alt="Avatar" className="w-11 h-11 rounded-full object-cover" />
+                <img
+                  src={user.avt || `https://ui-avatars.com/api/?name=${user.name}&background=10B981&color=fff`}
+                  alt="Avatar"
+                  className="w-10 h-10 rounded-full object-cover"
+                />
               </button>
-            ) : (
-              <Link to="/login" className="px-5 py-2.5 bg-orange-500 rounded-full hover:bg-orange-600 transition text-white font-medium shadow-md">
+              {isPopUser && (
+                <div className="absolute right-0 mt-3 w-56 bg-white rounded-lg shadow-lg border border-[#E5E7EB] overflow-hidden z-50">
+                  <div className="px-4 py-3 border-b border-[#E5E7EB]">
+                    <p className="font-semibold text-[#11182C]">{user.name}</p>
+                    <p className="text-xs text-[#6B7280]">{user.email}</p>
+                  </div>
+                  <Link to="/profile" onClick={() => setIsPopUser(false)} className="block px-4 py-2 hover:bg-[#F9FAFB] text-[#4B5563]">
+                    <i className="fa-solid fa-user mr-2 text-[#10B981]" /> Tài khoản của tôi
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-[#EF4444] hover:bg-[#F9FAFB]"
+                  >
+                    <i className="fa-solid fa-right-from-bracket mr-2" /> Đăng xuất
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex gap-3">
+              <Link
+                to="/register"
+                className="px-5 py-2.5 bg-[#10B981] text-white rounded-full hover:bg-[#059669] font-medium shadow"
+              >
+                Đăng ký
+              </Link>
+              <Link
+                to="/login"
+                className="px-5 py-2.5 border border-[#10B981] text-[#10B981] rounded-full hover:bg-[#ECFDF5] font-medium"
+              >
                 Đăng nhập
               </Link>
-            )}
-
-            {isPopUser && user && (
-              <div className="absolute right-0 mt-3 w-56 bg-gray-900 text-white shadow-xl rounded-lg border border-gray-700 z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-700">
-                  <p className="font-semibold text-white truncate">{user.name}</p>
-                  <p className="text-xs text-gray-400 truncate">{user.email}</p>
-                </div>
-                <Link to={'/profile'} onClick={() => setIsPopUser(false)}>
-                  <span className="w-full text-left px-4 py-2 hover:bg-gray-800 transition flex items-center gap-2 text-gray-200">
-                    <i className="fa-solid fa-user w-4"></i> Tài khoản của tôi
-                  </span>
-                </Link>
-                <button
-                  className="w-full text-left px-4 py-2 hover:bg-gray-800 transition text-red-400 flex items-center gap-2"
-                  onClick={handleLogout}
-                >
-                  <i className="fa-solid fa-right-from-bracket w-4"></i> Đăng xuất
-                </button>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        <button onClick={() => setIsOpen(!isOpen)} className="md:hidden text-2xl focus:outline-none p-2 rounded-lg text-white hover:bg-white/10 mobile-menu-button">
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="md:hidden text-2xl p-2 rounded-lg text-[#10B981] hover:bg-[#F9FAFB] mobile-menu-button"
+        >
           <i className={`fa-solid ${isOpen ? "fa-xmark" : "fa-bars"}`}></i>
         </button>
       </div>
 
+      {/* Overlay */}
       <div
-        className={`fixed inset-0 z-40 bg-black/30 backdrop-blur-sm transition-opacity duration-300 md:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setIsOpen(false)}
+        className={`fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300 md:hidden ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
       ></div>
+
+      {/* Mobile Menu */}
       <div
         ref={mobileMenuRef}
-        className={`fixed top-0 right-0 z-50 w-72 h-full bg-gradient-to-b from-[#2d6a2d] to-[#348738] shadow-xl transition-transform transform duration-300 md:hidden ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 z-50 w-72 h-full bg-white shadow-xl transition-transform duration-300 md:hidden ${isOpen ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         <div className="flex flex-col h-full">
-          <div className="p-4 border-b border-white/20">
+          {/* Header User Info */}
+          <div className="p-4 border-b border-[#E5E7EB]">
             {user ? (
               <div className="flex items-center gap-3">
-                <img src={user.avt || `https://ui-avatars.com/api/?name=${user.name}&background=random&color=fff`} alt="Avatar" className="w-10 h-10 rounded-full object-cover bg-white" />
+                <img
+                  src={user.avt || `https://ui-avatars.com/api/?name=${user.name}&background=10B981&color=fff`}
+                  alt="Avatar"
+                  className="w-10 h-10 rounded-full object-cover"
+                />
                 <div>
-                  <p className="font-semibold text-white">{user.name}</p>
-                  <p className="text-xs text-green-200">{user.email}</p>
+                  <p className="font-semibold text-[#11182C]">{user.name}</p>
+                  <p className="text-xs text-[#6B7280]">{user.email}</p>
                 </div>
               </div>
             ) : (
-              <Link to="/login" onClick={() => setIsOpen(false)} className="w-full text-center px-4 py-2 bg-orange-500 rounded-lg hover:bg-orange-600 transition text-white font-medium">
-                Đăng nhập / Đăng ký
-              </Link>
+              <div className="flex flex-col gap-2">
+                <Link
+                  to="/register"
+                  onClick={() => setIsOpen(false)}
+                  className="px-4 py-2 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] text-center font-medium"
+                >
+                  Đăng ký
+                </Link>
+                <Link
+                  to="/login"
+                  onClick={() => setIsOpen(false)}
+                  className="px-4 py-2 border border-[#10B981] text-[#10B981] rounded-lg hover:bg-[#ECFDF5] text-center font-medium"
+                >
+                  Đăng nhập
+                </Link>
+              </div>
             )}
           </div>
 
+          {/* Navigation */}
           <nav className="flex-grow p-4 space-y-2">
             <NavLink to="/" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
-              <i className="fa-solid fa-home w-5"></i>
-              <span>Trang chủ</span>
+              <i className="fa-solid fa-home w-5 text-[#10B981]"></i> Trang chủ
             </NavLink>
             <NavLink to="/partner" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
-              <i className="fa-solid fa-handshake w-5"></i>
-              <span>Dành cho đối tác</span>
+              <i className="fa-solid fa-handshake w-5 text-[#10B981]"></i> Đối tác
             </NavLink>
-            <NavLink to="/profile" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
-              <i className="fa-solid fa-user w-5"></i>
-              <span>Tài khoản của tôi</span>
+            <NavLink to="/posts" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
+              <i className="fa-solid fa-newspaper w-5 text-[#10B981]"></i> Tin tức
             </NavLink>
+            <NavLink to="/contacts" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
+              <i className="fa-solid fa-envelope w-5 text-[#10B981]"></i> Liên hệ
+            </NavLink>
+            <NavLink to="/tournaments" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
+              <i className="fa-solid fa-trophy w-5 text-[#F59E0B]"></i> Giải đấu
+            </NavLink>
+            {user && (
+              <NavLink to="/profile" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
+                <i className="fa-solid fa-user w-5 text-[#10B981]"></i> Tài khoản của tôi
+              </NavLink>
+            )}
           </nav>
 
+          {/* Logout */}
           {user && (
-            <div className="p-4 border-t border-white/20">
+            <div className="p-4 border-t border-[#E5E7EB]">
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 p-3 rounded-lg text-red-300 hover:bg-white/10 hover:text-red-400"
+                className="w-full flex items-center gap-3 p-3 rounded-lg text-[#EF4444] hover:bg-[#F9FAFB]"
               >
-                <i className="fa-solid fa-right-from-bracket w-5"></i>
-                <span>Đăng xuất</span>
+                <i className="fa-solid fa-right-from-bracket w-5"></i> Đăng xuất
               </button>
             </div>
           )}

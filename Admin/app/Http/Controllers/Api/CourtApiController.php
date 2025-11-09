@@ -22,14 +22,15 @@ class CourtApiController extends Controller
         ]);
     }
 
-
     /**
      * Lấy thông tin chi tiết 1 sân.
      */
     public function show($id)
     {
         $court = Court::with([
-            'images:id,court_id,url,is_primary,description',
+            // ✅ Chỉ giữ lại các cột thực tế có trong bảng images
+            'images:id,imageable_id,imageable_type,url,is_primary,description',
+
             'venue:id,name,address_detail,phone,start_time,end_time,province_id,district_id,owner_id',
             'venue.province:id,name',
             'venue.district:id,name',

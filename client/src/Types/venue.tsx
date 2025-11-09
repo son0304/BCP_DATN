@@ -48,7 +48,7 @@ export interface Venue {
     courts?: (Court & { time_slots?: EnrichedTimeSlot[] })[]; 
     
     reviews?: Review[];
-    venueTypes?: VenueTypeWithPivot[]; 
+    venue_types?: VenueTypeWithPivot[]; 
     province?: Province;
     owner?: User;
 }

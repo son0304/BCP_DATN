@@ -2,6 +2,7 @@
 <html lang="en">
 @include('layout.head')
 
+
 <body>
     <div class="container-scroller">
         @include('layout.nav')

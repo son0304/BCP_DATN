@@ -1,0 +1,115 @@
+:root {
+    --color-primary: #10B981;
+    --color-secondary: #F59E0B;
+    --color-success: #10B981;
+    --color-danger: #EF4444;
+    --color-bg: #F9FAFB;
+    --color-card-bg: #FFFFFF;
+    --color-text-primary: #11182C;
+    --color-text-secondary: #4B5563;
+    --color-border: #E5E7EB;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+    color: #fff !important;
+}
+
+.btn-primary:hover {
+    opacity: 0.85;
+}
+
+.btn-secondary {
+    background-color: var(--color-secondary) !important;
+    border-color: var(--color-secondary) !important;
+    color: #fff !important;
+}
+
+/* Badges */
+.badge-primary {
+    background-color: var(--color-primary) !important;
+    color: #fff !important;
+}
+
+.badge-secondary {
+    background-color: var(--color-secondary) !important;
+    color: #fff !important;
+}
+
+.badge-danger {
+    background-color: var(--color-danger) !important;
+    color: #fff !important;
+}
+
+/* Card & body */
+body {
+    background-color: var(--color-bg);
+    color: var(--color-text-secondary);
+    font-family: 'Inter', sans-serif;
+}
+
+.card {
+    background-color: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+}
+
+h1,h2,h3,h4,h5,h6 {
+    color: var(--color-text-primary);
+}
+
+
+/* Custom Styles for Modern Minimalism */
+.card {
+    /* Loại bỏ bóng đổ mạnh, chỉ dùng bóng đổ nhẹ (tùy chọn) */
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+    border-radius: 8px; /* Bo tròn góc nhẹ nhàng */
+}
+
+.card-header {
+    background-color: transparent; /* Header trong suốt, dùng màu nền trắng */
+    border-bottom: 1px solid var(--color-border);
+}
+
+/* Tùy chỉnh Input và Select */
+.form-control, .form-select {
+    border-color: var(--color-border);
+    transition: border-color 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--color-primary); /* Đổi màu viền khi focus */
+    box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.25); /* Dùng màu primary cho shadow */
+}
+
+/* Custom Accordion for Court List */
+.accordion-item {
+    border: 1px solid var(--color-border);
+    margin-bottom: 8px; /* Khoảng cách giữa các sân */
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--color-card-bg);
+}
+
+.accordion-button {
+    color: var(--color-text-primary);
+    font-weight: 600;
+    padding: 16px 20px;
+}
+
+.accordion-button:not(.collapsed) {
+    color: var(--color-primary);
+    background-color: rgba(16, 185, 129, 0.05); /* Nền xanh nhạt khi mở */
+    border-bottom: 1px solid var(--color-border);
+}
+
+.accordion-header .remove-court {
+    right: 20px;
+}
+
+/* Table */
+.time-slot-table thead tr {
+    background-color: rgba(16, 185, 129, 0.1); /* Nền xanh nhạt cho header bảng */
+    color: var(--color-text-primary);
+}

@@ -1,194 +1,263 @@
-import { Link } from "react-router-dom"
-import List_Venue from "./Venues/List_Venues"
+import { Link, useNavigate } from "react-router-dom";
+import { useFetchData } from "../Hooks/useApi";
+import type { Venue } from "../Types/venue";
+import type { Image } from "../Types/image";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 const Content = () => {
-    return (
+  const navigate = useNavigate();
+  const { data: venueData, isLoading, isError } =
+    useFetchData<Venue[]>("venues");
 
+  const venues: Venue[] = (venueData?.data as Venue[]) || [];
+  const displayedVenues = venues.slice(0, 4);
+
+  const banners = [
+    {
+      image:
+        "https://cdn.prod.website-files.com/6390c2d9fbb8357ffc404b63/6612f97cff3fd2e80bcb5b1c_What%20is%20Pickleball.png",
+      title: (
         <>
-            {/* Nền xanh lá nhạt */}
-            <section className="bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 h-[200px] md:h-[400px] mt-2 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-[#348738]/20 via-[#2d6a2d]/20 to-green-400/20"></div>
-                <div className="absolute top-10 left-10 w-32 h-32 bg-gradient-to-r from-[#348738]/30 to-green-400/30 rounded-full blur-xl"></div>
-                <div className="absolute bottom-10 right-10 w-40 h-40 bg-gradient-to-r from-green-400/30 to-[#348738]/30 rounded-full blur-xl"></div>
-            </section>
-
-            <section className="container mx-auto max-w-7xl bg-white/95 backdrop-blur-sm md:h-64 h-full md:-mt-20 md:relative md:z-10 rounded-2xl shadow-2xl border border-white/20 p-6">
-                <div className="w-full m-auto">
-                    <div className="my-6 text-center">
-                        {/* Tiêu đề xanh lá */}
-                        <h1 className="text-4xl md:text-5xl font-bold text-[#2d6a2d] my-4">
-                            Đặt sân ngay
-                        </h1>
-                        <p className="text-lg text-gray-600">Tìm kiếm sân chơi thể thao phù hợp với bạn</p>
-                    </div>
-                    <div>
-                        <form action="" className="grid md:grid-cols-4 gap-4 grid-cols-1">
-                            {/* Input fields màu xanh lá */}
-                            <div className="relative group">
-                                <div className="absolute inset-0 bg-gradient-to-r from-[#348738] to-[#2d6a2d] rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-                                <div className="relative flex items-center border-2 border-gray-200 group-hover:border-[#348738] p-3 w-full rounded-2xl bg-white/80 backdrop-blur-sm transition-all duration-300">
-                                    <div className="flex items-center">
-                                        <i className="fa-solid fa-futbol text-[#348738] text-lg"></i>
-                                        <div className="h-6 border-l border-gray-300 mx-3"></div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <select name="" id="" className="w-full border-none outline-none bg-transparent text-gray-700 font-medium">
-                                            <option value="">Chọn môn thể thao</option>
-                                            <option value="football">⚽ Bóng đá</option>
-                                            <option value="badminton">🏸 Cầu lông</option>
-                                            <option value="tennis">🎾 Tennis</option>
-                                            <option value="basketball">🏀 Bóng rổ</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="relative group">
-                                <div className="absolute inset-0 bg-gradient-to-r from-[#348738] to-[#2d6a2d] rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-                                <div className="relative flex items-center border-2 border-gray-200 group-hover:border-[#348738] p-3 w-full rounded-2xl bg-white/80 backdrop-blur-sm transition-all duration-300">
-                                    <div className="flex items-center">
-                                        <i className="fa-solid fa-map-marker-alt text-[#348738] text-lg"></i>
-                                        <div className="h-6 border-l border-gray-300 mx-3"></div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <select name="" id="" className="w-full border-none outline-none bg-transparent text-gray-700 font-medium">
-                                            <option value="">Chọn khu vực</option>
-                                            <option value="district1">Quận 1</option>
-                                            <option value="district2">Quận 2</option>
-                                            <option value="district3">Quận 3</option>
-                                            <option value="district7">Quận 7</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="relative group">
-                                <div className="absolute inset-0 bg-gradient-to-r from-[#348738] to-[#2d6a2d] rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-                                <div className="relative flex items-center border-2 border-gray-200 group-hover:border-[#348738] p-3 w-full rounded-2xl bg-white/80 backdrop-blur-sm transition-all duration-300">
-                                    <div className="flex items-center">
-                                        <i className="fa-solid fa-calendar text-[#348738] text-lg"></i>
-                                        <div className="h-6 border-l border-gray-300 mx-3"></div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <select name="" id="" className="w-full border-none outline-none bg-transparent text-gray-700 font-medium">
-                                            <option value="">Chọn ngày</option>
-                                            <option value="today">Hôm nay</option>
-                                            <option value="tomorrow">Ngày mai</option>
-                                            <option value="weekend">Cuối tuần</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* --- ĐỔI MÀU CTA --- */}
-                            {/* Nút CTA chính màu Cam */}
-                            <button className="w-full p-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2">
-                                <i className="fa-solid fa-search"></i>
-                                <span>Tìm kiếm ngay</span>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </section>
-
-            <section className="py-8 md:py-16 from-white to-gray-50">
-                <div className="container max-w-7xl mx-auto px-4">
-                    <div className="text-center mb-12">
-                        {/* Tiêu đề xanh lá */}
-                        <h1 className="md:text-5xl text-3xl font-bold text-[#2d6a2d] my-4">
-                            Gợi ý cho bạn
-                        </h1>
-                        <p className="text-lg text-gray-600">Những sân thể thao được yêu thích nhất</p>
-                    </div>
-
-                    <div >
-                        <div className="flex justify-end">
-                            <Link to={'venues'}>
-                                <button className="h-3 flex items-center gap-2 right-0 mb-5 ml-0">
-                                    <p>Xem thêm</p>
-                                    <i className="fa-solid fa-arrow-right"></i>
-                                </button>
-                            </Link>
-                        </div>
-                        <List_Venue limit={4} />
-                    </div>
-                </div>
-            </section>
-
-
-            <section className="py-12 md:py-20 to-green-50">
-                <div className="container mx-auto max-w-7xl px-4">
-                    <div className="text-center mb-16">
-                        {/* Tiêu đề xanh lá */}
-                        <h1 className="md:text-5xl text-3xl font-bold text-[#2d6a2d] my-4">
-                            Tại sao lại chọn chúng tôi
-                        </h1>
-                        <p className="text-lg text-gray-600">Những lý do khiến BCP trở thành lựa chọn hàng đầu</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {/* Các card "Why Us" dùng màu xanh lá */}
-                        <div className="group relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg hover:shadow-2xl flex flex-col items-center justify-center text-center transition-all duration-500 hover:-translate-y-2 border border-white/20 min-h-[280px] p-8">
-                            <div className="absolute inset-0 bg-gradient-to-br from-[#348738]/10 to-[#2d6a2d]/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                            <div className="relative z-10 flex flex-col items-center justify-center">
-                                <div className="w-16 h-16 bg-gradient-to-br from-[#2d6a2d] to-[#348738] hover:from-[#348738] hover:to-[#2d6a2d] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                                    <i className="fas fa-bolt text-white text-2xl"></i>
-                                </div>
-                                <h2 className="text-xl font-bold text-gray-800 mb-3">Đặt sân nhanh chóng</h2>
-                                <p className="text-gray-600 text-sm leading-relaxed">
-                                    Chỉ mất 2 phút để hoàn tất đặt sân trực tuyến 24/7
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* (Các card 2, 3, 4 tương tự) */}
-                        <div className="group relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg hover:shadow-2xl flex flex-col items-center justify-center text-center transition-all duration-500 hover:-translate-y-2 border border-white/20 min-h-[280px] p-8">
-                            <div className="absolute inset-0 bg-gradient-to-br from-[#348738]/10 to-[#2d6a2d]/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                            <div className="relative z-10 flex flex-col items-center justify-center">
-                                <div className="w-16 h-16 bg-gradient-to-br from-[#2d6a2d] to-[#348738] hover:from-[#348738] hover:to-[#2d6a2d] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                                    <i className="fa-solid fa-hand-holding-dollar text-white text-2xl"></i>
-                                </div>
-                                <h2 className="text-xl font-bold text-gray-800 mb-3">Giá cả hợp lý</h2>
-                                <p className="text-gray-600 text-sm leading-relaxed">
-                                    So sánh giá từ nhiều sân, nhiều ưu đãi hấp dẫn
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="group relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg hover:shadow-2xl flex flex-col items-center justify-center text-center transition-all duration-500 hover:-translate-y-2 border border-white/20 min-h-[280px] p-8">
-                            <div className="absolute inset-0 bg-gradient-to-br from-[#348738]/10 to-[#2d6a2d]/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                            <div className="relative z-10 flex flex-col items-center justify-center">
-                                <div className="w-16 h-16 bg-gradient-to-br from-[#2d6a2d] to-[#348738] hover:from-[#348738] hover:to-[#2d6a2d] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                                    <i className="fa-solid fa-trophy text-white text-2xl"></i>
-                                </div>
-                                <h2 className="text-xl font-bold text-gray-800 mb-3">Sân chất lượng</h2>
-                                <p className="text-gray-600 text-sm leading-relaxed">
-                                    Đối tác sân uy tín, cơ sở vật chất hiện đại
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="group relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg hover:shadow-2xl flex flex-col items-center justify-center text-center transition-all duration-500 hover:-translate-y-2 border border-white/20 min-h-[280px] p-8">
-                            <div className="absolute inset-0 bg-gradient-to-br from-[#348738]/10 to-[#2d6a2d]/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                            <div className="relative z-10 flex flex-col items-center justify-center">
-                                <div className="w-16 h-16 bg-gradient-to-br from-[#2d6a2d] to-[#348738] hover:from-[#348738] hover:to-[#2d6a2d] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                                    <i className="fas fa-bullseye text-white text-2xl"></i>
-                                </div>
-                                <h2 className="text-xl font-bold text-gray-800 mb-3">Đa dạng lựa chọn</h2>
-                                <p className="text-gray-600 text-sm leading-relaxed">
-                                    Bóng đá, cầu lông, tennis, bóng rổ và nhiều hơn nữa
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </section>
-
-
-            <section className=""></section>
-            <section className=""></section>
+          Đặt sân thể thao dễ dàng <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-teal-100">
+            Mọi lúc – Mọi nơi
+          </span>
         </>
-    )
-}
-export default Content
+      ),
+      desc: "Khám phá hàng trăm sân bóng, cầu lông, pickleball… Đặt lịch nhanh chóng và nhận ưu đãi cực hấp dẫn chỉ với vài cú nhấp.",
+    },
+    {
+      image:
+        "https://images.unsplash.com/photo-1551958219-acbc608c6377?q=80&w=1470&auto=format&fit=crop",
+      title: (
+        <>
+          Sân bóng chất lượng <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-teal-100">
+            Gần bạn nhất
+          </span>
+        </>
+      ),
+      desc: "Đặt sân bóng đá nhanh chóng, dễ dàng, với hệ thống tiện ích và ưu đãi hấp dẫn mỗi ngày.",
+    },
+    {
+      image:
+        "https://lh7-rt.googleusercontent.com/docsz/AD_4nXdilipWIRDONHYvGLHnlQgJ8AlNWegmZQL6JyUH-aZOnk5YrXILOeHEFwgYEOhegCxtPhk_ZOVMKrqwy4IS2v3OpM91ZSD8Z7QlGi5rNvFMbw-XY1I78SydXAGlVkp2uNtKw5bA?key=arrkdHtwmhcmPHr4YSqemok2",
+      title: (
+        <>
+          Trải nghiệm thể thao <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-teal-100">
+            Cùng bạn bè
+          </span>
+        </>
+      ),
+      desc: "Đặt sân cầu lông, pickleball và nhiều môn khác — chỉ trong vài giây.",
+    },
+  ];
+
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % banners.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const banner = banners[index];
+
+  return (
+    <>
+      {/* Banner đầu trang */}
+      <section className="relative h-[300px] md:h-[480px] flex items-center justify-center mt-2 pb-32 md:pb-40">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 1 }}
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${banner.image})` }}
+          />
+        </AnimatePresence>
+
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/70 via-emerald-800/50 to-teal-600/40"></div>
+
+        <motion.div
+          key={index + "-content"}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="relative z-10 flex flex-col items-center text-center w-full max-w-4xl px-6"
+        >
+          <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-4 md:mb-6 text-white drop-shadow-lg">
+            {banner.title}
+          </h1>
+          <p className="text-base md:text-lg text-emerald-100 mb-6 md:mb-8 leading-relaxed max-w-2xl">
+            {banner.desc}
+          </p>
+        </motion.div>
+      </section>
+
+      {/* 🔍 Form tìm kiếm */}
+      <section className="container mx-auto max-w-5xl bg-white md:h-64 h-full md:-mt-20 md:relative md:z-10 rounded-2xl shadow-2xl border border-gray-200 p-4 md:p-6">
+        <div className="w-full text-center mb-4">
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">
+            Tìm sân nhanh
+          </h1>
+          <p className="text-sm md:text-base text-gray-500">
+            Tìm kiếm sân thể thao phù hợp với bạn
+          </p>
+        </div>
+
+        <form className="grid md:grid-cols-4 grid-cols-1 gap-3 md:gap-4">
+          {[
+            { icon: "fa-futbol", label: "Chọn môn thể thao" },
+            { icon: "fa-map-marker-alt", label: "Chọn khu vực" },
+            { icon: "fa-calendar", label: "Chọn ngày" },
+          ].map((f, i) => (
+            <div
+              key={i}
+              className="relative flex items-center border-2 border-gray-200 hover:border-emerald-500 p-2 md:p-3 rounded-2xl transition-all duration-300"
+            >
+              <i
+                className={`fa-solid ${f.icon} text-emerald-500 text-base md:text-lg mr-3`}
+              ></i>
+              <select className="w-full border-none bg-transparent outline-none text-gray-700 text-sm md:text-base font-medium">
+                <option value="">{f.label}</option>
+              </select>
+            </div>
+          ))}
+
+          <button className="p-2 md:p-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm md:text-base font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2">
+            <i className="fa-solid fa-search"></i>
+            <span>Tìm kiếm</span>
+          </button>
+        </form>
+      </section>
+
+      {/* 🏟️ Gợi ý sân */}
+      <section className="py-10 md:py-16 mt-10 md:mt-16 bg-gradient-to-b from-white to-gray-50">
+        <div className="container max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-emerald-600">
+                Gợi ý cho bạn
+              </h2>
+              <p className="text-sm md:text-base text-gray-500">
+                Những sân thể thao được yêu thích nhất
+              </p>
+            </div>
+            <Link to="/venues">
+              <button className="flex items-center gap-2 text-emerald-500 hover:text-emerald-600 text-sm md:text-base transition font-semibold">
+                <span>Xem thêm</span>
+                <i className="fa-solid fa-arrow-right"></i>
+              </button>
+            </Link>
+          </div>
+
+          {isError ? (
+            <p className="text-center text-red-500 py-10">
+              Đã xảy ra lỗi khi tải dữ liệu sân!
+            </p>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-x-hidden scrollbar-hide">
+              {isLoading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="bg-white rounded-2xl shadow-md animate-pulse border border-gray-200 min-w-[220px] sm:min-w-0"
+                    >
+                      <div className="w-full h-40 bg-gray-200"></div>
+                    </div>
+                  ))
+                : displayedVenues.length > 0
+                ? displayedVenues.map((venue) => {
+                    const primaryImage = venue.images?.find(
+                      (img: Image) => img.is_primary === 1
+                    );
+                    return (
+                      <div
+                        key={venue.id}
+                        className="bg-white rounded-2xl border border-gray-200 overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:shadow-lg flex flex-col min-w-[220px] sm:min-w-0"
+                      >
+                        <div className="relative">
+                          <img
+                            onClick={() => navigate(`/venues/${venue.id}`)}
+                            src={
+                              primaryImage?.url ||
+                              "https://via.placeholder.com/400x300?text=BCP+Sports"
+                            }
+                            alt={venue.name}
+                            className="w-full h-28 sm:h-36 object-cover cursor-pointer"
+                          />
+                          <div className="absolute top-0 right-0 bg-emerald-500 text-white px-2 py-1 rounded-bl-md flex items-center gap-1 shadow-md text-xs">
+                            <i className="fa-solid fa-star text-yellow-400"></i>
+                            <span>
+                              {Number(venue.reviews_avg_rating)?.toFixed(1) ||
+                                "0.0"}
+                            </span>
+                          </div>
+                          <div className="absolute bottom-0 left-0 bg-emerald-500 text-white px-2 py-1 rounded-tr-md flex items-center gap-1 shadow-md text-xs">
+                            <i className="fa-regular fa-clock text-white mr-1"></i>
+                            <span>
+                              {venue.start_time?.slice(0, 5)} -{" "}
+                              {venue.end_time?.slice(0, 5)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-3 flex-1 flex flex-col">
+                          <div className="flex flex-wrap gap-1 mb-1">
+                            {venue.venue_types?.length ? (
+                              venue.venue_types.map((type, i) => (
+                                <span
+                                  key={i}
+                                  className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium line-clamp-1"
+                                >
+                                  {type.name}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-gray-500 italic">
+                                Chưa có loại hình
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 className="text-sm md:text-base font-semibold text-gray-900 mb-1 line-clamp-1">
+                            {venue.name}
+                          </h3>
+
+                          <div className="flex items-start text-xs md:text-sm text-gray-600 mb-2">
+                            <i className="fa-solid fa-location-dot text-emerald-500 mt-0.5 mr-1 flex-shrink-0"></i>
+                            <span className="line-clamp-2">
+                              {venue.address_detail}
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => navigate(`/venues/${venue.id}`)}
+                            className="mt-auto bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+                          >
+                            Xem chi tiết
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                : (
+                  <p className="col-span-full text-center text-gray-500 italic py-10">
+                    Không có sân nào được tìm thấy.
+                  </p>
+                )}
+            </div>
+          )}
+        </div>
+      </section>
+    </>
+  );
+};
+
+export default Content;

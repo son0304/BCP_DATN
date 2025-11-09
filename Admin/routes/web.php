@@ -9,7 +9,8 @@ use App\Http\Controllers\Web\{
     UserController,
     BookingController,
     AuthController,
-    VenueController
+    VenueController,
+    PromotionController
 };
 
 // ==============================
@@ -72,6 +73,17 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('/', [ReviewController::class, 'index'])->name('index');
         Route::get('{review}', [ReviewController::class, 'show'])->name('show');
         Route::delete('{review}', [ReviewController::class, 'destroy'])->name('destroy');
+    });
+
+    // --- PROMOTIONS MANAGEMENT (Admin quản lý voucher) ---
+    Route::prefix('promotions')->name('promotions.')->group(function () {
+        Route::get('/', [PromotionController::class, 'index'])->name('index');
+        Route::get('create', [PromotionController::class, 'create'])->name('create');
+        Route::post('/', [PromotionController::class, 'store'])->name('store');
+        Route::get('{promotion}', [PromotionController::class, 'show'])->name('show');
+        Route::get('{promotion}/edit', [PromotionController::class, 'edit'])->name('edit');
+        Route::put('{promotion}', [PromotionController::class, 'update'])->name('update');
+        Route::delete('{promotion}', [PromotionController::class, 'destroy'])->name('destroy');
     });
 });
 

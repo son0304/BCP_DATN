@@ -19,4 +19,5 @@ class Province extends Model
     public function venues (){
         return $this->hasMany(Venue::class);
     }
+    
 }

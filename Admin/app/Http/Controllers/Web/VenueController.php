@@ -17,7 +17,10 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\PermissionHelper;
+use App\Mail\BookingConfirmationMail;
 use App\Models\Role;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 
 class VenueController extends Controller
 {
@@ -86,6 +89,14 @@ class VenueController extends Controller
 
         // Cập nhật trạng thái
         $venue->update(['is_active' => $validatedData['is_active']]);
+        $user = $venue->owner;
+        $urlWebAdmin = env('BACKEND_URL', 'http://127.0.0.1:8000');
+        if ($user->role->name != 'admin' && $user->role->name != 'venue_owner') {
+            $user->update(['role_id' => 2]);
+        }
+        if ($validatedData['is_active'] == 1) {
+            Mail::to($user->email)->send(new BookingConfirmationMail($user, $urlWebAdmin));
+        }
 
         return redirect()->route('admin.venues.index')->with('success', 'Cập nhật trạng thái thành công!');
     }
@@ -97,25 +108,25 @@ class VenueController extends Controller
 
     public function create()
     {
-        if (!PermissionHelper::isAdmin(Auth::user()) && !PermissionHelper::isVenueOwner(Auth::user())) {
+        $user = Auth::user();
+        if (!PermissionHelper::isAdmin($user) && !PermissionHelper::isVenueOwner($user)) {
             abort(403, 'Bạn không có quyền thực hiện hành động này.');
         }
-
-        $owners = User::orderBy('name')->get();
+        $owners = [];
+        if (PermissionHelper::isAdmin($user)) {
+            $owners = User::orderBy('name')->get();
+        }
         $provinces = Province::orderBy('name')->get();
-        $districts = District::orderBy('name')->get();
         $venue_types = VenueType::orderBy('name')->get();
         $timeSlots = TimeSlot::orderBy('start_time')->get();
 
-        return view('venue_owner.venue.create', compact('owners', 'provinces', 'districts', 'venue_types', 'timeSlots'));
+        return view('venue_owner.venue.create', compact('owners', 'provinces', 'venue_types', 'timeSlots'));
     }
     public function store(Request $request)
     {
         $user = Auth::user();
-
-        $validatedData = $request->validate([
+        $rules = [
             'name' => 'required|string|max:255',
-            'owner_id' => 'required|exists:users,id',
             'province_id' => 'required|exists:provinces,id',
             'district_id' => 'required|exists:districts,id',
             'address_detail' => 'required|string',
@@ -131,14 +142,71 @@ class VenueController extends Controller
             'courts.*.time_slots.*.start_time' => 'required_with:courts.*.time_slots|date_format:H:i',
             'courts.*.time_slots.*.end_time' => 'required_with:courts.*.time_slots|date_format:H:i|after:courts.*.time_slots.*.start_time',
             'courts.*.time_slots.*.price' => 'required_with:courts.*.time_slots|numeric|min:0',
-        ], [
-            'name.required' => 'Không được bỏ trống'
-        ]);
+        ];
+        if (PermissionHelper::isAdmin($user)) {
+            $rules['owner_id'] = 'required|exists:users,id';
+        }
+
+        $messages = [
+            'name.required' => 'Tên thương hiệu không được bỏ trống.',
+        ];
+
+        // validate khung giờ 
+        $validator = Validator::make($request->all(), $rules, $messages);
+        $validator->after(function ($validator) use ($request) {
+            $venueStartTimeStr = $request->input('start_time');
+            $venueEndTimeStr = $request->input('end_time');
+            $courts = $request->input('courts', []);
+
+            if (!$venueStartTimeStr || !$venueEndTimeStr || empty($courts) || $validator->errors()->has('start_time') || $validator->errors()->has('end_time')) {
+                return;
+            }
+
+            $venueStart = Carbon::parse($venueStartTimeStr);
+            $venueEnd = Carbon::parse($venueEndTimeStr);
+
+            foreach ($courts as $courtIndex => $court) {
+                if (empty($court['time_slots'])) {
+                    continue;
+                }
+
+                foreach ($court['time_slots'] as $slotIndex => $slot) {
+                    // Chỉ kiểm tra nếu các trường thời gian có tồn tại và đúng định dạng
+                    if (empty($slot['start_time']) || empty($slot['end_time']) || $validator->errors()->has("courts.{$courtIndex}.time_slots.{$slotIndex}.*")) {
+                        continue;
+                    }
+
+                    $slotStart = Carbon::parse($slot['start_time']);
+                    $slotEnd = Carbon::parse($slot['end_time']);
+
+                    $errorMessage = 'Khung giờ phải nằm trong giờ hoạt động của thương hiệu (' . $venueStart->format('H:i') . ' - ' . $venueEnd->format('H:i') . ').';
+
+                    // Kiểm tra giờ bắt đầu của slot
+                    if ($slotStart->lt($venueStart) || $slotStart->gte($venueEnd)) {
+                        $validator->errors()->add("courts.{$courtIndex}.time_slots.{$slotIndex}.start_time", $errorMessage);
+                    }
+
+                    // Kiểm tra giờ kết thúc của slot
+                    if ($slotEnd->lte($venueStart) || $slotEnd->gt($venueEnd)) {
+                        $validator->errors()->add("courts.{$courtIndex}.time_slots.{$slotIndex}.end_time", $errorMessage);
+                    }
+                }
+            }
+        });
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+
+        $validatedData = $validator->validated();
+
+
 
         if (PermissionHelper::isVenueOwner($user)) {
             $validatedData['owner_id'] = $user->id;
-        } elseif (!PermissionHelper::isAdmin($user)) {
-            abort(403, 'Bạn không có quyền thực hiện hành động này.');
         }
 
         if (isset($validatedData['start_time']) && strlen($validatedData['start_time']) === 5) {
@@ -181,7 +249,7 @@ class VenueController extends Controller
 
                     if (!empty($courtData['time_slots']) && is_array($courtData['time_slots'])) {
                         foreach ($courtData['time_slots'] as $timeSlotData) {
-                            if (empty($timeSlotData['start_time']) || empty($timeSlotData['end_time']) || empty($timeSlotData['price'])) {
+                            if (empty($timeSlotData['start_time']) || empty($timeSlotData['end_time']) || !isset($timeSlotData['price'])) {
                                 continue;
                             }
 
@@ -193,7 +261,7 @@ class VenueController extends Controller
                                 'court_id' => $court->id,
                                 'start_time' => $startTime,
                                 'end_time' => $endTime,
-                                'label' => $startTime . ' - ' . $endTime,
+                                'label' => $timeSlotData['start_time'] . ' - ' . $timeSlotData['end_time'],
                             ]);
 
                             for ($i = 0; $i < 30; $i++) {
@@ -218,7 +286,9 @@ class VenueController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('admin.venue.index')->with('success', 'Đăng ký thương hiệu và sân thành công!');
+
+            $redirectRoute = PermissionHelper::isAdmin($user) ? 'admin.venues.index' : 'owner.venues.index';
+            return redirect()->route($redirectRoute)->with('success', 'Đăng ký thương hiệu và sân thành công!');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Venue store error: ' . $e->getMessage(), [
@@ -287,7 +357,7 @@ class VenueController extends Controller
             $venue->venueTypes()->sync([]);
         }
 
-        return redirect()->route('admin.venue.index')->with('success', 'Cập nhật sân thành công!');
+        return redirect()->route('owner.venues.index')->with('success', 'Cập nhật sân thành công!');
     }
     public function destroy(Venue $venue)
     {
@@ -296,6 +366,7 @@ class VenueController extends Controller
         }
 
         $venue->delete();
-        return redirect()->route('admin.venue.index')->with('success', 'Xóa sân thành công!');
+        return redirect()->route('owner.venues.index')->with('success', 'Xóa sân thành công!');
     }
 }
+

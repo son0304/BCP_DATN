@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { User } from '../../Types/user';
+import Booking_history from './Booking_history';
 
 const InfoItem: React.FC<{ icon: string; label: string; value?: string | number | null }> = ({ icon, label, value }) => (
     <div>
@@ -31,22 +32,16 @@ const Detail_User = () => {
             console.error("Lỗi khi parse user từ localStorage:", e);
             setError("Dữ liệu người dùng bị lỗi.");
         }
-    }, []); 
+    }, []);
 
     if (error || !user) {
         return (
             <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-6">
-                <i className="fa-solid fa-user-xmark text-5xl text-red-400 mb-4"></i>
                 <h2 className="text-2xl font-bold text-gray-800">Không thể tải thông tin</h2>
                 <p className="text-gray-500 mt-2">
                     {error || "Không có dữ liệu người dùng."}
                 </p>
-                <Link 
-                    to="/login"
-                    className="mt-4 px-5 py-2.5 bg-orange-500 rounded-full hover:bg-orange-600 transition text-white font-medium shadow-md"
-                >
-                    Đăng nhập
-                </Link>
+                
             </div>
         );
     }
@@ -62,24 +57,23 @@ const Detail_User = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
                         {/* Avatar và Tên */}
                         <div className="flex items-center gap-5">
-                            <img 
-                                src={avatarUrl} 
-                                alt={user.name} 
-                                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md ring-2 ring-[#348738]" 
+                            <img
+                                src={avatarUrl}
+                                alt={user.name}
+                                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md ring-2 ring-[#348738]"
                             />
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
                                 <p className="text-lg text-gray-600">{user.email}</p>
-                                <span className={`mt-2 inline-block px-3 py-1 text-xs font-semibold rounded-full ${
-                                    user.role_id === 1 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                                }`}>
+                                <span className={`mt-2 inline-block px-3 py-1 text-xs font-semibold rounded-full ${user.role_id === 1 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                                    }`}>
                                     {user.role_id === 1 ? 'Admin' : 'User'}
                                 </span>
                             </div>
                         </div>
                         {/* Nút Hành động */}
                         <div className="flex-shrink-0">
-                            <Link 
+                            <Link
                                 to={`/profile/edit`} // Sửa link thành trang edit profile
                                 state={{ user: user }} // Truyền dữ liệu user qua state
                                 className="px-5 py-2.5 bg-orange-500 rounded-full hover:bg-orange-600 transition text-white font-medium shadow-md"
@@ -94,24 +88,24 @@ const Detail_User = () => {
                 {/* === PHẦN THÂN CỦA CARD (CHI TIẾT) === */}
                 <div className="p-6 md:p-8">
                     <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                        <InfoItem 
-                            icon="fa-phone" 
-                            label="Số điện thoại" 
-                            value={user.phone} 
+                        <InfoItem
+                            icon="fa-phone"
+                            label="Số điện thoại"
+                            value={user.phone}
                         />
-                        <InfoItem 
-                            icon="fa-check-circle" 
-                            label="Trạng thái" 
-                            value={user.is_active ? 'Đang hoạt động' : 'Đã khóa'} 
+                        <InfoItem
+                            icon="fa-check-circle"
+                            label="Trạng thái"
+                            value={user.is_active ? 'Đang hoạt động' : 'Đã khóa'}
                         />
-                        <InfoItem 
-                            icon="fa-map-pin" 
-                            label="Tỉnh/Thành phố" 
+                        <InfoItem
+                            icon="fa-map-pin"
+                            label="Tỉnh/Thành phố"
                             value={user.province?.toString()} // Nên thay bằng user.province.name
                         />
-                        <InfoItem 
-                            icon="fa-map-marker-alt" 
-                            label="Quận/Huyện" 
+                        <InfoItem
+                            icon="fa-map-marker-alt"
+                            label="Quận/Huyện"
                             value={user.district?.toString()} // Nên thay bằng user.district.name
                         />
                         {/* <div className="md:col-span-2">
@@ -123,6 +117,10 @@ const Detail_User = () => {
                         </div> */}
                     </dl>
                 </div>
+            </div>
+
+            <div className="max-w-4xl mx-auto my-2 bg-white rounded-2xl shadow-xl overflow-hidden">
+                <Booking_history user={user} />
             </div>
         </div>
     );

@@ -68,16 +68,20 @@ class VenueApiController extends Controller
     {
         $validated = $request->validate(['date' => 'nullable|date_format:Y-m-d']);
         $date = $validated['date'] ?? now()->toDateString();
-
         $venue = Venue::with([
-            // ✅ morphMany: không có venue_id
             'images:id,imageable_id,imageable_type,url,is_primary,description',
             'venueTypes:id,name',
             'courts:id,venue_id,name,surface,is_indoor',
             'courts.timeSlots:id,court_id,label,start_time,end_time',
             'owner:id,name,email',
             'province:id,name',
-        ])->withAvg('reviews', 'rating')->find($id);
+            'reviews:id,user_id,venue_id,rating,comment,created_at,updated_at',
+            'reviews.user:id,name,avt'
+
+        ])
+            ->withAvg('reviews', 'rating')
+            ->where('id', $id)
+            ->first(); // thay vì find($id)
 
         if (!$venue) {
             return response()->json([
@@ -164,7 +168,6 @@ class VenueApiController extends Controller
                 'success' => true,
                 'data' => $venue->load('images')
             ], 201);
-
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Lỗi tạo venue: ' . $e->getMessage());

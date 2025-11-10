@@ -13,6 +13,8 @@ type FormData = {
 
 const Login = () => {
     const [serverErrors, setServerErrors] = useState<{ [key: string]: string }>({});
+    const [isLoading, setIsLoading] = useState(false);
+
     const navigate = useNavigate();
     const { showNotification } = useNotification();
     const { mutate } = usePostData<{ access_token: string; user: any }, FormData>('login');
@@ -25,6 +27,7 @@ const Login = () => {
 
     const onSubmit = (data: FormData) => {
         setServerErrors({});
+        setIsLoading(true); // Bắt đầu loading
         mutate(data, {
             onSuccess: (response) => {
                 const { success, data: resData, message } = response;
@@ -33,23 +36,23 @@ const Login = () => {
                         localStorage.setItem("token", resData.access_token);
                         localStorage.setItem("user", JSON.stringify(resData.user));
                     }
-                    showNotification(message, 'success')
-
+                    showNotification(message, 'success');
                     navigate('/');
                 } else {
-                    showNotification(message, 'error')
-
+                    showNotification(message, 'error');
                 }
             },
             onError: (error: any) => {
                 if (error.response?.data?.errors) {
                     setServerErrors(error.response.data.errors);
                 } else {
-                    console.error(" Lỗi đăng nhập:", error.message);
+                    console.error("Lỗi đăng nhập:", error.message);
                 }
             },
+            onSettled: () => setIsLoading(false), // Kết thúc loading dù success hay error
         });
     };
+
 
     return (
         <div className='min-h-screen flex justify-center items-center bg-gray-50 p-4 sm:p-6 lg:p-8'>
@@ -71,9 +74,17 @@ const Login = () => {
                             {...register('password', { required: 'Mật khẩu không được để trống', minLength: { value: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự', }, })}
                         />
 
-                        <button type="submit" className="w-full py-3 bg-orange-500 text-white rounded-lg font-semibold  shadow-sm hover:bg-orange-600  focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-  transition-all duration-300 ease-in-out">
-                            Đăng nhập
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className={`w-full py-3 rounded-lg font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-300 ease-in-out ${isLoading
+                                ? "bg-orange-300 cursor-not-allowed"
+                                : "bg-orange-500 hover:bg-orange-600 text-white"
+                                }`}
+                        >
+                            {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
                         </button>
+
 
                         <div className='text-sm text-center'>
                             <a href="#" className='font-medium text-orange-500 hover:text-orange-600'>

@@ -15,7 +15,7 @@ const UserPopover: React.FC = () => {
   }, []);
 
   return (
-    <div className="" ref={popoverRef}>
+    <div className="absolute" ref={popoverRef}>
       <button
         onClick={() => setOpen(!open)}
         className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 transition"

@@ -12,13 +12,7 @@ const List_Venue = ({ limit }: VenuesProps) => {
   const navigate = useNavigate();
   const { data: venueData, isLoading, isError } = useFetchData<Venue[]>("venues");
 
-if (venueData) {
-  console.log("venueData:", venueData);
 
-} else {
-  console.log("Lỗi kh lấy được data");
-
-}
   const [searchName, setSearchName] = useState("");
   const [selectedAddress, setSelectedAddress] = useState("");
   const [filteredVenues, setFilteredVenues] = useState<Venue[] | null>(null);

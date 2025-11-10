@@ -25,6 +25,7 @@ export type Voucher = {
   type: '%' | 'VND';
   expires_at: string | null;
 };
+
 type BookingDetailVenueProps = {
   venue: Venue;
   user: User;
@@ -38,16 +39,18 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
   user,
   refetch,
   selectedDate,
-  setSelectedDate
+  setSelectedDate,
 }) => {
-  const [isActiveCourtId, setIsActiveCourtId] = useState<number | null>(null);
+  const [activeCourtId, setActiveCourtId] = useState<number | null>(null);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<number>(0);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { showNotification } = useNotification();
   const { mutate } = usePostData<ApiResponse<number>, any>('tickets');
   const navigate = useNavigate();
+
   const courts = venue.courts ?? [];
 
   // ===== Format tiền
@@ -61,8 +64,7 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
     const total = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
     let finalPrice = total;
     if (selectedVoucher) {
-      if (selectedVoucher.type === '%') finalPrice -= (total * selectedVoucher.value) / 100;
-      else finalPrice -= selectedVoucher.value;
+      finalPrice -= selectedVoucher.type === '%' ? (total * selectedVoucher.value) / 100 : selectedVoucher.value;
     }
     setSelectedPrice(Math.max(0, finalPrice));
   }, [selectedItems, selectedVoucher]);
@@ -73,23 +75,21 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
     setSelectedItems([]);
   }, [selectedDate, refetch]);
 
-  // ===== Sân con mặc định
+  // ===== Chọn sân con mặc định
   useEffect(() => {
-    if (venue?.courts?.length && isActiveCourtId === null)
-      setIsActiveCourtId(venue.courts[0].id);
-  }, [venue, isActiveCourtId]);
+    if (courts.length && activeCourtId === null) setActiveCourtId(courts[0].id);
+  }, [courts, activeCourtId]);
 
   // ===== Chọn slot
-  const handleSelectItem = (clickedItem: SelectedItem, status: string | null | undefined) => {
+  const handleSelectItem = (clickedItem: SelectedItem, status?: string | null) => {
     if (status !== 'open') {
-      const message =
+      const msg =
         status === 'booked'
           ? 'Khung giờ này đã được người khác đặt trước.'
           : status === 'maintenance'
-            ? 'Khung giờ này đang được bảo trì.'
-            : 'Khung giờ này hiện không khả dụng.';
-      showNotification(message, 'error');
-      return;
+          ? 'Khung giờ này đang bảo trì.'
+          : 'Khung giờ này không khả dụng.';
+      return showNotification(msg, 'error');
     }
 
     const isSelected = selectedItems.some(
@@ -97,19 +97,15 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
     );
 
     setSelectedItems((prev) =>
-      isSelected
-        ? prev.filter(
-          (item) => !(item.court_id === clickedItem.court_id && item.time_slot_id === clickedItem.time_slot_id)
-        )
-        : [...prev, clickedItem]
+      isSelected ? prev.filter((i) => !(i.court_id === clickedItem.court_id && i.time_slot_id === clickedItem.time_slot_id)) : [...prev, clickedItem]
     );
   };
 
   // ===== Submit booking
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (selectedItems.length === 0) return showNotification('Chọn ít nhất 1 khung giờ.', 'error');
     if (!user) return showNotification('Vui lòng đăng nhập để đặt sân.', 'error');
+    if (selectedItems.length === 0) return showNotification('Chọn ít nhất 1 khung giờ.', 'error');
 
     const bookings = selectedItems.map((item) => ({
       court_id: item.court_id,
@@ -118,19 +114,17 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
       unit_price: item.price,
     }));
 
-    const total = selectedItems.reduce((s, i) => s + i.price, 0);
-    const discount =
-      selectedVoucher?.type === '%'
+    const total = selectedItems.reduce((sum, item) => sum + item.price, 0);
+    const discount = selectedVoucher
+      ? selectedVoucher.type === '%'
         ? (total * selectedVoucher.value) / 100
-        : selectedVoucher?.value || 0;
+        : selectedVoucher.value
+      : 0;
+
+    setIsSubmitting(true);
 
     mutate(
-      {
-        user_id: user.id,
-        promotion_id: selectedVoucher?.id || null,
-        discount_amount: discount,
-        bookings,
-      },
+      { user_id: user.id, promotion_id: selectedVoucher?.id || null, discount_amount: discount, bookings },
       {
         onSuccess: (res) => {
           if (res.success) {
@@ -142,6 +136,7 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
           }
         },
         onError: () => showNotification('Lỗi khi đặt sân.', 'error'),
+        onSettled: () => setIsSubmitting(false),
       }
     );
   };
@@ -153,7 +148,7 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
           Đặt lịch thuê sân
         </h4>
 
-        {/* Ngày */}
+        {/* Chọn ngày */}
         <div className="mb-4">
           <label className="text-base font-semibold text-[#4B5563]">Chọn ngày</label>
           <input
@@ -165,18 +160,17 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
           />
         </div>
 
-        {/* Sân con */}
+        {/* Chọn sân con */}
         <div className="mb-4">
           <label className="text-base font-semibold text-[#4B5563]">Chọn sân con</label>
           <div className="mt-2 flex flex-wrap gap-2">
             {courts.map((court) => (
               <button
                 key={court.id}
-                onClick={() => setIsActiveCourtId(court.id)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-200 ${isActiveCourtId === court.id
-                  ? 'bg-[#10B981] text-white shadow-md'
-                  : 'bg-[#F9FAFB] text-[#4B5563] hover:bg-gray-100 border-[#E5E7EB]'
-                  }`}
+                onClick={() => setActiveCourtId(court.id)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-200 ${
+                  activeCourtId === court.id ? 'bg-[#10B981] text-white shadow-md' : 'bg-[#F9FAFB] text-[#4B5563] hover:bg-gray-100 border-[#E5E7EB]'
+                }`}
               >
                 {court.name}
               </button>
@@ -191,10 +185,8 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
           </p>
           <div className="grid grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-1">
             {courts
-              .filter((c) => c.id === isActiveCourtId)
-              .flatMap((court: any) =>
-                court.time_slots?.map((time: any) => ({ court, time })) ?? []
-              )
+              .filter((c) => c.id === activeCourtId)
+              .flatMap((court: any) => court.time_slots?.map((time: any) => ({ court, time })) ?? [])
               .map(({ court, time }: any) => {
                 const isSelected = selectedItems.some(
                   (it) => it.court_id === court.id && it.time_slot_id === time.id
@@ -204,8 +196,9 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
                   time.status === 'open'
                     ? 'bg-green-50 text-green-800 border border-green-200'
                     : time.status === 'booked'
-                      ? 'bg-red-100 text-red-600 cursor-not-allowed opacity-60'
-                      : 'bg-gray-100 text-gray-500 cursor-not-allowed';
+                    ? 'bg-red-100 text-red-600 cursor-not-allowed opacity-60'
+                    : 'bg-gray-100 text-gray-500 cursor-not-allowed';
+
                 if (isSelected) cls = 'bg-[#10B981] text-white ring-2 ring-green-300 shadow-md';
 
                 return (
@@ -247,13 +240,13 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
             </div>
             <button
               type="submit"
-              disabled={selectedItems.length === 0}
-              className={`w-full mt-4 py-3 rounded-lg text-white font-semibold ${selectedItems.length === 0
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-emerald-500 hover:bg-emerald-600'
-                }`}
+              disabled={selectedItems.length === 0 || isSubmitting}
+              className={`w-full mt-4 py-3 rounded-lg text-white font-semibold flex items-center justify-center gap-2 ${
+                selectedItems.length === 0 || isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600'
+              }`}
             >
-              Đặt ngay ({selectedItems.length})
+              {isSubmitting && <span className="loader-border animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full" />}
+              {isSubmitting ? 'Đang đặt...' : `Đặt ngay (${selectedItems.length})`}
             </button>
           </div>
         </form>

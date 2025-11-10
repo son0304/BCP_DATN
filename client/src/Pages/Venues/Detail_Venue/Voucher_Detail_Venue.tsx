@@ -49,7 +49,7 @@ const Voucher_Detail_Venue: React.FC<VoucherProps> = ({ onVoucherApply }) => {
         <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm font-semibold text-green-800">
             <i className="fa-solid fa-check-circle mr-2" />
-            Mã {voucher.code} đã được áp dụng
+            Mã {voucher.code} đã được lấy thành công
           </p>
           <p className="text-xs text-green-700 mt-1">
             Giảm: {voucher.type === '%' ? `${voucher.value}%` : formatPrice(voucher.value)}

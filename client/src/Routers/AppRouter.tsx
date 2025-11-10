@@ -1,6 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
 import Content from '../Pages/HomePage'
-import Ticket from '../Pages/Ticket/Ticket'
 import App from '../App'
 import Index_Partner from '../Pages/Partner/Index_Partner'
 import Create_Venue from '../Pages/Venues/Create_Venue'
@@ -15,6 +14,7 @@ import Home_Blog from '../Pages/Blog/Home_Blog';
 import Index_Blog from '../Pages/Blog/Index_Blog';
 import Detail_Blog from '../Pages/Blog/Detail_Blog';
 import Index_Detail_Venue from '../Pages/Venues/Detail_Venue/Index_Detail_Venue'
+import Ticket_Detail from '../Pages/Ticket/Ticket'
 const AppRouter = () => {
     return (
         <Routes>
@@ -28,8 +28,8 @@ const AppRouter = () => {
                 {/* Trang chủ */}
                 <Route index element={<Content />} />
                 <Route path='venues' element={<List_Venue />} />
-                <Route path='venues/:id' element={<Index_Detail_Venue />} />
-                <Route path='booking/:id' element={<Ticket />} />
+                <Route path='venues/:id' element={<Index_Detail_Venue />}/>
+                <Route path='booking/:id' element={<Ticket_Detail />} />
                 <Route path='profile' element={<Detail_User />} />
                 <Route path='partner' element={<Home_Partner />}>
                     <Route index element={<Index_Partner />} />

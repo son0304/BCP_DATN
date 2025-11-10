@@ -8,7 +8,6 @@ import type { User } from "../../../Types/user";
 
 const Gallery_Detail_Venue = ({ venue, formatPrice }: {venue: Venue, formatPrice: (price: number) => string;}) => {
   const [galleryIndex, setGalleryIndex] = useState<number>(0);
-
   const { data: province } = useFetchDataById<Province>('province', Number(venue.province_id));
   const { data: district } = useFetchDataById<District>('district', Number(venue.district_id));
   const { data: owner } = useFetchDataById<User>('district', Number(venue.owner_id));
@@ -29,15 +28,7 @@ const Gallery_Detail_Venue = ({ venue, formatPrice }: {venue: Venue, formatPrice
     return min === max ? `${formatPrice(min)}` : `${formatPrice(min)} - ${formatPrice(max)}`;
   })();
 
-  const reviews = (venue as any).reviews ?? {
-    avg_rating: (venue as any).reviews_avg_rating ?? 4.6,
-    total: (venue as any).reviews_count ?? 18,
-    breakdown: [
-      { title: 'Chất lượng sân', score: 4.6 },
-      { title: 'Dịch vụ', score: 4.4 },
-      { title: 'Vị trí', score: 4.7 },
-    ],
-  };
+ 
   return (
     <div className="lg:flex p-2 md:p-8 lg:p-10 bg-[#F9FAFB] rounded-2xl shadow-lg gap-6">
       <div className="lg:w-3/5 space-y-4">
@@ -52,8 +43,8 @@ const Gallery_Detail_Venue = ({ venue, formatPrice }: {venue: Venue, formatPrice
             <div className="mt-2 flex flex-wrap gap-4 text-sm opacity-95">
               <div className="flex items-center gap-2">
                 <i className="fa-solid fa-star text-[#F59E0B]" />
-                <span className="font-semibold">{Number(reviews.avg_rating ?? 0).toFixed(1)}/5.0</span>
-                <span className="text-gray-300">({reviews.total} đánh giá)</span>
+                <span className="font-semibold">{Number(venue.reviews_avg_rating ?? 0).toFixed(1)}/5.0</span>
+                <span className="text-gray-300">({venue.reviews?.length} đánh giá)</span>
               </div>
               <div className="flex items-center gap-2">
                 <i className="fa-solid fa-location-dot text-[#F59E0B]" />

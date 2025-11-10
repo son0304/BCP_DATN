@@ -9,6 +9,7 @@ type User = {
   avt?: string;
 };
 
+// Hook detect click outside
 const useClickOutside = (ref: React.RefObject<HTMLDivElement>, callback: () => void) => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -22,35 +23,29 @@ const useClickOutside = (ref: React.RefObject<HTMLDivElement>, callback: () => v
 };
 
 const Header = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isPopUser, setIsPopUser] = useState(false);
+  const [isOpen, setIsOpen] = useState(false); // Mobile menu
+  const [isPopUser, setIsPopUser] = useState(false); // User dropdown
   const { showNotification } = useNotification();
-
   const popoverRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
-  useClickOutside(popoverRef as React.RefObject<HTMLDivElement>, () => setIsPopUser(false));
+  useClickOutside(popoverRef as React.RefObject<HTMLDivElement> , () => setIsPopUser(false));
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        mobileMenuRef.current &&
-        !mobileMenuRef.current.contains(target) &&
-        !target.parentElement?.closest(".mobile-menu-button")
-      ) {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node) &&
+          !(event.target as HTMLElement).closest(".mobile-menu-button")) {
         setIsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [mobileMenuRef]);
-
-  const navigate = useNavigate();
+  }, []);
 
   const [user, setUser] = useState<User | null>(() => {
     try {
-      const userStr = localStorage.getItem("user");
-      return userStr ? JSON.parse(userStr) : null;
+      const u = localStorage.getItem("user");
+      return u ? JSON.parse(u) : null;
     } catch {
       localStorage.removeItem("user");
       return null;
@@ -67,20 +62,18 @@ const Header = () => {
     navigate("/");
   };
 
-  const getNavLinkClass = ({ isActive }: { isActive: boolean }) => {
-    const baseClasses =
-      "relative group px-4 py-2 rounded-lg hover:bg-green-50 transition-all duration-300 font-medium text-[#348738]";
-    return isActive ? `${baseClasses} focus:bg-[#10B981] focus:text-white border-b-2 border-[#F59E0B]` : baseClasses;
-  };
+  const getNavLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `relative group px-4 py-2 rounded-lg transition-all duration-300 font-medium text-[#348738] ${
+      isActive ? "border-b-2 border-[#F59E0B] focus:bg-[#10B981] focus:text-white" : "hover:bg-green-50"
+    }`;
 
-  const getMobileNavLinkClass = ({ isActive }: { isActive: boolean }) => {
-    const baseClasses =
-      "flex items-center gap-3 hover:text-green-700 transition-colors duration-300 p-2 rounded-lg hover:bg-green-50 text-[#11182C]";
-    return isActive ? `${baseClasses} bg-green-100 font-semibold` : baseClasses;
-  };
+  const getMobileNavLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-3 p-2 rounded-lg transition-colors duration-300 ${
+      isActive ? "bg-green-100 font-semibold" : "hover:bg-green-50"
+    } text-[#11182C]`;
 
   return (
-    <header className="bg-[#FFFFFF] shadow-md sticky top-0 z-40">
+    <header className="bg-white shadow-md sticky top-0 z-40">
       <div className="max-w-7xl mx-auto flex justify-between items-center px-4 py-3 relative z-10">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-3">
@@ -98,13 +91,12 @@ const Header = () => {
           <NavLink to="/blog" className={getNavLinkClass}>Tin tức</NavLink>
           <NavLink to="/contacts" className={getNavLinkClass}>Liên hệ</NavLink>
           <NavLink to="/tournaments" className={getNavLinkClass}>Giải đấu</NavLink>
-
         </nav>
 
-        {/* User or Auth */}
-        <div className="hidden md:flex items-center gap-4" ref={popoverRef}>
+        {/* User dropdown */}
+        <div className="hidden md:flex items-center gap-4 relative" ref={popoverRef}>
           {user ? (
-            <>
+            <div className="relative">
               <button
                 onClick={() => setIsPopUser(!isPopUser)}
                 className="w-11 h-11 rounded-full bg-[#10B981] hover:bg-[#059669] transition flex items-center justify-center"
@@ -115,13 +107,18 @@ const Header = () => {
                   className="w-10 h-10 rounded-full object-cover"
                 />
               </button>
+
               {isPopUser && (
-                <div className="absolute right-0 mt-3 w-56 bg-white rounded-lg shadow-lg border border-[#E5E7EB] overflow-hidden z-50">
+                <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-[#E5E7EB] overflow-hidden z-50">
                   <div className="px-4 py-3 border-b border-[#E5E7EB]">
                     <p className="font-semibold text-[#11182C]">{user.name}</p>
                     <p className="text-xs text-[#6B7280]">{user.email}</p>
                   </div>
-                  <Link to="/profile" onClick={() => setIsPopUser(false)} className="block px-4 py-2 hover:bg-[#F9FAFB] text-[#4B5563]">
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsPopUser(false)}
+                    className="block px-4 py-2 hover:bg-[#F9FAFB] text-[#4B5563]"
+                  >
                     <i className="fa-solid fa-user mr-2 text-[#10B981]" /> Tài khoản của tôi
                   </Link>
                   <button
@@ -132,7 +129,7 @@ const Header = () => {
                   </button>
                 </div>
               )}
-            </>
+            </div>
           ) : (
             <div className="flex gap-3">
               <Link
@@ -151,7 +148,7 @@ const Header = () => {
           )}
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile menu button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="md:hidden text-2xl p-2 rounded-lg text-[#10B981] hover:bg-[#F9FAFB] mobile-menu-button"
@@ -163,18 +160,20 @@ const Header = () => {
       {/* Overlay */}
       <div
         onClick={() => setIsOpen(false)}
-        className={`fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300 md:hidden ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-          }`}
-      ></div>
+        className={`fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+      />
 
       {/* Mobile Menu */}
       <div
         ref={mobileMenuRef}
-        className={`fixed top-0 right-0 z-50 w-72 h-full bg-white shadow-xl transition-transform duration-300 md:hidden ${isOpen ? "translate-x-0" : "translate-x-full"
-          }`}
+        className={`fixed top-0 right-0 z-50 w-72 h-full bg-white shadow-xl transition-transform duration-300 md:hidden ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
       >
         <div className="flex flex-col h-full">
-          {/* Header User Info */}
+          {/* Mobile user info */}
           <div className="p-4 border-b border-[#E5E7EB]">
             {user ? (
               <div className="flex items-center gap-3">
@@ -216,7 +215,7 @@ const Header = () => {
             <NavLink to="/partner" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
               <i className="fa-solid fa-handshake w-5 text-[#10B981]"></i> Đối tác
             </NavLink>
-            <NavLink to="/posts" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
+            <NavLink to="/blog" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
               <i className="fa-solid fa-newspaper w-5 text-[#10B981]"></i> Tin tức
             </NavLink>
             <NavLink to="/contacts" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>

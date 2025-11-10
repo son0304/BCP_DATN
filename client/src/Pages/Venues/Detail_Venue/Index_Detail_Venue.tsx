@@ -28,6 +28,7 @@ const Index_Detail_Venue: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const idVenue = Number(id);
   const { data: detail_venue, isLoading, refetch } = useFetchDataById<Venue>('venue', idVenue, { date: selectedDate });
+  
 
   // ======= Load sân lân cận =======
   useEffect(() => {

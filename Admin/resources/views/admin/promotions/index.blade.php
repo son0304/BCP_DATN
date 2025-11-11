@@ -148,7 +148,7 @@
                         <div class="table-responsive">
                             <table class="table table-hover table-bordered align-middle mb-0">
                                 <thead class="table-light">
-                                    <tr>
+                                    <tr class="text-center">
                                         <th>ID</th>
                                         <th>Mã voucher</th>
                                         <th>Giá trị</th>
@@ -164,7 +164,7 @@
                                 </thead>
                                 <tbody>
                                     @forelse($promotions as $promotion)
-                                        <tr>
+                                        <tr class="text-center">
                                             <td>{{ $promotion->id }}</td>
                                             <td>
                                                 <span class="voucher-code">{{ $promotion->code }}</span>
@@ -173,6 +173,9 @@
                                                 <strong>
                                                     @if($promotion->type == '%')
                                                         {{ number_format($promotion->value, 0) }}%
+                                                        @if($promotion->max_discount_amount)
+                                                            <div class="text-muted small">Tối đa {{ number_format($promotion->max_discount_amount, 0) }}₫</div>
+                                                        @endif
                                                     @else
                                                         {{ number_format($promotion->value, 0) }}₫
                                                     @endif
@@ -188,12 +191,7 @@
                                             <td>{{ \Carbon\Carbon::parse($promotion->start_at, 'UTC')->setTimezone('Asia/Ho_Chi_Minh')->format('d/m/Y H:i') }}</td>
                                             <td>{{ \Carbon\Carbon::parse($promotion->end_at, 'UTC')->setTimezone('Asia/Ho_Chi_Minh')->format('d/m/Y H:i') }}</td>
                                             <td>
-                                                {{ $promotion->used_count }} / 
-                                                @if($promotion->usage_limit == 0)
-                                                    <span class="text-muted">Không giới hạn</span>
-                                                @else
-                                                    {{ $promotion->usage_limit }}
-                                                @endif
+                                                {{ $promotion->used_count }} / {{ $promotion->usage_limit }}
                                             </td>
                                             <td>
                                                 @php
@@ -202,14 +200,17 @@
                                                     $startAt = \Carbon\Carbon::parse($promotion->start_at);
                                                     $endAt = \Carbon\Carbon::parse($promotion->end_at);
                                                     
-                                                    // Logic đơn giản: chỉ kiểm tra thời gian
+                                                    // Logic kiểm tra trạng thái
                                                     $isNotStarted = $startAt->gt($now);  // start_at > now
                                                     $isExpired = $endAt->lt($now);      // end_at < now
+                                                    $isOutOfUsage = $promotion->usage_limit > 0 && $promotion->used_count >= $promotion->usage_limit;
                                                 @endphp
                                                 @if($isNotStarted)
                                                     <span class="badge bg-info">Chưa hoạt động</span>
                                                 @elseif($isExpired)
                                                     <span class="badge bg-danger">Hết hạn</span>
+                                                @elseif($isOutOfUsage)
+                                                    <span class="badge bg-warning">Hết lượt sử dụng</span>
                                                 @else
                                                     <span class="badge bg-success">Đang hoạt động</span>
                                                 @endif

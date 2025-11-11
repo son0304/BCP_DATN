@@ -6,26 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('promotions', function (Blueprint $table) {
-            $table->foreignId('created_by')->nullable()->after('used_count')->constrained('users')->nullOnDelete();
+            // Số tiền giảm tối đa (áp dụng khi type = '%')
+            $table->decimal('max_discount_amount', 12, 2)->nullable()->after('used_count');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('promotions', function (Blueprint $table) {
-            $table->dropForeign(['created_by']);
-            $table->dropColumn('created_by');
+            $table->dropColumn('max_discount_amount');
         });
     }
 };
-
 

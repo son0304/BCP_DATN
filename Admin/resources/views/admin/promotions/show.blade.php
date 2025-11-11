@@ -1,6 +1,6 @@
 @extends('app')
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -8,9 +8,6 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="card-title">Chi tiết Voucher: {{ $promotion->code }}</h3>
                         <div>
-                            <a href="{{ route('admin.promotions.edit', $promotion) }}" class="btn btn-warning">
-                                <i class="fas fa-edit"></i> Chỉnh sửa
-                            </a>
                             <a href="{{ route('admin.promotions.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Quay lại
                             </a>
@@ -53,6 +50,9 @@
                                         <strong class="text-primary fs-5">
                                             @if($promotion->type == '%')
                                                 {{ number_format($promotion->value, 0) }}%
+                                                @if($promotion->max_discount_amount)
+                                                    <div class="text-muted small">Tối đa {{ number_format($promotion->max_discount_amount, 0) }}₫</div>
+                                                @endif
                                             @else
                                                 {{ number_format($promotion->value, 0) }}₫
                                             @endif
@@ -80,11 +80,7 @@
                                 <tr>
                                     <th>Giới hạn sử dụng</th>
                                     <td>
-                                        @if($promotion->usage_limit == 0)
-                                            <span class="text-muted">Không giới hạn</span>
-                                        @else
-                                            {{ $promotion->usage_limit }} lần
-                                        @endif
+                                        <strong>{{ $promotion->usage_limit }} lần</strong>
                                     </td>
                                 </tr>
                                 <tr>
@@ -112,11 +108,14 @@
                                             $endAt = \Carbon\Carbon::parse($promotion->end_at);
                                             $isNotStarted = $startAt->gt($now);
                                             $isExpired = $endAt->lt($now);
+                                            $isOutOfUsage = $promotion->usage_limit > 0 && $promotion->used_count >= $promotion->usage_limit;
                                         @endphp
                                         @if($isNotStarted)
                                             <span class="badge bg-info">Chưa hoạt động</span>
                                         @elseif($isExpired)
                                             <span class="badge bg-danger">Hết hạn</span>
+                                        @elseif($isOutOfUsage)
+                                            <span class="badge bg-warning">Hết lượt sử dụng</span>
                                         @else
                                             <span class="badge bg-success">Đang hoạt động</span>
                                         @endif
@@ -167,7 +166,7 @@
                         </div>
                     </div>
 
-                    <div class="mt-4">
+                    <div class="mt-4 text-center">
                         <a href="{{ route('admin.promotions.edit', $promotion) }}" class="btn btn-warning">
                             <i class="fas fa-edit"></i> Chỉnh sửa voucher
                         </a>
@@ -180,9 +179,6 @@
                                 <i class="fas fa-trash"></i> Xóa voucher
                             </button>
                         </form>
-                        <a href="{{ route('admin.promotions.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Quay lại danh sách
-                        </a>
                     </div>
                 </div>
             </div>

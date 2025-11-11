@@ -148,7 +148,7 @@
                         <div class="table-responsive">
                             <table class="table table-hover table-bordered align-middle mb-0">
                                 <thead class="table-light">
-                                    <tr>
+                                    <tr class="text-center">
                                         <th>ID</th>
                                         <th>Mã voucher</th>
                                         <th>Giá trị</th>
@@ -164,7 +164,7 @@
                                 </thead>
                                 <tbody>
                                     @forelse($promotions as $promotion)
-                                        <tr>
+                                        <tr class="text-center">
                                             <td>{{ $promotion->id }}</td>
                                             <td>
                                                 <span class="voucher-code">{{ $promotion->code }}</span>

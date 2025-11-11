@@ -118,30 +118,30 @@
             <div class="table-responsive">
                 <table class="table table-bordered table-striped table-hover align-middle">
                     <thead class="table-primary-green text-nowrap">
-                        <tr>
-                            <th class="text-center">ID</th>
-                            <th class="text-center">Khách hàng</th>
-                            <th class="text-center">Sân</th>
-                            <th class="text-center">Giá</th>
-                            <th class="text-center">Giảm giá</th>
-                            <th class="text-center">Tổng</th>
-                            <th class="text-center">Trạng thái</th>
-                            <th class="text-center">Thanh toán</th>
-                            <th class="text-center">Ghi chú</th>
-                            <th class="text-center">Ngày tạo</th>
-                            <th class="text-center">Hành động</th>
+                        <tr class="text-center">
+                            <th>ID</th>
+                            <th>Khách hàng</th>
+                            <th>Sân</th>
+                            <th>Giá</th>
+                            <th>Giảm giá</th>
+                            <th>Tổng</th>
+                            <th>Trạng thái</th>
+                            <th>Thanh toán</th>
+                            <th>Ghi chú</th>
+                            <th>Ngày tạo</th>
+                            <th>Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($tickets as $ticket)
-                        <tr>
-                            <td class="text-center">{{ $ticket->id }}</td>
+                        <tr class="text-center">
+                            <td>{{ $ticket->id }}</td>
                             <td class="text-nowrap text-center">
                                 <span class="px-2 py-1 text-success fw-bold">
                                     {{ $ticket->user->name ?? 'N/A' }}
                                 </span>
                             </td>
-                            <td class="text-center">
+                            <td>
                                 @foreach($ticket->items as $item)
                                 <span class="badge bg-warning text-dark mb-1">
                                     {{ $item->booking->court->venue->name ?? 'N/A' }}
@@ -151,7 +151,7 @@
                             <td class="text-nowrap text-center">{{ number_format($ticket->subtotal,0,'.',',') }}₫</td>
                             <td class="text-nowrap text-center" style="color: red;">{{ number_format($ticket->discount_amount,0,'.',',') }}₫</td>
                             <td class="text-nowrap fw-bold text-center">{{ number_format($ticket->total_amount,0,'.',',') }}₫</td>
-                            <td class="text-center">
+                            <td>
                                 @php
                                 $statusLabels = [
                                 'pending' => 'Chờ xác nhận',
@@ -172,7 +172,7 @@
                                 </span>
                             </td>
 
-                            <td class="text-center">
+                            <td>
                                 @php
                                 $paymentLabels = [
                                 'unpaid' => 'Chưa thanh toán',
@@ -190,11 +190,11 @@
                                     {{ $paymentText }}
                                 </span>
                             </td>
-                            <td class="text-center" style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ $ticket->notes ?? '' }}">
+                            <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ $ticket->notes ?? '' }}">
                                 {{ $ticket->notes ?? '-' }}
                             </td>
                             <td class="text-nowrap text-center">{{ $ticket->created_at->format('d-m-Y H:i') }}</td>
-                            <td class="text-center">
+                            <td>
                                 <a href="" class="btn btn-sm btn-outline-primary w-75" data-bs-toggle="modal" data-bs-target="#ticketModal{{ $ticket->id }}">
                                     <i class="fas fa-eye"></i>
                                 </a>

@@ -1,6 +1,6 @@
 @extends('app')
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -8,9 +8,6 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="card-title">Chỉnh sửa Voucher: {{ $promotion->code }}</h3>
                         <div>
-                            <a href="{{ route('admin.promotions.edit', $promotion) }}" class="btn btn-warning">
-                                <i class="fas fa-edit"></i> Chỉnh sửa
-                            </a>
                             <a href="{{ route('admin.promotions.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Quay lại
                             </a>
@@ -151,7 +148,7 @@
                             Bạn không thể giảm giới hạn sử dụng xuống dưới số lần đã sử dụng.
                         </div>
 
-                        <div class="form-group mt-4">
+                        <div class="form-group mt-4 text-center">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save"></i> Cập nhật voucher
                             </button>

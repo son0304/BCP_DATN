@@ -12,25 +12,20 @@ use App\Http\Controllers\Api\VenueApiController;
 use App\Http\Controllers\Web\LocationController;
 use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+*/
+
+// ==================== PUBLIC ROUTES ====================
+// Những route này không cần token
 Route::post('/register', [AuthApiController::class, 'register']);
 Route::post('/login', [AuthApiController::class, 'login']);
-Route::post('/logout', [AuthApiController::class, 'logout']);
 Route::post('/verify-email', [AuthApiController::class, 'verifyEmail']);
 
-
-// lay quan huyen
-Route::get('/districts/{province}', [LocationController::class, 'getDistrictsByProvince']);
-
 Route::get('/venues', [VenueApiController::class, 'index']);
-Route::post('/venues', [VenueApiController::class, 'store']);
 Route::get('/venue/{id}', [VenueApiController::class, 'show']);
-
-Route::get('/tickets', [TicketApiController::class, 'index']);
-Route::get('/ticket/{id}', [TicketApiController::class, 'show']);
-Route::post('/tickets', [TicketApiController::class, 'store']);
-Route::get('/ticket', [TicketApiController::class, 'store']);
-
-Route::post('/upload', [ImageApiController::class, 'store']);
 
 Route::get('/time_slots', [TimeSlotApiController::class, 'index']);
 
@@ -39,8 +34,33 @@ Route::get('/province/{id}', [ProvinceApiController::class, 'show']);
 
 Route::get('/districts', [DistrictApiController::class, 'index']);
 Route::get('/district/{id}', [DistrictApiController::class, 'show']);
+Route::get('/districts/{province}', [LocationController::class, 'getDistrictsByProvince']);
+
 
 Route::get('/promotions', [PromotionApiController::class, 'index']);
 
 Route::apiResource('reviews', ReviewApiController::class)
-    ->only(['index', 'show', 'store', 'update', 'destroy']);
+    ->only(['index', 'show']);
+
+// ==================== PROTECTED ROUTES ====================
+// Những route này cần JWT token
+Route::middleware(['jwt.auth'])->group(function () {
+
+    // Logout
+    Route::post('/logout', [AuthApiController::class, 'logout']);
+
+    // Tickets
+    Route::get('/tickets', [TicketApiController::class, 'index']);
+    Route::get('/ticket/{id}', [TicketApiController::class, 'show']);
+    Route::post('/tickets', [TicketApiController::class, 'store']);
+
+    // Venue (create)
+    Route::post('/venues', [VenueApiController::class, 'store']);
+
+    // Upload image
+    Route::post('/upload', [ImageApiController::class, 'store']);
+
+    // Reviews (protected actions)
+    Route::apiResource('reviews', ReviewApiController::class)
+        ->only(['store', 'update', 'destroy']);
+});

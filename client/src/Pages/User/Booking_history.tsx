@@ -1,0 +1,124 @@
+import { useState } from "react";
+import type { User } from "../../Types/user";
+import { useFetchData } from "../../Hooks/useApi";
+import type { Ticket } from "../../Types/tiket";
+
+const BookingHistory = ({ user }: { user: User }) => {
+  const [isStatus, setIsStatus] = useState("all");
+
+  const statusOptions = [
+    { value: "all", label: "Tất cả", color: "bg-gray-200 text-gray-800", active: "bg-gray-500 text-white" },
+    { value: "pending", label: "Chờ xác nhận", color: "bg-yellow-100 text-yellow-800", active: "bg-yellow-500 text-white" },
+    { value: "confirmed", label: "Đã xác nhận", color: "bg-blue-100 text-blue-800", active: "bg-blue-500 text-white" },
+    { value: "completed", label: "Hoàn thành", color: "bg-green-100 text-green-800", active: "bg-green-500 text-white" },
+    { value: "cancelled", label: "Đã hủy", color: "bg-red-100 text-red-800", active: "bg-red-500 text-white" },
+  ];
+
+  const paymentOptions = [
+    { value: "unpaid", label: "Chưa thanh toán", color: "bg-gray-100 text-gray-800" },
+    { value: "paid", label: "Đã thanh toán", color: "bg-green-100 text-green-800" },
+    { value: "refunded", label: "Đã hoàn tiền", color: "bg-orange-100 text-orange-800" },
+  ];
+
+  const { data } = useFetchData("tickets");
+  const lisBooking: Ticket[] = (data?.data as Ticket[]) ?? [];
+
+  const bookingByStatus = lisBooking.filter(
+    (booking) => isStatus === "all" || booking.status === isStatus
+  );
+
+  return (
+    <div className="p-6">
+      {/* Filter Buttons */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        {statusOptions.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => setIsStatus(option.value)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-200 
+              ${isStatus === option.value
+                ? option.active
+                : option.color + " border-gray-200 hover:opacity-80"}`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Booking Table */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full border border-gray-200 divide-y divide-gray-200">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">ID</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Trạng thái</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Thanh toán</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Tổng tiền</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Ghi chú</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Ngày tạo</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {bookingByStatus.length > 0 ? (
+              bookingByStatus.map((ticket) => {
+                const statusItem =
+                  statusOptions.find((opt) => opt.value === ticket.status) ?? null;
+                const paymentItem =
+                  paymentOptions.find((opt) => opt.value === ticket.payment_status) ?? null;
+
+                return (
+                  <tr key={ticket.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 text-sm text-gray-700">{ticket.id}</td>
+                    <td className="px-4 py-2 text-sm">
+                      {statusItem ? (
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${statusItem.color}`}
+                        >
+                          {statusItem.label}
+                        </span>
+                      ) : (
+                        ticket.status
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      {paymentItem ? (
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${paymentItem.color}`}
+                        >
+                          {paymentItem.label}
+                        </span>
+                      ) : (
+                        ticket.payment_status
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-700">
+                      {ticket.total_amount.toLocaleString("vi-VN")}₫
+                    </td>
+                    <td className="px-4 py-2 text-sm text-gray-700">{ticket.notes || "-"}</td>
+                    <td className="px-4 py-2 text-sm text-gray-700">
+                      {new Date(ticket.created_at).toLocaleString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={6} className="px-4 py-4 text-center text-gray-500">
+                  Không có lịch sử booking nào.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default BookingHistory;

@@ -8,6 +8,7 @@ use App\Models\Booking; // Cần cho việc tạo booking
 use App\Models\Item;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -16,13 +17,15 @@ class TicketApiController extends Controller
 {
     public function index()
     {
-        $tickets = Ticket::all();
+
+        $tickets = Ticket::where('user_id', Auth::id())->get();
         return response()->json([
             'success' => true,
-            'message' => 'Tạo ticket thành công, vui lòng thanh toán trong 2 phút.',
+            'message' => 'Danh sách vé của bạn',
             'data' => $tickets
         ]);
     }
+
 
     public function show($id)
     {

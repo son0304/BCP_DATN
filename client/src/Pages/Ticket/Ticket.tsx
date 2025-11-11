@@ -1,7 +1,7 @@
 import React from "react";
 import { useParams } from "react-router-dom";
 import { useFetchDataById } from "../../Hooks/useApi";
-import type { ISODateTimeString } from "../../Types/common";
+import type { Ticket } from "../../Types/tiket";
 
 // Định nghĩa lại các màu theo quy tắc đã cung cấp
 const PRIMARY_COLOR = "#10B981"; // Emerald Green
@@ -12,19 +12,7 @@ const TEXT_SECONDARY = "text-[#6B7280]"; // Xám Vừa
 const UTILITY_ERROR = "#EF4444"; // Đỏ
 
 // Interface (Giữ nguyên)
-interface TicketData {
-  id: number;
-  user_id: number;
-  promotion_id: number | null;
-  subtotal: number | string;
-  discount_amount: number | string;
-  total_amount: number | string;
-  status: "pending" | "confirmed" | "cancelled";
-  payment_status: "unpaid" | "paid" | "refunded";
-  notes: string | null;
-  created_at: ISODateTimeString;
-  updated_at: ISODateTimeString;
-}
+
 
 // Thông tin thanh toán (VIETQR) - Giữ nguyên
 const BANK_BIN = "970418"; 
@@ -33,9 +21,9 @@ const ACCOUNT_NAME = "NGUYEN VAN A";
 const BANK_NAME = "Techcombank";
 
 // Component chính
-const Ticket: React.FC = () => {
+const Ticket_Detail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { data, isLoading, error } = useFetchDataById<TicketData>("ticket", id!);
+  const { data, isLoading, error } = useFetchDataById<Ticket>("ticket", id!);
 
   if (isLoading) {
     return (
@@ -74,6 +62,8 @@ const Ticket: React.FC = () => {
     pending: { text: "Đang chờ", icon: "fa-solid fa-clock", classes: "bg-amber-50 text-amber-800 border-amber-400" },
     // confirmed: Dùng màu Primary
     confirmed: { text: "Đã xác nhận", icon: "fa-solid fa-check-circle", classes: "bg-emerald-50 text-emerald-800 border-emerald-400" },
+    // completed
+    completed: { text: "Hoàn thành", icon: "fa-solid fa-check-circle", classes: "bg-emerald-50 text-emerald-800 border-emerald-400" },
     // cancelled: Dùng màu Đỏ Utility
     cancelled: { text: "Đã hủy", icon: "fa-solid fa-times-circle", classes: "bg-red-50 text-red-800 border-red-400" }, 
   };
@@ -250,4 +240,4 @@ const Ticket: React.FC = () => {
   );
 };
 
-export default Ticket;
+export default Ticket_Detail;

@@ -1,21 +1,18 @@
-import React from 'react'
+import React, { useState } from 'react'
 import type { Venue } from '../../../Types/venue';
 import type { Review } from '../../../Types/review';
+import { Link } from 'react-router-dom';
 
 const Info_Detail_Venue = ({ venue, formatPrice }: { venue: Venue, formatPrice: (price: number) => string; }) => {
+  const [selectedComment, setSelectedComment] = useState(false)
 
   const services = (venue as any).services ?? ['Bãi gửi xe', 'Cho thuê dụng cụ', 'WC & phòng thay đồ', 'Nước uống'];
   const courts = venue.courts ?? [];
+  const reviews = venue.reviews ?? [];
 
-  const reviews = (venue as any).reviews ?? {
-    avg_rating: (venue as any).reviews_avg_rating ?? 4.6,
-    total: (venue as any).reviews_count ?? 18,
-    breakdown: [
-      { title: 'Chất lượng sân', score: 4.6 },
-      { title: 'Dịch vụ', score: 4.4 },
-      { title: 'Vị trí', score: 4.7 },
-    ],
-  };
+
+
+
 
   return (
     <div className="lg:col-span-3 space-y-8 order-2 lg:order-1">
@@ -72,34 +69,141 @@ const Info_Detail_Venue = ({ venue, formatPrice }: { venue: Venue, formatPrice: 
       </section>
 
       {/* Đánh giá */}
-      <section id="reviews" className="bg-white rounded-xl p-6 border border-[#E5E7EB] shadow-lg">
-        <h3 className="text-lg font-bold text-[#11182C] mb-4 border-b border-[#E5E7EB] pb-2">Đánh giá khách hàng ({reviews.total})</h3>
-        <div className="flex flex-wrap gap-8 items-center">
-          <div className="text-center">
-            <p className="text-2xl font-extrabold text-[#10B981]">{Number(reviews.avg_rating).toFixed(1)}</p>
-            <p className="text-sm text-[#6B7280]">Điểm trung bình</p>
+      <section id="reviews" className="bg-white rounded-xl p-6 border border-gray-200 shadow-lg">
+        {/* Header điểm đánh giá */}
+        <div className="flex flex-wrap items-center gap-8 mb-6">
+          <div className="text-center flex-shrink-0">
+            <p className="text-3xl font-extrabold text-green-500">
+              {Number(venue.reviews_avg_rating).toFixed(1)}
+            </p>
+            <p className="text-sm text-gray-500">Điểm trung bình</p>
           </div>
+
           <div className="flex-1 space-y-2">
-            {reviews.breakdown.map((r: any, i: number) => (
-              <div key={i} className="flex items-center text-sm text-[#4B5563]">
-                <span className="w-24 text-[#6B7280]">{r.title}</span>
-                <div className="flex-1 h-2 mx-3 bg-[#E5E7EB] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#F59E0B]"
-                    style={{ width: `${(r.score / 5) * 100}%` }}
-                  />
-                </div>
-                <span className="font-semibold">{r.score.toFixed(1)}</span>
-              </div>
-            ))}
+            <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-yellow-500 transition-all duration-500"
+                style={{ width: `${(reviews?.length / 5) * 100}%` }}
+              />
+            </div>
+            <p className="text-sm text-gray-500 mt-1">{reviews?.length} đánh giá</p>
           </div>
         </div>
-        <div className="mt-6 pt-4 border-t border-[#E5E7EB] text-center">
-          <button className="text-[#10B981] font-semibold hover:underline text-base">
-            Xem tất cả đánh giá và bình luận
-          </button>
-        </div>
+
+        {/* Danh sách bình luận */}
+        {
+          selectedComment && (
+            <div className="bg-gray-50 rounded-xl p-4 shadow-inner max-h-96 overflow-auto mb-4">
+              <h4 className="text-lg font-semibold text-gray-700 mb-4">Danh sách bình luận</h4>
+
+              {reviews.length === 0 && (
+                <p className="text-sm text-gray-500">Chưa có bình luận nào</p>
+              )}
+
+              {reviews.map((review) => (
+                <div key={review.id} className="mb-4 border-b border-gray-200 pb-3">
+
+                  {/* Avatar + Tên */}
+                  <div className="flex items-center gap-3 mb-1">
+                    {review.user?.avt ? (
+                      <img
+                        src={review.user.avt}
+                        alt="avatar"
+                        className="w-8 h-8 rounded-full object-cover border border-gray-300"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-semibold">
+                        {review.user?.name?.charAt(0).toUpperCase() || "K"}
+                      </div>
+                    )}
+
+                    <p className="font-medium text-gray-800 text-sm">
+                      {review.user?.name || "Khách"}
+                    </p>
+                  </div>
+
+                  {/* Sao đánh giá */}
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: review.rating }).map((_, index) => (
+                      <i key={index} className="fa-solid fa-star text-[#F59E0B] text-xs" />
+                    ))}
+                    {Array.from({ length: 5 - review.rating }).map((_, index) => (
+                      <i key={index} className="fa-solid fa-star text-gray-300 text-xs" />
+                    ))}
+                  </div>
+
+                  {/* Nội dung bình luận */}
+                  <p className="text-gray-600 text-sm mt-1">{review.comment}</p>
+
+                  {/* Thời gian */}
+                  <p className="text-xs text-gray-400 mt-1">
+                    {new Date(review.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+
+              ))}
+            </div>
+          )
+        }
+
+        {/* Nút xem tất cả bình luận */}
+        {
+          !selectedComment ? (
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => setSelectedComment(true)}
+                className="text-green-600 font-semibold hover:underline transition text-base"
+              >
+                Xem tất cả đánh giá và bình luận
+              </button>
+            </div>
+          ) : (
+            <div className="mt-6 border-t border-gray-200 pt-5">
+
+              {/* Form viết bình luận */}
+              <div className="flex flex-col gap-3 mb-6">
+                <textarea
+                  placeholder="Viết bình luận của bạn..."
+                  className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                  rows={4}
+                />
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <input type="file" id="review-image" className="hidden" />
+                    <label
+                      htmlFor="review-image"
+                      className="px-4 py-2 bg-green-100 text-green-700 rounded-lg cursor-pointer hover:bg-green-200 transition"
+                    >
+                      Chọn ảnh
+                    </label>
+                    <span className="text-sm text-gray-500">Tối đa 1 ảnh</span>
+                  </div>
+
+                  <button
+                    className="px-5 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-semibold"
+                  >
+                    Gửi bình luận
+                  </button>
+                </div>
+              </div>
+
+              {/* Nút thu gọn */}
+              <div className="text-center">
+                <button
+                  onClick={() => setSelectedComment(false)}
+                  className="text-gray-500 hover:text-gray-700 hover:underline transition text-sm"
+                >
+                  Thu gọn ▲
+                </button>
+              </div>
+
+            </div>
+          )
+        }
+
       </section>
+
     </div>
   )
 }

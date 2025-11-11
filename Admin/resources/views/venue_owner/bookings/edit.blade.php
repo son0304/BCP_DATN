@@ -54,6 +54,7 @@
                             <select name="status" id="status" class="form-select" required>
                                 <option value="pending" {{ $booking->status == 'pending' ? 'selected' : '' }}>Chờ xác nhận</option>
                                 <option value="confirmed" {{ $booking->status == 'confirmed' ? 'selected' : '' }}>Đã xác nhận</option>
+                                <option value="completed" {{ $booking->status == 'completed' ? 'selected' : '' }}>Đã xác nhận</option>
                                 <option value="cancelled" {{ $booking->status == 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
                             </select>
                         </div>

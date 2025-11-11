@@ -44,6 +44,7 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
   const [activeCourtId, setActiveCourtId] = useState<number | null>(null);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<number>(0);
+  const [rawTotalPrice, setRawTotalPrice] = useState<number>(0); // Lưu tổng tiền gốc
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -62,10 +63,22 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
   // ===== Tính tổng tiền
   useEffect(() => {
     const total = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
+    setRawTotalPrice(total); // Đặt tổng tiền gốc
+
     let finalPrice = total;
     if (selectedVoucher) {
-      finalPrice -= selectedVoucher.type === '%' ? (total * selectedVoucher.value) / 100 : selectedVoucher.value;
+      // Tính toán chiết khấu chính xác
+      let discount = 0;
+      if (selectedVoucher.type === '%') {
+        discount = (total * selectedVoucher.value) / 100;
+        // NOTE: Chỗ này có thể thêm logic max_discount nếu có
+      } else { // type === 'VND'
+        discount = selectedVoucher.value;
+      }
+      // Đảm bảo chiết khấu không vượt quá tổng tiền
+      finalPrice -= Math.min(discount, total);
     }
+    // Đảm bảo giá cuối cùng không âm
     setSelectedPrice(Math.max(0, finalPrice));
   }, [selectedItems, selectedVoucher]);
 
@@ -114,11 +127,12 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
       unit_price: item.price,
     }));
 
-    const total = selectedItems.reduce((sum, item) => sum + item.price, 0);
+    // Tính toán giảm giá dựa trên rawTotalPrice
+    const total = rawTotalPrice; // Sử dụng tổng tiền gốc
     const discount = selectedVoucher
       ? selectedVoucher.type === '%'
-        ? (total * selectedVoucher.value) / 100
-        : selectedVoucher.value
+        ? Math.min((total * selectedVoucher.value) / 100, total) // Đảm bảo giảm giá % không vượt quá tổng
+        : Math.min(selectedVoucher.value, total) // Đảm bảo giảm giá VND không vượt quá tổng
       : 0;
 
     setIsSubmitting(true);
@@ -231,7 +245,11 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
 
         {/* Form tổng tiền */}
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <Voucher_Detail_Venue onVoucherApply={setSelectedVoucher} />
+          {/* Truyền prop totalPrice={rawTotalPrice} */}
+          <Voucher_Detail_Venue 
+            onVoucherApply={setSelectedVoucher} 
+            totalPrice={rawTotalPrice} 
+          />
 
           <div className="pt-4 border-t border-gray-200">
             <div className="flex justify-between">

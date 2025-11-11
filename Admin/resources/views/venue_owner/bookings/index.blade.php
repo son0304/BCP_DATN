@@ -2,19 +2,75 @@
 
 @section('content')
 <style>
-    .btn-primary { --bs-btn-hover-bg: #2d6a2d; --bs-btn-hover-border-color: #2d6a2d; }
-    .btn-accent { --bs-btn-bg: #f97316; --bs-btn-border-color: #f97316; --bs-btn-hover-bg: #ea580c; --bs-btn-hover-border-color: #ea580c; --bs-btn-color: #fff; }
-    .table-primary-green { background-color: var(--bs-primary); color: #fff; }
-    .badge.bg-draft { background-color: #f59e0b !important; color: #fff !important; }
-    :root { --bs-primary-green: #348738; --bs-primary-green-dark: #2d6a2d; }
-    .bg-primary-green { background-color: var(--bs-primary-green) !important; }
-    .btn-primary-green { background-color: var(--bs-primary-green); border-color: var(--bs-primary-green); color: #fff; }
-    .btn-primary-green:hover { background-color: var(--bs-primary-green-dark); border-color: var(--bs-primary-green-dark); }
-    .ticket-detail-modal { border-radius: 12px; overflow: hidden; }
-    .ticket-detail-modal .info-box { background-color: #fff; border-radius: 10px; border: 1px solid #e5e7eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .ticket-detail-modal .info-box h6 { font-size: 0.9rem; font-weight: 600; color: #666; }
-    .ticket-detail-modal .booking-item { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-    .ticket-detail-modal .booking-item:hover { transform: scale(1.01); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .btn-primary {
+        --bs-btn-hover-bg: #2d6a2d;
+        --bs-btn-hover-border-color: #2d6a2d;
+    }
+
+    .btn-accent {
+        --bs-btn-bg: #f97316;
+        --bs-btn-border-color: #f97316;
+        --bs-btn-hover-bg: #ea580c;
+        --bs-btn-hover-border-color: #ea580c;
+        --bs-btn-color: #fff;
+    }
+
+    .table-primary-green {
+        background-color: var(--bs-primary);
+        color: #fff;
+    }
+
+    .badge.bg-draft {
+        background-color: #f59e0b !important;
+        color: #fff !important;
+    }
+
+    :root {
+        --bs-primary-green: #348738;
+        --bs-primary-green-dark: #2d6a2d;
+    }
+
+    .bg-primary-green {
+        background-color: var(--bs-primary-green) !important;
+    }
+
+    .btn-primary-green {
+        background-color: var(--bs-primary-green);
+        border-color: var(--bs-primary-green);
+        color: #fff;
+    }
+
+    .btn-primary-green:hover {
+        background-color: var(--bs-primary-green-dark);
+        border-color: var(--bs-primary-green-dark);
+    }
+
+    .ticket-detail-modal {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .ticket-detail-modal .info-box {
+        background-color: #fff;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .ticket-detail-modal .info-box h6 {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #666;
+    }
+
+    .ticket-detail-modal .booking-item {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .ticket-detail-modal .booking-item:hover {
+        transform: scale(1.01);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
 </style>
 
 <div class="mt-4">
@@ -28,7 +84,7 @@
                     <select name="venue" class="form-select">
                         <option value="">Tất cả sân</option>
                         @foreach($venues as $venue)
-                            <option value="{{ $venue->id }}" {{ ($venueId ?? '') == $venue->id ? 'selected' : '' }}>{{ $venue->name }}</option>
+                        <option value="{{ $venue->id }}" {{ ($venueId ?? '') == $venue->id ? 'selected' : '' }}>{{ $venue->name }}</option>
                         @endforeach
                     </select>
                     <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> Tìm</button>
@@ -38,22 +94,22 @@
 
         <div class="card-body pt-3 pb-0">
             @php
-                $statusOptions = [
-                    '' => ['label' => 'Tất cả', 'class' => 'btn-outline-secondary'],
-                    'pending' => ['label' => 'Chờ xác nhận', 'class' => 'btn-warning text-white'],
-                    'confirmed' => ['label' => 'Đã xác nhận', 'class' => 'btn-success text-white'],
-                    'cancelled' => ['label' => 'Đã hủy', 'class' => 'btn-danger text-white'],
-                    'completed' => ['label' => 'Hoàn thành', 'class' => 'btn-primary text-white'],
-                ];
-                $currentStatus = request('status') ?? '';
+            $statusOptions = [
+            '' => ['label' => 'Tất cả', 'class' => 'btn-outline-secondary'],
+            'pending' => ['label' => 'Chờ xác nhận', 'class' => 'btn-warning text-white'],
+            'confirmed' => ['label' => 'Đã xác nhận', 'class' => 'btn-success text-white'],
+            'cancelled' => ['label' => 'Đã hủy', 'class' => 'btn-danger text-white'],
+            'completed' => ['label' => 'Hoàn thành', 'class' => 'btn-primary text-white'],
+            ];
+            $currentStatus = request('status') ?? '';
             @endphp
 
             <div class="d-flex flex-wrap gap-2">
                 @foreach($statusOptions as $key => $data)
-                    <a href="{{ route('owner.bookings.index', array_merge(request()->except('page'), ['status' => $key ?: null])) }}"
-                        class="btn {{ $currentStatus === $key ? $data['class'] : 'btn-outline-secondary' }}">
-                        {{ $data['label'] }}
-                    </a>
+                <a href="{{ route('owner.bookings.index', array_merge(request()->except('page'), ['status' => $key ?: null])) }}"
+                    class="btn {{ $currentStatus === $key ? $data['class'] : 'btn-outline-secondary' }}">
+                    {{ $data['label'] }}
+                </a>
                 @endforeach
             </div>
         </div>
@@ -63,46 +119,81 @@
                 <table class="table table-bordered table-striped table-hover align-middle">
                     <thead class="table-primary-green text-nowrap">
                         <tr>
-                            <th>ID</th>
-                            <th>Khách hàng</th>
-                            <th>Sân</th>
-                            <th>Subtotal</th>
-                            <th>Discount</th>
-                            <th class="text-end">Total</th>
+                            <th class="text-center">ID</th>
+                            <th class="text-center">Khách hàng</th>
+                            <th class="text-center">Sân</th>
+                            <th class="text-center">Giá</th>
+                            <th class="text-center">Giảm giá</th>
+                            <th class="text-center">Tổng</th>
                             <th class="text-center">Trạng thái</th>
                             <th class="text-center">Thanh toán</th>
-                            <th>Ghi chú</th>
-                            <th>Ngày tạo</th>
+                            <th class="text-center">Ghi chú</th>
+                            <th class="text-center">Ngày tạo</th>
                             <th class="text-center">Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($tickets as $ticket)
                         <tr>
-                            <td>{{ $ticket->id }}</td>
-                            <td class="text-nowrap">{{ $ticket->user->name ?? 'N/A' }}</td>
-                            <td>
+                            <td class="text-center">{{ $ticket->id }}</td>
+                            <td class="text-nowrap text-center">
+                                <span class="px-2 py-1 text-success fw-bold">
+                                    {{ $ticket->user->name ?? 'N/A' }}
+                                </span>
+                            </td>
+                            <td class="text-center">
                                 @foreach($ticket->items as $item)
-                                    <span class="badge bg-secondary mb-1">{{ $item->booking->court->venue->name ?? 'N/A' }}</span>
+                                <span class="badge bg-warning text-dark mb-1">
+                                    {{ $item->booking->court->venue->name ?? 'N/A' }}
+                                </span>
                                 @endforeach
                             </td>
-                            <td class="text-nowrap">{{ number_format($ticket->subtotal,0,'.',',') }}₫</td>
-                            <td class="text-nowrap">{{ number_format($ticket->discount_amount,0,'.',',') }}₫</td>
-                            <td class="text-nowrap fw-bold text-end">{{ number_format($ticket->total_amount,0,'.',',') }}₫</td>
+                            <td class="text-nowrap text-center">{{ number_format($ticket->subtotal,0,'.',',') }}₫</td>
+                            <td class="text-nowrap text-center" style="color: red;">{{ number_format($ticket->discount_amount,0,'.',',') }}₫</td>
+                            <td class="text-nowrap fw-bold text-center">{{ number_format($ticket->total_amount,0,'.',',') }}₫</td>
                             <td class="text-center">
-                                <span class="badge @if($ticket->status=='draft') bg-draft @elseif($ticket->status=='confirmed') bg-success @elseif($ticket->status=='cancelled') bg-danger @elseif($ticket->status=='completed') bg-primary @else bg-secondary @endif">
-                                    {{ ucfirst($ticket->status) }}
+                                @php
+                                $statusLabels = [
+                                'pending' => 'Chờ xác nhận',
+                                'confirmed' => 'Đã xác nhận',
+                                'completed' => 'Hoàn thành',
+                                'cancelled' => 'Đã hủy',
+                                ];
+                                $statusText = $statusLabels[$ticket->status] ?? 'Không xác định';
+                                @endphp
+
+                                <span class="badge 
+        @if($ticket->status=='pending') bg-warning 
+        @elseif($ticket->status=='confirmed') bg-success 
+        @elseif($ticket->status=='completed') bg-primary 
+        @elseif($ticket->status=='cancelled') bg-danger 
+        @else bg-secondary @endif">
+                                    {{ $statusText }}
                                 </span>
                             </td>
+
                             <td class="text-center">
-                                <span class="badge @if($ticket->payment_status=='unpaid') bg-danger @elseif($ticket->payment_status=='paid') bg-success @elseif($ticket->payment_status=='refunded') bg-info text-dark @else bg-secondary @endif">
-                                    {{ ucfirst($ticket->payment_status) }}
+                                @php
+                                $paymentLabels = [
+                                'unpaid' => 'Chưa thanh toán',
+                                'paid' => 'Đã thanh toán',
+                                'refunded' => 'Đã hoàn tiền',
+                                ];
+                                $paymentText = $paymentLabels[$ticket->payment_status] ?? 'Không xác định';
+                                @endphp
+
+                                <span class="badge 
+        @if($ticket->payment_status=='unpaid') bg-danger 
+        @elseif($ticket->payment_status=='paid') bg-success 
+        @elseif($ticket->payment_status=='refunded') bg-info text-dark 
+        @else bg-secondary @endif">
+                                    {{ $paymentText }}
                                 </span>
                             </td>
-                            <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ $ticket->notes ?? '' }}">
+                            <td class="text-center" style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ $ticket->notes ?? '' }}">
                                 {{ $ticket->notes ?? '-' }}
                             </td>
-                            <td class="text-nowrap">{{ $ticket->created_at->format('d-m-Y H:i') }}</td>
+                            <td class="text-nowrap text-center">{{ $ticket->created_at->format('d-m-Y H:i') }}</td>
                             <td class="text-center">
                                 <a href="" class="btn btn-sm btn-outline-primary w-75" data-bs-toggle="modal" data-bs-target="#ticketModal{{ $ticket->id }}">
                                     <i class="fas fa-eye"></i>
@@ -135,18 +226,18 @@
                                                     <div class="info-box p-3 h-100">
                                                         <h6 class="text-muted mb-2"><i class="fas fa-info-circle me-2"></i>Trạng thái đơn</h6>
                                                         @php
-                                                            $allowedTransitions = [
-                                                                'pending'=>['pending','confirmed','cancelled'],
-                                                                'confirmed'=>['confirmed','completed','cancelled'],
-                                                                'completed'=>['completed'],
-                                                                'cancelled'=>['cancelled'],
-                                                            ];
+                                                        $allowedTransitions = [
+                                                        'pending'=>['pending','confirmed','cancelled'],
+                                                        'confirmed'=>['confirmed','completed','cancelled'],
+                                                        'completed'=>['completed'],
+                                                        'cancelled'=>['cancelled'],
+                                                        ];
                                                         @endphp
                                                         <select name="status" class="form-select" {{ in_array($ticket->status,['completed','cancelled'])?'disabled':'' }}>
-                                                            @foreach(['pending'=>'Chờ xác nhận','confirmed'=>'Đã xác nhận','cancelled'=>'Đã hủy','completed'=>'Hoàn thành'] as $v=>$label)
-                                                                @if(in_array($v,$allowedTransitions[$ticket->status]))
-                                                                    <option value="{{ $v }}" {{ $ticket->status==$v?'selected':'' }}>{{ $label }}</option>
-                                                                @endif
+                                                            @foreach(['pending'=>'Chờ xác nhận','confirmed'=>'Đã xác nhận','completed'=>'Hoàn thành','cancelled'=>'Hủy'] as $v=>$label)
+                                                            @if(in_array($v,$allowedTransitions[$ticket->status]))
+                                                            <option value="{{ $v }}" {{ $ticket->status==$v?'selected':'' }}>{{ $label }}</option>
+                                                            @endif
                                                             @endforeach
                                                         </select>
                                                         <h6 class="text-muted mb-2 mt-3"><i class="fas fa-wallet me-2"></i>Thanh toán</h6>
@@ -161,8 +252,21 @@
                                                     <div class="info-box p-3 h-100">
                                                         <h6 class="text-muted mb-2"><i class="fas fa-calendar me-2"></i>Ngày tạo</h6>
                                                         <p class="mb-3">{{ $ticket->created_at->format('d/m/Y H:i') }}</p>
+
+                                                        <h6 class="text-muted mb-1"><i class="fas fa-money-bill me-2"></i>Giá gốc</h6>
+                                                        <p class="mb-2 text-secondary fw-semibold">
+                                                            {{ number_format($ticket->subtotal ?? 0, 0, '.', ',') }}₫
+                                                        </p>
+
+                                                        <h6 class="text-muted mb-1"><i class="fas fa-tags me-2"></i>Giảm giá</h6>
+                                                        <p class="mb-2 text-danger fw-semibold">
+                                                            -{{ number_format($ticket->discount_amount ?? 0, 0, '.', ',') }}₫
+                                                        </p>
+
                                                         <h6 class="text-muted mb-1"><i class="fas fa-money-bill-wave me-2"></i>Tổng tiền</h6>
-                                                        <p class="fs-5 fw-bold text-danger mb-0">{{ number_format($ticket->total_amount,0,'.',',') }}₫</p>
+                                                        <p class="fs-5 fw-bold text-success mb-0">
+                                                            {{ number_format($ticket->total_amount ?? 0, 0, '.', ',') }}₫
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -171,22 +275,22 @@
                                             <h5 class="fw-bold mb-3"><i class="fas fa-calendar-check me-2 text-success"></i>Chi tiết Sân ({{ $ticket->items->count() }})</h5>
                                             <div class="booking-list">
                                                 @forelse($ticket->items as $item)
-                                                    <div class="booking-item border rounded-3 p-3 mb-2 bg-white shadow-sm">
-                                                        <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                                            <div>
-                                                                <p class="fw-semibold mb-1">{{ $item->booking->court->name ?? 'N/A' }}</p>
-                                                                <small class="text-muted">{{ $item->booking->date ?? '-' }} | {{ $item->booking->timeSlot->label ?? '-' }}</small>
-                                                            </div>
-                                                            <div class="text-end">
-                                                                <p class="fw-bold text-dark mb-0">{{ number_format($item->unit_price,0,'.',',') }}₫</p>
-                                                                @if($item->discount_amount>0)
-                                                                    <small class="text-danger">(-{{ number_format($item->discount_amount,0,'.',',') }}₫)</small>
-                                                                @endif
-                                                            </div>
+                                                <div class="booking-item border rounded-3 p-3 mb-2 bg-white shadow-sm">
+                                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                                        <div>
+                                                            <p class="fw-semibold mb-1">{{ $item->booking->court->name ?? 'N/A' }}</p>
+                                                            <small class="text-muted">{{ $item->booking->date ?? '-' }} | {{ $item->booking->timeSlot->label ?? '-' }}</small>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <p class="fw-bold text-dark mb-0">{{ number_format($item->unit_price,0,'.',',') }}₫</p>
+                                                            @if($item->discount_amount>0)
+                                                            <small class="text-danger">(-{{ number_format($item->discount_amount,0,'.',',') }}₫)</small>
+                                                            @endif
                                                         </div>
                                                     </div>
+                                                </div>
                                                 @empty
-                                                    <div class="alert alert-secondary text-center">Không có chi tiết booking.</div>
+                                                <div class="alert alert-secondary text-center">Không có chi tiết booking.</div>
                                                 @endforelse
                                             </div>
 
@@ -210,7 +314,7 @@
                             <td colspan="11" class="text-center p-4">
                                 <p class="mb-0">Không tìm thấy ticket nào.</p>
                                 @if($search)
-                                    <p class="mb-0 text-muted">Không có kết quả cho tìm kiếm: "{{ $search }}"</p>
+                                <p class="mb-0 text-muted">Không có kết quả cho tìm kiếm: "{{ $search }}"</p>
                                 @endif
                             </td>
                         </tr>

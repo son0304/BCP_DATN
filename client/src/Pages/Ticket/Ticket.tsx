@@ -62,6 +62,8 @@ const Ticket_Detail: React.FC = () => {
     pending: { text: "Đang chờ", icon: "fa-solid fa-clock", classes: "bg-amber-50 text-amber-800 border-amber-400" },
     // confirmed: Dùng màu Primary
     confirmed: { text: "Đã xác nhận", icon: "fa-solid fa-check-circle", classes: "bg-emerald-50 text-emerald-800 border-emerald-400" },
+    // completed
+    completed: { text: "Hoàn thành", icon: "fa-solid fa-check-circle", classes: "bg-emerald-50 text-emerald-800 border-emerald-400" },
     // cancelled: Dùng màu Đỏ Utility
     cancelled: { text: "Đã hủy", icon: "fa-solid fa-times-circle", classes: "bg-red-50 text-red-800 border-red-400" }, 
   };

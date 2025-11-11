@@ -14,18 +14,14 @@ use App\Mail\EmailVerificationMail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
-use Illuminate\Support\Facades\Auth;
-use Tymon\JWTAuth\Facades\JWTAuth;
-// Thêm 2 dòng này để xử lý Exception của JWT
-use Tymon\JWTAuth\Exceptions\TokenInvalidException;
-use Tymon\JWTAuth\Exceptions\JWTException;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenInvalidException;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 
 class AuthApiController extends Controller
 {
     public function register(Request $request)
     {
-        // --- ĐÃ SỬA: Lỗi validation 'require' và 'number' ---
-        // --- ĐÃ SỬA: Đồng bộ tên cột 'province_id' và 'district_id' ---
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -59,8 +55,8 @@ class AuthApiController extends Controller
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'phone' => $request->phone,
-                'province_id' => $request->province_id, // <-- Đã sửa
-                'district_id' => $request->district_id, // <-- Đã sửa
+                'province_id' => $request->province_id,
+                'district_id' => $request->district_id,
                 'role_id' => $defaultRole->id,
                 'is_active' => false,
                 'is_email_verified' => false,
@@ -97,29 +93,24 @@ class AuthApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $validator->errors()], 422);
         }
 
-        // 2. Tìm người dùng bằng email
         $user = User::where('email', $request->email)->with(['role', 'district', 'province'])->first();
 
-        // 3. Kiểm tra mật khẩu
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json(['success' => false, 'message' => 'Email hoặc mật khẩu không chính xác.'], 401);
         }
 
-        // 4. Kiểm tra email đã xác nhận chưa
         if (!$user->is_email_verified) {
             return response()->json(['success' => false, 'message' => 'Vui lòng xác nhận email trước khi đăng nhập.', 'errors' => ['email' => 'Email chưa được xác nhận.']], 403);
         }
 
-        // 5. Kiểm tra tài khoản có bị khóa không
         if (!$user->is_active) {
             return response()->json(['success' => false, 'message' => 'Tài khoản của bạn đã bị khóa hoặc vô hiệu hóa.', 'errors' => ['account' => 'Tài khoản bị vô hiệu hóa.']], 403);
         }
 
-        // 6. Mọi thứ đều hợp lệ, tạo token
+        // Tạo token với PHP-OSS Saver JWT
         $token = JWTAuth::fromUser($user);
-        $expiresIn = JWTAuth::factory()->getTTL() * 60; // (Tính bằng giây)
+        $expiresIn = JWTAuth::factory()->getTTL() * 60;
 
-        // 7. Trả về JSON
         return response()->json([
             'success' => true,
             'message' => 'Đăng nhập thành công.',
@@ -134,7 +125,6 @@ class AuthApiController extends Controller
                     'role_id' => $user->role->id ?? 2,
                     'phone' => $user->phone,
                     'avt' => $user->avt ?? null,
-                    // --- ĐÃ SỬA: Sửa tên quan hệ (singular) ---
                     'district' => $user->district->name ?? null,
                     'province' => $user->province->name ?? null,
                     'is_active' => $user->is_active,
@@ -143,20 +133,11 @@ class AuthApiController extends Controller
         ]);
     }
 
-    /**
-     * Đăng xuất (API - JWTAuth)
-     */
     public function logout(Request $request)
     {
-        // --- ĐÃ SỬA: Viết lại hàm logout cho JWTAuth ---
         try {
-            // Yêu cầu token hiện tại phải bị vô hiệu hóa (thêm vào blacklist)
             JWTAuth::invalidate(JWTAuth::getToken());
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Đăng xuất thành công!'
-            ]);
+            return response()->json(['success' => true, 'message' => 'Đăng xuất thành công!']);
         } catch (TokenInvalidException $e) {
             return response()->json(['success' => false, 'message' => 'Token không hợp lệ.'], 401);
         } catch (JWTException $e) {
@@ -164,17 +145,10 @@ class AuthApiController extends Controller
         }
     }
 
-    /**
-     * Xử lý xác nhận email từ link (API)
-     * Luồng này đã đúng (React GỌI POST, API xử lý POST)
-     */
     public function verifyEmail(Request $request)
     {
         if (!$request->has('token') || empty($request->token)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Thiếu token xác nhận email!'
-            ], 400);
+            return response()->json(['success' => false, 'message' => 'Thiếu token xác nhận email!'], 400);
         }
 
         try {
@@ -182,17 +156,11 @@ class AuthApiController extends Controller
             $user = User::where('email_verification_token', $token)->first();
 
             if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Token không hợp lệ hoặc đã hết hạn.'
-                ], 400);
+                return response()->json(['success' => false, 'message' => 'Token không hợp lệ hoặc đã hết hạn.'], 400);
             }
 
             if ($user->is_email_verified) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Email này đã được xác nhận trước đó!'
-                ], 400);
+                return response()->json(['success' => false, 'message' => 'Email này đã được xác nhận trước đó!'], 400);
             }
 
             $user->update([
@@ -201,16 +169,10 @@ class AuthApiController extends Controller
                 'email_verification_token' => null,
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Email đã được xác thực thành công!'
-            ]);
+            return response()->json(['success' => true, 'message' => 'Email đã được xác thực thành công!']);
         } catch (\Exception $e) {
             Log::error('Lỗi xác nhận email: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Đã xảy ra lỗi trong quá trình xác nhận.'
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Đã xảy ra lỗi trong quá trình xác nhận.'], 500);
         }
     }
 }

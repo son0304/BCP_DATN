@@ -7,37 +7,40 @@ use App\Http\Controllers\Api\ProvinceApiController;
 use App\Http\Controllers\Api\TicketApiController;
 use App\Http\Controllers\Api\TimeSlotApiController;
 use App\Http\Controllers\Api\VenueApiController;
-use App\Http\Controllers\Api\AuthController;
 use Illuminate\Support\Facades\Route;
 
+// --- Public routes ---
 Route::post('/register', [AuthApiController::class, 'register']);
 Route::post('/login', [AuthApiController::class, 'login']);
-Route::post('/logout', [AuthApiController::class, 'logout']);
 Route::post('/verify-email', [AuthApiController::class, 'verifyEmail']);
 
-
-
-
-
+// --- Venue routes ---
 Route::get('/venues', [VenueApiController::class, 'index']);
-Route::post('/venues', [VenueApiController::class, 'store']);
+Route::get('/venues/{id}', [VenueApiController::class, 'show']);
+// Alias cho frontend gọi /venue/{id}
 Route::get('/venue/{id}', [VenueApiController::class, 'show']);
 
-// Route::get('/courts', [CourtApiController::class, 'index']);
-// Route::get('/court/{id}', [CourtApiController::class, 'show']);
-
-
+// --- Ticket routes ---
 Route::get('/tickets', [TicketApiController::class, 'index']);
-Route::get('/ticket/{id}', [TicketApiController::class, 'show']);
-Route::post('/tickets', [TicketApiController::class, 'store']);
+Route::get('/tickets/{id}', [TicketApiController::class, 'show']);
 
-Route::get('/ticket', [TicketApiController::class, 'store']);
-
-Route::post('/upload', [ImgeApiController::class, 'store']);
-
-
+// --- Time slot routes ---
 Route::get('/time_slots', [TimeSlotApiController::class, 'index']);
 
-
+// --- Province routes ---
 Route::get('/provinces', [ProvinceApiController::class, 'index']);
 Route::get('/provinces/{id}', [ProvinceApiController::class, 'show']);
+
+// --- Protected routes (JWT auth) ---
+Route::middleware(['auth:api'])->group(function () {
+    Route::post('/logout', [AuthApiController::class, 'logout']);
+
+    // Venue management
+    Route::post('/venues', [VenueApiController::class, 'store']);
+
+    // Ticket management
+    Route::post('/tickets', [TicketApiController::class, 'store']);
+
+    // Image upload
+    Route::post('/upload', [ImgeApiController::class, 'store']);
+});

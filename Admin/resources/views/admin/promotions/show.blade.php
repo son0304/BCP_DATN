@@ -53,6 +53,9 @@
                                         <strong class="text-primary fs-5">
                                             @if($promotion->type == '%')
                                                 {{ number_format($promotion->value, 0) }}%
+                                                @if($promotion->max_discount_amount)
+                                                    <div class="text-muted small">Tối đa {{ number_format($promotion->max_discount_amount, 0) }}₫</div>
+                                                @endif
                                             @else
                                                 {{ number_format($promotion->value, 0) }}₫
                                             @endif
@@ -80,11 +83,7 @@
                                 <tr>
                                     <th>Giới hạn sử dụng</th>
                                     <td>
-                                        @if($promotion->usage_limit == 0)
-                                            <span class="text-muted">Không giới hạn</span>
-                                        @else
-                                            {{ $promotion->usage_limit }} lần
-                                        @endif
+                                        <strong>{{ $promotion->usage_limit }} lần</strong>
                                     </td>
                                 </tr>
                                 <tr>
@@ -112,11 +111,14 @@
                                             $endAt = \Carbon\Carbon::parse($promotion->end_at);
                                             $isNotStarted = $startAt->gt($now);
                                             $isExpired = $endAt->lt($now);
+                                            $isOutOfUsage = $promotion->usage_limit > 0 && $promotion->used_count >= $promotion->usage_limit;
                                         @endphp
                                         @if($isNotStarted)
                                             <span class="badge bg-info">Chưa hoạt động</span>
                                         @elseif($isExpired)
                                             <span class="badge bg-danger">Hết hạn</span>
+                                        @elseif($isOutOfUsage)
+                                            <span class="badge bg-warning">Hết lượt sử dụng</span>
                                         @else
                                             <span class="badge bg-success">Đang hoạt động</span>
                                         @endif

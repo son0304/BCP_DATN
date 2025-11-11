@@ -9,7 +9,7 @@ class Promotion extends Model
 {
     /** @use HasFactory<\Database\Factories\PromotionFactory> */
     use HasFactory;
-    protected $fillable = ['code', 'value', 'type','start_at','end_at', 'usage_limit', 'used_count', 'created_by'];
+    protected $fillable = ['code', 'value', 'type','start_at','end_at', 'usage_limit', 'used_count', 'created_by', 'max_discount_amount'];
 
     /**
      * The attributes that should be cast.
@@ -21,6 +21,7 @@ class Promotion extends Model
         return [
             'start_at' => 'datetime',
             'end_at' => 'datetime',
+            'max_discount_amount' => 'decimal:2',
         ];
     }
 

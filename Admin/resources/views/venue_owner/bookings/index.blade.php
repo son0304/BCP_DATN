@@ -142,9 +142,16 @@
                                 </span>
                             </td>
                             <td>
-                                @foreach($ticket->items as $item)
+                                @php
+                                $uniqueVenues = $ticket->items
+                                ->pluck('booking.court.venue')
+                                ->filter() // loại bỏ null
+                                ->unique('id'); // lọc trùng theo id
+                                @endphp
+
+                                @foreach($uniqueVenues as $venue)
                                 <span class="badge bg-warning text-dark mb-1">
-                                    {{ $item->booking->court->venue->name ?? 'N/A' }}
+                                    {{ $venue->name }}
                                 </span>
                                 @endforeach
                             </td>

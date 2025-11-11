@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { User } from "../../Types/user";
 import { useFetchData } from "../../Hooks/useApi";
+import { Modal, Descriptions, List } from "antd";
 import type { Ticket } from "../../Types/tiket";
 
 const BookingHistory = ({ user }: { user: User }) => {
@@ -23,12 +24,21 @@ const BookingHistory = ({ user }: { user: User }) => {
   const { data } = useFetchData("tickets");
   const lisBooking: Ticket[] = (data?.data as Ticket[]) ?? [];
 
-  const bookingByStatus = lisBooking.filter(
-    (booking) => isStatus === "all" || booking.status === isStatus
-  );
+  const bookingByStatus = lisBooking
+    .filter((booking) => isStatus === "all" || booking.status === isStatus)
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+
 
   return (
     <div className="p-6">
+      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+        Lịch sử đặt sân của bạn
+      </h2>
       {/* Filter Buttons */}
       <div className="flex flex-wrap gap-3 mb-6">
         {statusOptions.map((option) => (
@@ -50,14 +60,24 @@ const BookingHistory = ({ user }: { user: User }) => {
         <table className="min-w-full border border-gray-200 divide-y divide-gray-200">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">ID</th>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Trạng thái</th>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Thanh toán</th>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Tổng tiền</th>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Ghi chú</th>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Ngày tạo</th>
+              {[
+                "ID",
+                "Trạng thái",
+                "Thanh toán",
+                "Tổng tiền",
+                "Ghi chú",
+                "Ngày tạo",
+              ].map((header) => (
+                <th
+                  key={header}
+                  className="px-4 py-2 text-sm font-semibold text-gray-700 text-center whitespace-nowrap"
+                >
+                  {header}
+                </th>
+              ))}
             </tr>
           </thead>
+
           <tbody className="divide-y divide-gray-200">
             {bookingByStatus.length > 0 ? (
               bookingByStatus.map((ticket) => {
@@ -67,9 +87,19 @@ const BookingHistory = ({ user }: { user: User }) => {
                   paymentOptions.find((opt) => opt.value === ticket.payment_status) ?? null;
 
                 return (
-                  <tr key={ticket.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 text-sm text-gray-700">{ticket.id}</td>
-                    <td className="px-4 py-2 text-sm">
+                  <tr
+                    key={ticket.id}
+                    className="hover:bg-gray-50 text-center whitespace-nowrap"
+                  >
+                    <td
+                      onClick={() => setSelectedTicket(ticket)}
+                      className="px-4 py-2 text-sm text-blue-600 hover:text-blue-800 cursor-pointer font-medium align-middle"
+                      title="Xem chi tiết"
+                    >
+                      {ticket.id}
+                    </td>
+
+                    <td className="px-4 py-2 text-sm align-middle">
                       {statusItem ? (
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${statusItem.color}`}
@@ -80,7 +110,8 @@ const BookingHistory = ({ user }: { user: User }) => {
                         ticket.status
                       )}
                     </td>
-                    <td className="px-4 py-2 text-sm">
+
+                    <td className="px-4 py-2 text-sm align-middle">
                       {paymentItem ? (
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${paymentItem.color}`}
@@ -91,11 +122,16 @@ const BookingHistory = ({ user }: { user: User }) => {
                         ticket.payment_status
                       )}
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-700">
-                      {ticket.total_amount.toLocaleString("vi-VN")}₫
+
+                    <td className="px-4 py-2 text-sm text-gray-700 align-middle">
+                      {Number(ticket.total_amount.toLocaleString("vi-VN", { minimumFractionDigits: 0, maximumFractionDigits: 0 }))}₫
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-700">{ticket.notes || "-"}</td>
-                    <td className="px-4 py-2 text-sm text-gray-700">
+
+                    <td className="px-4 py-2 text-sm text-gray-700 align-middle">
+                      {ticket.notes || "-"}
+                    </td>
+
+                    <td className="px-4 py-2 text-sm text-gray-700 align-middle">
                       {new Date(ticket.created_at).toLocaleString("vi-VN", {
                         day: "2-digit",
                         month: "2-digit",
@@ -116,6 +152,133 @@ const BookingHistory = ({ user }: { user: User }) => {
             )}
           </tbody>
         </table>
+
+        {/* Modal Chi tiết */}
+        {selectedTicket && (
+          <Modal
+            open={!!selectedTicket}
+            onCancel={() => setSelectedTicket(null)}
+            footer={null}
+            title={`Chi tiết đơn #${selectedTicket.id}`}
+            width={720}
+            centered
+          >
+            {/* Thông tin cơ bản của đơn */}
+            <div className="mb-4">
+              <Descriptions
+                column={1}
+                size="small"
+                bordered
+                className="text-sm text-gray-700"
+              >
+                <Descriptions.Item label="Trạng thái">
+                  {(() => {
+                    const statusItem = statusOptions.find(
+                      (opt) => opt.value === selectedTicket.status
+                    );
+                    return statusItem ? (
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${statusItem.color}`}
+                      >
+                        {statusItem.label}
+                      </span>
+                    ) : (
+                      selectedTicket.status
+                    );
+                  })()}
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Thanh toán">
+                  {(() => {
+                    const paymentItem = paymentOptions.find(
+                      (opt) => opt.value === selectedTicket.payment_status
+                    );
+                    return paymentItem ? (
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${paymentItem.color}`}
+                      >
+                        {paymentItem.label}
+                      </span>
+                    ) : (
+                      selectedTicket.payment_status
+                    );
+                  })()}
+                </Descriptions.Item>
+                <Descriptions.Item label="Giá">
+                  {Number(selectedTicket.subtotal).toLocaleString("vi-VN", {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}₫
+                </Descriptions.Item>
+                <Descriptions.Item label="Giảm giá">
+                  <span className="text-red-500">
+                    -{Number(selectedTicket.discount_amount).toLocaleString("vi-VN", {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}₫
+                  </span>
+                </Descriptions.Item>
+                <Descriptions.Item label="Tổng">
+                  {Number(selectedTicket.total_amount).toLocaleString("vi-VN", {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  })}₫
+                </Descriptions.Item>
+                <Descriptions.Item label="Ghi chú">
+                  {selectedTicket.notes || "Không có"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Ngày tạo">
+                  {new Date(selectedTicket.created_at).toLocaleString("vi-VN")}
+                </Descriptions.Item>
+              </Descriptions>
+
+            </div>
+
+            {/* Danh sách sân đã đặt */}
+            <div>
+              <h3 className="font-medium mb-2 text-gray-800">Danh sách sân đã đặt</h3>
+
+              {selectedTicket?.items && selectedTicket.items.length > 0 ? (
+                <List
+                  itemLayout="vertical"
+                  dataSource={selectedTicket.items}
+                  bordered
+                  renderItem={(item) => (
+                    <List.Item key={item.id}>
+                      <div className="space-y-1">
+                        <p><strong>Sân:</strong> {item.booking?.court?.venue?.name ?? "N/K"}</p>
+                        <p><strong>Sân con:</strong> {item.booking?.court?.name ?? "N/K"}</p>
+                        <p>
+                          <strong>Ngày:</strong>{" "}
+                          {item.booking?.date
+                            ? new Date(item.booking.date).toLocaleDateString("vi-VN")
+                            : "N/K"}
+                        </p>
+                        <p>
+                          <strong>Giờ chơi:</strong>{" "}
+                          {item.booking?.time_slot?.start_time?.slice(0, 5) ?? "N/K"} -{" "}
+                          {item.booking?.time_slot?.end_time?.slice(0, 5) ?? "N/K"}
+                        </p>
+                        <p>
+                          <strong>Giá:</strong>{" "}
+                          {item.unit_price
+                            ? Number(item.unit_price).toLocaleString("vi-VN", {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 0,
+                            }) + "₫"
+                            : "N/K"}
+                        </p>
+                      </div>
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                <p className="text-gray-500 text-sm mt-2">Không có sân nào trong đơn này.</p>
+              )}
+
+            </div>
+          </Modal>
+        )}
       </div>
     </div>
   );

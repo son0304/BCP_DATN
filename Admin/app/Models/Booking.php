@@ -30,4 +30,9 @@ class Booking extends Model
     {
         return $this->hasOne(Item::class); // 1 booking = 1 item
     }
+
+    public function venue()
+    {
+        return $this->belongsTo(Venue::class);
+    }
 }

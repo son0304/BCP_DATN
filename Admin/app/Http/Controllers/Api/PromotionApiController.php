@@ -11,6 +11,7 @@ class PromotionApiController extends Controller
     public function index(Request $request)
     {
         $code = $request->input('code');
+        $now = now();
 
         // ==== TRƯỜNG HỢP 1: CÓ CODE - XÁC THỰC 1 VOUCHER ====
         if ($code) {
@@ -24,11 +25,27 @@ class PromotionApiController extends Controller
                 ], 404);
             }
 
-            // Hết hạn
-            if ($voucher->end_at && now()->greaterThan($voucher->end_at)) {
+            // *** LOGIC MỚI: Chưa bắt đầu ***
+            if ($voucher->start_at && $now->lessThan($voucher->start_at)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mã giảm giá chưa đến ngày bắt đầu.'
+                ], 400);
+            }
+
+            // Hết hạn (Logic cũ)
+            if ($voucher->end_at && $now->greaterThan($voucher->end_at)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Mã giảm giá đã hết hạn.'
+                ], 400);
+            }
+
+            // *** LOGIC MỚI: Hết lượt sử dụng ***
+            if ($voucher->usage_limit !== null && $voucher->used_count >= $voucher->usage_limit) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mã giảm giá đã hết lượt sử dụng.'
                 ], 400);
             }
 
@@ -38,7 +55,9 @@ class PromotionApiController extends Controller
                 'code' => $voucher->code,
                 'value' => floatval($voucher->value),
                 'type' => $voucher->type === '%' ? '%' : 'VND',
-                'expires_at' => $voucher->end_at
+                'start_at' => $voucher->start_at, // *** MỚI: Thêm start_at ***
+                'expires_at' => $voucher->end_at,
+                'max_discount_amount' => $voucher->type === '%' ? floatval($voucher->max_discount_amount) : null, // *** MỚI: Thêm max_discount_amount ***
             ];
 
             return response()->json([
@@ -50,10 +69,20 @@ class PromotionApiController extends Controller
 
         // ==== TRƯỜNG HỢP 2: KHÔNG CÓ CODE - LẤY TẤT CẢ VOUCHER HỢP LỆ ====
         
-        // Lấy tất cả voucher CÒN HẠN (chưa hết hạn hoặc không có ngày hết hạn)
-        $vouchers = Promotion::where(function ($query) {
-                $query->whereNull('end_at') // Không có ngày hết hạn
-                      ->orWhere('end_at', '>', now()); // Hoặc ngày hết hạn còn trong tương lai
+        // *** LOGIC MỚI: Lấy tất cả voucher HỢP LỆ (đã bắt đầu, còn hạn, còn lượt) ***
+        $vouchers = Promotion::where(function ($query) use ($now) {
+                // 1. Phải bắt đầu rồi
+                $query->where('start_at', '<=', $now);
+            })
+            ->where(function ($query) use ($now) {
+                // 2. Phải chưa kết thúc (hoặc không có ngày kết thúc - logic cũ)
+                $query->where('end_at', '>=', $now)
+                      ->orWhereNull('end_at');
+            })
+            ->where(function ($query) {
+                // 3. Phải còn lượt sử dụng (hoặc không giới hạn)
+                $query->whereNull('usage_limit')
+                      ->orWhereRaw('used_count < usage_limit');
             })
             ->get();
 
@@ -64,7 +93,9 @@ class PromotionApiController extends Controller
                 'code' => $voucher->code,
                 'value' => floatval($voucher->value),
                 'type' => $voucher->type === '%' ? '%' : 'VND',
-                'expires_at' => $voucher->end_at
+                'start_at' => $voucher->start_at, // *** MỚI: Thêm start_at ***
+                'expires_at' => $voucher->end_at,
+                'max_discount_amount' => $voucher->type === '%' ? floatval($voucher->max_discount_amount) : null, // *** MỚI: Thêm max_discount_amount ***
             ];
         });
 

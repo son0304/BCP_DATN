@@ -1,30 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 @include('layout.head')
 
-
 <body>
-    <div class="container-scroller">
+
+    <!-- Begin page -->
+    <div id="wrapper">
         @include('layout.nav')
-
-        <div class="container-fluid page-body-wrapper">
-            @include('layout.sidebar')
-
-            <div class="main-panel">
-                {{-- Content --}}
-                <div class="content-wrapper my-4">
+        @include('layout.sidebar')
+        <div class="content-page">
+            <div class="content">
+                <div class="container-fluid">
                     @yield('content')
                 </div>
-                {{-- EndContent --}}
 
-                @include('layout.footer')
             </div>
+            <!-- Footer Start -->
+            @include('layout.footer')
+            <!-- end Footer -->
         </div>
     </div>
-    @include('layout.alert')
+   @include('layout.right-bar')
+    <div class="rightbar-overlay"></div>
 
     @include('layout.scrip')
-    @stack('scripts')
+
 </body>
 
 </html>

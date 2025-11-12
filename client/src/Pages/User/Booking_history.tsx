@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { User } from "../../Types/user";
 import { useFetchData } from "../../Hooks/useApi";
-import { Modal, Descriptions, List } from "antd";
+import { Modal, Descriptions, List, Steps, Tag } from "antd";
 import type { Ticket } from "../../Types/tiket";
 
 const BookingHistory = ({ user }: { user: User }) => {
@@ -33,6 +33,7 @@ const BookingHistory = ({ user }: { user: User }) => {
 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
 
+  const { Step } = Steps;
 
   return (
     <div className="p-6">
@@ -172,22 +173,31 @@ const BookingHistory = ({ user }: { user: User }) => {
                 className="text-sm text-gray-700"
               >
                 <Descriptions.Item label="Trạng thái">
-                  {(() => {
-                    const statusItem = statusOptions.find(
-                      (opt) => opt.value === selectedTicket.status
-                    );
-                    return statusItem ? (
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${statusItem.color}`}
-                      >
-                        {statusItem.label}
-                      </span>
-                    ) : (
-                      selectedTicket.status
-                    );
-                  })()}
+                  {selectedTicket.status === "cancelled" ? (
+                    // 1. Nếu đã hủy, hiển thị Tag (Thẻ) màu đỏ
+                    <Tag color="error">Đã hủy</Tag>
+                  ) : (
+                    // 2. Nếu không, hiển thị quy trình 3 bước bình thường
+                    <Steps
+                      size="small"
+                      current={
+                        // Tính toán bước hiện tại trên 3 bước
+                        ["pending", "confirmed", "completed"].indexOf(selectedTicket.status)
+                      }
+                      status={
+                        // Chỉ có 2 trạng thái: đang xử lý hoặc hoàn thành
+                        selectedTicket.status === "completed"
+                          ? "finish"
+                          : "process"
+                      }
+                      responsive
+                    >
+                      <Step title="Chờ xác nhận" />
+                      <Step title="Đã xác nhận" />
+                      <Step title="Hoàn thành" />
+                    </Steps>
+                  )}
                 </Descriptions.Item>
-
                 <Descriptions.Item label="Thanh toán">
                   {(() => {
                     const paymentItem = paymentOptions.find(

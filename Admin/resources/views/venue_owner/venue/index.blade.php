@@ -18,10 +18,10 @@
 
     {{-- Thông báo thành công --}}
     @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
     @endif
 
     {{-- Danh sách sân --}}
@@ -43,67 +43,70 @@
                     </thead>
                     <tbody>
                         @forelse($venues as $venue)
-                            <tr>
-                                <td class="fw-semibold">{{ $venue->id }}</td>
-                                <td>
-                                    <strong class="text-dark d-block">{{ $venue->name }}</strong>
-                                </td>
-                                <td>{{ $venue->owner->name ?? 'N/A' }}</td>
-                                <td>{{ $venue->province->name ?? 'N/A' }}</td>
+                        <tr>
+                            <td class="fw-semibold">{{ $venue->id }}</td>
+                            <td>
+                                <strong class="text-dark d-block">{{ $venue->name }}</strong>
+                            </td>
+                            <td>{{ $venue->owner->name ?? 'N/A' }}</td>
+                            <td>{{ $venue->province->name ?? 'N/A' }}</td>
 
-                                {{-- Giờ mở cửa --}}
-                                <td class="text-center">
-                                    @if ($venue->start_time)
-                                        <span class="badge badge-primary rounded-pill px-3 py-2">
-                                            {{ \Carbon\Carbon::parse($venue->start_time)->format('H:i') }}
-                                        </span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
+                            {{-- Giờ mở cửa --}}
+                            <td class="text-center">
+                                @if ($venue->start_time)
+                                <span class="badge badge-primary rounded-pill px-3 py-2">
+                                    {{ \Carbon\Carbon::parse($venue->start_time)->format('H:i') }}
+                                </span>
+                                @else
+                                <span class="text-muted">—</span>
+                                @endif
+                            </td>
 
-                                {{-- Giờ đóng cửa --}}
-                                <td class="text-center">
-                                    @if ($venue->end_time)
-                                        <span class="badge badge-secondary rounded-pill px-3 py-2">
-                                            {{ \Carbon\Carbon::parse($venue->end_time)->format('H:i') }}
-                                        </span>
-                                    @else
-                                        <span class="text-muted">—</span>
-                                    @endif
-                                </td>
+                            {{-- Giờ đóng cửa --}}
+                            <td class="text-center">
+                                @if ($venue->end_time)
+                                <span class="badge badge-secondary rounded-pill px-3 py-2">
+                                    {{ \Carbon\Carbon::parse($venue->end_time)->format('H:i') }}
+                                </span>
+                                @else
+                                <span class="text-muted">—</span>
+                                @endif
+                            </td>
 
-                                {{-- Trạng thái --}}
-                                <td class="text-center">
-                                    @if ($venue->is_active)
-                                        <span class="badge badge-success rounded-pill px-3 py-2">Hoạt động</span>
-                                    @else
-                                        <span class="badge badge-danger rounded-pill px-3 py-2">Đã khóa</span>
-                                    @endif
-                                </td>
+                            {{-- Trạng thái --}}
+                            <td class="text-center">
+                                @if ($venue->is_active)
+                                <span class="badge badge-success rounded-pill px-3 py-2">Hoạt động</span>
+                                @else
+                                <span class="badge badge-danger rounded-pill px-3 py-2">Đã khóa</span>
+                                @endif
+                            </td>
 
-                                {{-- Hành động --}}
-                                <td class="text-end">
-                                    <a href="{{ route('owner.venues.show', $venue->id) }}" class="btn btn-outline-secondary btn-sm me-2">
-                                        <i class="fas fa-edit"></i> Show
-                                    </a>
-                                    <form action="{{ route('owner.venues.destroy', $venue->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN sân này? Hành động này không thể hoàn tác!')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-outline-danger btn-sm">
-                                            <i class="fas fa-trash"></i> Xóa
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
+                            {{-- Hành động --}}
+                            <td class="text-end">
+                                <a href="{{ route('owner.venues.show', $venue->id) }}" class="btn btn-outline-primary btn-sm me-2">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ route('owner.venues.edit', $venue->id) }}" class="btn btn-outline-warning btn-sm me-2">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <form action="{{ route('owner.venues.destroy', $venue->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN sân này? Hành động này không thể hoàn tác!')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
                         @empty
-                            <tr>
-                                <td colspan="8" class="text-center py-5">
-                                    <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-                                    <h5 class="mb-1">Không tìm thấy thương hiệu sân nào</h5>
-                                    <p class="text-muted">Hãy bắt đầu bằng cách thêm một sân mới.</p>
-                                </td>
-                            </tr>
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                                <h5 class="mb-1">Không tìm thấy thương hiệu sân nào</h5>
+                                <p class="text-muted">Hãy bắt đầu bằng cách thêm một sân mới.</p>
+                            </td>
+                        </tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -112,11 +115,11 @@
 
         {{-- Phân trang --}}
         @if ($venues->hasPages())
-            <div class="card-footer py-3">
-                <div class="d-flex justify-content-center">
-                    {{ $venues->links() }}
-                </div>
+        <div class="card-footer py-3">
+            <div class="d-flex justify-content-center">
+                {{ $venues->links() }}
             </div>
+        </div>
         @endif
     </div>
 </div>

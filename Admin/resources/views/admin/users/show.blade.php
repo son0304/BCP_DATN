@@ -19,63 +19,6 @@
                 </div>
                 
                 <div class="card-body">
-                    <!-- Search and Filter Form -->
-                    <div class="search-filter-container mb-4">
-                        <form method="GET" action="{{ route('admin.users.index') }}" class="search-form">
-                            <div class="row align-items-end">
-                                <div class="col-md-4">
-                                    <div class="form-group mb-0">
-                                        <label for="search">Tìm kiếm người dùng</label>
-                                        <input type="text" class="form-control" id="search" name="search" 
-                                               placeholder="Tên, email, số điện thoại...">
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-3">
-                                    <div class="form-group mb-0">
-                                        <label for="role_id">Vai trò</label>
-                                        <select class="form-control" id="role_id" name="role_id">
-                                            <option value="">Tất cả vai trò</option>
-                                            @foreach($roles as $role)
-                                                <option value="{{ $role->id }}">
-                                                    @if($role->name === 'Admin')
-                                                        👑 Admin
-                                                    @elseif($role->name === 'Manager')
-                                                        👔 Manager
-                                                    @elseif($role->name === 'Owner')
-                                                        🔑 Owner
-                                                    @else
-                                                        👤 Customer
-                                                    @endif
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-3">
-                                    <div class="form-group mb-0">
-                                        <label for="is_active">Trạng thái</label>
-                                        <select class="form-control" id="is_active" name="is_active">
-                                            <option value="">Tất cả trạng thái</option>
-                                            <option value="1">Hoạt động</option>
-                                            <option value="0">Không hoạt động</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-2">
-                                    <div class="form-group mb-0">
-                                        <label>&nbsp;</label>
-                                        <button type="submit" class="btn btn-primary btn-block">
-                                            <i class="fas fa-search"></i> Tìm kiếm
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-
                     <div class="row">
                         <!-- Thông tin cơ bản -->
                         <div class="col-md-6">

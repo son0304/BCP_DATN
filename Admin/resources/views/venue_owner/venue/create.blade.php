@@ -1,19 +1,7 @@
 @extends('app')
-<style>
-    .custom-input {
-        padding: 0.94rem 18px !important;
-    }
 
-    .custom-checkbox {
-        margin-left: 0 !important;
-    }
-
-    .custom-checkbox2 {
-        margin-left: 21px !important;
-    }
-</style>
 @section('content')
-    <div class="container-fluid py-4">
+    <div class="py-4">
         {{-- Header --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>

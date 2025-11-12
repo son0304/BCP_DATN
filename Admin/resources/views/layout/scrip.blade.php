@@ -5,3 +5,5 @@
     <script src="{{ asset('template/assets/libs/jquery-sparkline/jquery.sparkline.min.js') }}"></script>
     <script src="{{ asset('template/assets/js/pages/dashboard-1.init.js') }}"></script>
     <script src="{{ asset('template/assets/js/app.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+

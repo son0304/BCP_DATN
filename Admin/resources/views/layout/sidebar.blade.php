@@ -19,7 +19,7 @@
             {{-- Menu chung --}}
             <li class="nav-item">
                 @if (auth()->user()->role->name === 'admin')
-                    <a class="nav-link" href="{{ route('admin.dashboard') }}">
+                    <a class="nav-link" href="{{ route('home.index') }}">
                         <span class="menu-title">Dashboard</span>
                         <i class="mdi mdi-view-dashboard menu-icon"></i>
                     </a>

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Availability;
-use App\Models\Booking; // Cần cho việc tạo booking
+use App\Models\Booking;
 use App\Models\Item;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
@@ -15,10 +15,23 @@ use Illuminate\Validation\ValidationException;
 
 class TicketApiController extends Controller
 {
+
+    protected $ticketRelations = [
+        'items.booking.court.venue', // Tải: Item -> Booking -> Court -> Venue
+        'items.booking.timeSlot'     // Tải: Item -> Booking -> TimeSlot (để lấy start/end_time)
+    ];
+
+    /**
+     * Display a listing of the resource.
+     */
     public function index()
     {
 
-        $tickets = Ticket::where('user_id', Auth::id())->get();
+        $tickets = Ticket::with($this->ticketRelations)
+            ->where('user_id', Auth::id())
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         return response()->json([
             'success' => true,
             'message' => 'Danh sách vé của bạn',
@@ -26,7 +39,9 @@ class TicketApiController extends Controller
         ]);
     }
 
-
+    /**
+     * Display the specified resource.
+     */
     public function show($id)
     {
         $ticket = Ticket::with([
@@ -38,16 +53,20 @@ class TicketApiController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Ticket không tồn tại',
+
             ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Tạo ticket thành công, vui lòng thanh toán trong 2 phút.',
+            'message' => 'Chi tiết vé.',
             'data' => $ticket
         ]);
     }
 
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -69,7 +88,7 @@ class TicketApiController extends Controller
                     $availability = Availability::where('court_id', $bookingData['court_id'])
                         ->where('slot_id', $bookingData['time_slot_id'])
                         ->where('date', $bookingData['date'])
-                        ->lockForUpdate() // Khóa hàng để tránh người khác đặt cùng lúc
+                        ->lockForUpdate()
                         ->first();
 
                     if (!$availability || $availability->status !== 'open') {
@@ -102,23 +121,21 @@ class TicketApiController extends Controller
                         'court_id' => $bookingData['court_id'],
                         'time_slot_id' => $bookingData['time_slot_id'],
                         'date' => $bookingData['date'],
-                        'status' => 'pending',
+                        'status' => 'pending', // Sẽ cập nhật khi thanh toán
                     ]);
 
-                    // --- ĐÃ SỬA ---
-                    // Sửa 'price' thành 'unit_price' cho khớp với CSDL
                     Item::create([
                         'ticket_id' => $ticket->id,
                         'booking_id' => $createdBooking->id,
                         'unit_price' => $bookingData['unit_price'],
-                        'discount_amount' => 0,
+                        'discount_amount' => 0, // Giảm giá được áp dụng ở Ticket, không phải Item
                     ]);
 
                     Availability::where('court_id', $bookingData['court_id'])
                         ->where('slot_id', $bookingData['time_slot_id'])
                         ->where('date', $bookingData['date'])
                         ->update([
-                            'status' => 'closed',
+                            'status' => 'closed', // Tạm đóng
                             'note' => 'Đã đặt qua ticket #' . $ticket->id,
                         ]);
                 }
@@ -141,7 +158,7 @@ class TicketApiController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {
-            Log::error('Lỗi khi tạo ticket: ' . $e->getMessage());
+            Log::error('Lỗi khi tạo ticket: '. $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Đã có lỗi xảy ra phía server.'

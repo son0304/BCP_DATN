@@ -337,7 +337,9 @@ class VenueController extends Controller
             $validatedData['end_time'] .= ':00';
         }
 
-        $validatedData['is_active'] = $request->boolean('is_active');
+        $validatedData['is_active'] = $request->has('is_active')
+            ? $request->boolean('is_active')
+            : $venue->is_active;
 
         $venue->update([
             'name' => $validatedData['name'],
@@ -369,4 +371,3 @@ class VenueController extends Controller
         return redirect()->route('owner.venues.index')->with('success', 'Xóa sân thành công!');
     }
 }
-

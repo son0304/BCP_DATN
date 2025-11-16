@@ -23,8 +23,11 @@ export type Voucher = {
   code: string;
   value: number;
   type: '%' | 'VND';
+  start_at: string;
   expires_at: string | null;
+  max_discount_amount: number | null; 
 };
+
 
 type BookingDetailVenueProps = {
   venue: Venue;
@@ -44,7 +47,7 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
   const [activeCourtId, setActiveCourtId] = useState<number | null>(null);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<number>(0);
-  const [rawTotalPrice, setRawTotalPrice] = useState<number>(0); // Lưu tổng tiền gốc
+  const [rawTotalPrice, setRawTotalPrice] = useState<number>(0);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -54,33 +57,43 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
 
   const courts = venue.courts ?? [];
 
-  // ===== Format tiền
   const formatPrice = (price: number | string) => {
     const value = Number(price) || 0;
     return value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
   };
 
+  // Tạo hàm helper để tính toán chiết khấu chính xác =====
+  const calculateDiscount = (voucher: Voucher | null, total: number): number => {
+    if (!voucher) return 0;
+
+    let discount = 0;
+    if (voucher.type === '%') {
+      discount = (total * voucher.value) / 100;
+      // Áp dụng giới hạn (max_discount_amount)
+      if (voucher.max_discount_amount && voucher.max_discount_amount > 0 && discount > voucher.max_discount_amount) {
+        discount = voucher.max_discount_amount;
+      }
+    } else { // type === 'VND'
+      discount = voucher.value;
+    }
+    
+    // Đảm bảo chiết khấu không vượt quá tổng tiền
+    return Math.min(discount, total);
+  };
+  // ========================================================================
+
   // ===== Tính tổng tiền
   useEffect(() => {
     const total = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
-    setRawTotalPrice(total); // Đặt tổng tiền gốc
+    setRawTotalPrice(total);
 
-    let finalPrice = total;
-    if (selectedVoucher) {
-      // Tính toán chiết khấu chính xác
-      let discount = 0;
-      if (selectedVoucher.type === '%') {
-        discount = (total * selectedVoucher.value) / 100;
-        // NOTE: Chỗ này có thể thêm logic max_discount nếu có
-      } else { // type === 'VND'
-        discount = selectedVoucher.value;
-      }
-      // Đảm bảo chiết khấu không vượt quá tổng tiền
-      finalPrice -= Math.min(discount, total);
-    }
-    // Đảm bảo giá cuối cùng không âm
+    // ===== CẬP NHẬT (3): Sử dụng hàm helper mới =====
+    const discount = calculateDiscount(selectedVoucher, total);
+    const finalPrice = total - discount;
+    // ================================================
+
     setSelectedPrice(Math.max(0, finalPrice));
-  }, [selectedItems, selectedVoucher]);
+  }, [selectedItems, selectedVoucher]); // selectedVoucher đã bao gồm max_discount_amount
 
   // ===== Khi đổi ngày => reset selectedItems
   useEffect(() => {
@@ -127,13 +140,9 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
       unit_price: item.price,
     }));
 
-    // Tính toán giảm giá dựa trên rawTotalPrice
-    const total = rawTotalPrice; // Sử dụng tổng tiền gốc
-    const discount = selectedVoucher
-      ? selectedVoucher.type === '%'
-        ? Math.min((total * selectedVoucher.value) / 100, total) // Đảm bảo giảm giá % không vượt quá tổng
-        : Math.min(selectedVoucher.value, total) // Đảm bảo giảm giá VND không vượt quá tổng
-      : 0;
+    // ===== CẬP NHẬT (4): Sử dụng hàm helper mới để gửi discount_amount chính xác =====
+    const discount = calculateDiscount(selectedVoucher, rawTotalPrice);
+    // ==============================================================================
 
     setIsSubmitting(true);
 
@@ -245,7 +254,7 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
 
         {/* Form tổng tiền */}
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          {/* Truyền prop totalPrice={rawTotalPrice} */}
+          {/* Truyền prop totalPrice={rawTotalPrice} (Phần này đã đúng) */}
           <Voucher_Detail_Venue 
             onVoucherApply={setSelectedVoucher} 
             totalPrice={rawTotalPrice} 

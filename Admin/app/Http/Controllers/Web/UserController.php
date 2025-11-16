@@ -43,7 +43,7 @@ class UserController extends Controller
             $query->where('is_active', $request->is_active);
         }
 
-        $users = $query->paginate(15)->withQueryString();
+        $users = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
         $roles = Role::select('id', 'name')->get(); // Chỉ select những cột cần thiết
 
         return view('admin.users.index', compact('users', 'roles'));

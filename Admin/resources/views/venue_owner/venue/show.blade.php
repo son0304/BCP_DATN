@@ -1,44 +1,6 @@
 @extends('app')
 
 @section('content')
-    {{-- Thêm <style> để định nghĩa màu xanh lá/cam --}}
-    <style>
-        :root {
-            --bs-primary: #348738;
-            --bs-primary-rgb: 52, 135, 56;
-            --bs-primary-dark: #2d6a2d;
-            --bs-primary-bg-subtle: #e1f3e2;
-            --bs-primary-border-subtle: #d1e7dd;
-        }
-
-        .btn-primary {
-            --bs-btn-hover-bg: #2d6a2d;
-            --bs-btn-hover-border-color: #2d6a2d;
-        }
-
-        .text-primary {
-            color: var(--bs-primary) !important;
-        }
-
-        .btn-accent {
-            --bs-btn-bg: #f97316;
-            /* Tailwind orange-500 */
-            --bs-btn-border-color: #f97316;
-            --bs-btn-hover-bg: #ea580c;
-            /* Tailwind orange-600 */
-            --bs-btn-hover-border-color: #ea580c;
-            --bs-btn-color: #fff;
-        }
-
-        .card-header-green {
-            background-color: var(--bs-primary-bg-subtle);
-            border-bottom: 1px solid var(--bs-primary-border-subtle);
-        }
-
-        .badge-primary {
-            background-color: var(--bs-primary);
-        }
-    </style>
 
     <div class="container-fluid py-4">
 
@@ -48,7 +10,6 @@
                 <p class="text-muted mb-0">Quản lý thông tin cho: <strong>{{ $venue->name }}</strong></p>
             </div>
             <div>
-
                 <a href="{{ route('owner.venues.index') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-1"></i> Quay lại
                 </a>
@@ -99,7 +60,7 @@
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header card-header-green py-3 d-flex justify-content-between align-items-center">
                         <h5 class="mb-0 text-primary">Danh sách sân con ({{ $venue->courts->count() }})</h5>
-                        <a href="{{ route('owner.venues.courts.create', $venue->id) }}" class="btn btn-accent me-2">
+                        <a href="{{ route('owner.venues.courts.create', $venue->id) }}" class="btn btn-success me-2">
                             <i class="fas fa-plus me-1"></i> Thêm
                         </a>
                     </div>
@@ -113,7 +74,7 @@
                                             <th>Loại hình</th>
                                             <th>Giá (đ/giờ)</th>
                                             <th class="text-center">Loại sân</th>
-                                            <th class="text-end">Lịch</th>
+                                            <th class="text-end">Hành động</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -158,9 +119,6 @@
                     <div class="card-body d-grid gap-2">
                         <a href="{{ route('owner.venues.edit', $venue) }}" class="btn btn-warning">
                             <i class="fas fa-edit me-1"></i> Chỉnh sửa thông tin Venue
-                        </a>
-                        <a href="{{ route('owner.venues.courts.create', $venue->id) }}" class="btn btn-accent me-2">
-                            <i class="fas fa-plus me-1"></i> Thêm Sân Con Mới
                         </a>
                     </div>
                 </div>

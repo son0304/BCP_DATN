@@ -28,7 +28,7 @@ const Index_Detail_Venue: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const idVenue = Number(id);
   const { data: detail_venue, isLoading, refetch } = useFetchDataById<Venue>('venue', idVenue, { date: selectedDate });
-  
+
 
   // ======= Load sân lân cận =======
   useEffect(() => {
@@ -40,8 +40,8 @@ const Index_Detail_Venue: React.FC = () => {
         const list = Array.isArray(res?.data)
           ? res.data
           : Array.isArray(res?.data?.data)
-          ? res.data.data
-          : [];
+            ? res.data.data
+            : [];
         const items = list.filter((v: any) => v.id !== currentId).slice(0, 4);
         setRelatedVenues(items.length ? items : detail_venue?.data ? [detail_venue.data] : []);
       } catch (err) {
@@ -78,18 +78,23 @@ const Index_Detail_Venue: React.FC = () => {
       {/* ================= MAIN CONTENT ================= */}
       <div className="p-2 md:p-8 lg:p-10 space-y-10">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* === CỘT TRÁI === */}
-          <Info_Detail_Venue venue={venue} formatPrice={formatPrice} />
+          {/* === CỘT TRÁI: ĐẶT LỊCH === */}
+          <div className="lg:col-span-3 order-1">
+            <Booking_Detail_Venue
+              venue={venue}
+              user={user}
+              refetch={refetch}
+              selectedDate={selectedDate}
+              setSelectedDate={setSelectedDate}
+            />
+          </div>
 
-          {/* === CỘT PHẢI: ĐẶT LỊCH === */}
-          <Booking_Detail_Venue
-            venue={venue}
-            user={user}
-            refetch={refetch}
-            selectedDate={selectedDate}
-            setSelectedDate={setSelectedDate}
-          />
+          {/* === CỘT PHẢI: THÔNG TIN SÂN === */}
+          <div className="lg:col-span-2 order-2">
+            <Info_Detail_Venue venue={venue} formatPrice={formatPrice} />
+          </div>
         </div>
+
       </div>
 
       {/* ================= FOOTER ================= */}

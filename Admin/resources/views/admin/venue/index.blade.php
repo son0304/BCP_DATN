@@ -2,7 +2,6 @@
 
 @section('content')
 
-
 <div class="container-fluid py-4">
 
     <div class="card border-0 shadow-sm">
@@ -12,9 +11,6 @@
                     <h1 class="h4 mb-0 fw-bold">Quản lý thương hiệu sân</h1>
                     <p class="text-muted mb-0 small">Danh sách tất cả các sân trong hệ thống.</p>
                 </div>
-                <div>
-                    {{-- Nút "Thêm mới" đã bị xóa theo yêu cầu --}}
-                </div>
             </div>
         </div>
 
@@ -22,23 +18,23 @@
 
 
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-primary-green">
+                <table class="table table-hover table-bordered align-middle mb-0">
+                    <thead class="table-light text-center">
                         <tr>
-                            <th style="width: 60px;">ID</th>
+                            <th style="width: 100px;">ID</th>
                             <th>Tên sân</th>
                             <th>Chủ sở hữu</th>
                             <th>Địa điểm</th>
                             <th class="text-center" style="width: 130px;">Giờ mở cửa</th>
                             <th class="text-center" style="width: 130px;">Giờ đóng cửa</th>
                             <th class="text-center" style="width: 140px;">Trạng thái</th>
-                            <th class="text-end" style="width: 140px;">Hành động</th>
+                            <th style="width: 140px;">Hành động</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="text-center">
                         @forelse($venues as $venue)
                         <tr>
-                            <td class="fw-semibold">#{{ $venue->id }}</td>
+                            <td class="fw-semibold">{{ $venue->id }}</td>
                             <td>
                                 <strong class="text-dark d-block">{{ $venue->name }}</strong>
                                 <small class="text-muted">{{ $venue->phone ?? 'Chưa có SĐT' }}</small>
@@ -46,43 +42,42 @@
                             <td>{{ $venue->owner->name ?? 'N/A' }}</td>
                             <td>{{ $venue->province->name ?? 'N/A' }}</td>
 
-                            <td class="text-center">
+                            <td>
                                 @if ($venue->start_time)
-                                    <span class="badge  bg-success  border border-primary-subtle text-primary-emphasis rounded-pill px-3 py-2">
-                                        {{ \Carbon\Carbon::parse($venue->start_time)->format('H:i') }}
-                                    </span>
+
+                                <span class="badge bg-primary-subtle border border-primary-subtle text-primary-emphasis rounded-pill px-3 py-2">
+                                    {{ \Carbon\Carbon::parse($venue->start_time)->format('H:i') }}
+                                </span>
                                 @else
-                                    <span class="text-muted">—</span>
+                                <span class="text-muted">—</span>
                                 @endif
                             </td>
 
-                            <td class="text-center">
+                            <td>
                                 @if ($venue->end_time)
-                                    <span class="badge bg-warning border border-warning-subtle text-warning-emphasis rounded-pill px-3 py-2">
-                                        {{ \Carbon\Carbon::parse($venue->end_time)->format('H:i') }}
-                                    </span>
+
+                                <span class="badge bg-warning-subtle border border-warning-subtle text-warning-emphasis rounded-pill px-3 py-2">
+                                    {{ \Carbon\Carbon::parse($venue->end_time)->format('H:i') }}
+                                </span>
                                 @else
-                                    <span class="text-muted">—</span>
+                                <span class="text-muted">—</span>
                                 @endif
                             </td>
-
-                            {{-- --- ĐÃ SỬA: Chuyển lại thành Badge (nhãn) tĩnh --- --}}
-                            <td class="text-center">
+                            <td>
                                 @if ($venue->is_active == 1)
-                                    <span class="badge border bg-primary  text-success-emphasis rounded-pill px-3 py-2">
-                                        Hoạt động
-                                    </span>
+
+                                <span class="badge bg-success-subtle border border-success-subtle text-success-emphasis rounded-pill px-3 py-2">
+                                    Hoạt động
+                                </span>
                                 @else
-                                    <span class="badge bg-danger border border-danger-subtle text-danger-emphasis rounded-pill px-3 py-2">
-                                        Đã khóa
-                                    </span>
+                                <span class="badge bg-danger-subtle border border-danger-subtle text-danger-emphasis rounded-pill px-3 py-2">
+                                    Đã khóa
+                                </span>
                                 @endif
                             </td>
-
-                            {{-- Hành động (Nút "Xem" màu cam) --}}
-                            <td class="text-end">
-                                <a href="{{ route('admin.venues.show', $venue->id) }}" class="btn btn-sm text-secondary btn-accent me-2">
-                                    <i class="fas fa-eye me-1"></i>
+                            <td>
+                                <a href="{{ route('admin.venues.show', $venue->id) }}" class="btn btn-outline-primary btn-sm me-2">
+                                    <i class="fas fa-eye"></i>
                                 </a>
                             </td>
                         </tr>

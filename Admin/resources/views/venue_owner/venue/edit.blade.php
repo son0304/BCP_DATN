@@ -1,30 +1,7 @@
 @extends('app')
 
 @section('content')
-    {{-- Thêm <style> để định nghĩa màu xanh lá chủ đạo --}}
-    <style>
-        :root {
-            --bs-primary: #348738;
-            --bs-primary-rgb: 52, 135, 56;
-        }
-
-        .btn-primary {
-            --bs-btn-hover-bg: #2d6a2d;
-            --bs-btn-hover-border-color: #2d6a2d;
-        }
-
-        .form-control:focus,
-        .form-select:focus {
-            border-color: #84c887;
-            box-shadow: 0 0 0 0.25rem rgba(52, 135, 56, 0.25);
-        }
-
-        .form-switch .form-check-input:checked {
-            background-color: var(--bs-primary);
-            border-color: var(--bs-primary);
-        }
-    </style>
-
+    
     <div class="container-fluid py-4">
 
         <div class="d-flex justify-content-between align-items-center mb-4">

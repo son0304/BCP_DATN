@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\TicketApiController;
 use App\Http\Controllers\Api\TimeSlotApiController;
 use App\Http\Controllers\Api\VenueApiController;
 use App\Http\Controllers\Web\LocationController;
+use App\Http\Controllers\Api\VenueTypeApiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -41,6 +42,8 @@ Route::get('/promotions', [PromotionApiController::class, 'index']);
 
 Route::apiResource('reviews', ReviewApiController::class)
     ->only(['index', 'show']);
+
+Route::get('/venue_types', [VenueTypeApiController::class, 'index']);
 
 // ==================== PROTECTED ROUTES ====================
 // Những route này cần JWT token

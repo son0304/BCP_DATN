@@ -29,13 +29,25 @@ class TicketApiController extends Controller
 
     public function show($id)
     {
-        $ticket = Ticket::find($id);
+        $ticket = Ticket::with([
+            'items:id,ticket_id,booking_id,unit_price,discount_amount', // chỉ lấy các cột cần thiết của item
+            'items.booking:id,court_id,date,status', // chỉ lấy các cột cần thiết của booking
+            'items.booking.court:id,name' // chỉ lấy id và name của court
+        ])->find($id);
+        if (!$ticket) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ticket không tồn tại',
+            ], 404);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Tạo ticket thành công, vui lòng thanh toán trong 2 phút.',
             'data' => $ticket
         ]);
     }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -111,6 +123,8 @@ class TicketApiController extends Controller
                         ]);
                 }
 
+
+
                 return $ticket;
             });
 
@@ -133,5 +147,10 @@ class TicketApiController extends Controller
                 'message' => 'Đã có lỗi xảy ra phía server.'
             ], 500);
         }
+    }
+
+    public function payment(Request $request, $id)
+    {
+        //
     }
 }

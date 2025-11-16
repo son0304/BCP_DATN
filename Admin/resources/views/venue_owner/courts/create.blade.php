@@ -1,132 +1,100 @@
 @extends('app')
 
 @section('content')
-    {{-- Thêm <style> để định nghĩa màu xanh lá chủ đạo --}}
-    <style>
-        :root {
-            --bs-primary: #348738;
-            --bs-primary-rgb: 52, 135, 56;
-        }
 
-        .btn-primary {
-            --bs-btn-hover-bg: #2d6a2d;
-            --bs-btn-hover-border-color: #2d6a2d;
-        }
 
-        .btn-outline-primary {
-            --bs-btn-hover-color: #fff;
-        }
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-0 py-3">
+            {{-- Thêm thông báo sân này thuộc Venue nào (nếu có) --}}
+            @if (request('venue_id') && ($venue = \App\Models\Venue::find(request('venue_id'))))
+                <small class="text-muted">
+                    — cho thương hiệu: <span class="text-success fw-bold">{{ $venue->name }}</span>
+                </small>
+            @endif
+        </div>
+        <div class="card-body">
+            @if ($errors->any())
+                <div class="alert alert-danger">
+                    <strong>Có lỗi xảy ra!</strong>
+                    <ul>
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
-        .form-control:focus,
-        .form-select:focus {
-            border-color: #84c887;
-            box-shadow: 0 0 0 0.25rem rgba(52, 135, 56, 0.25);
-        }
+            <form action="{{ route('owner.venues.courts.store', ['venue' => $venue->id]) }}" method="POST"> @csrf
+                <input type="hidden" name="venue_id" value="{{ $venue->id }}">
 
-        /* Đảm bảo label cho hàng động có kích thước nhỏ hơn */
-        .time-slot-row .form-label {
-            font-size: .875em;
-            font-weight: 500;
-            margin-bottom: .25rem;
-        }
-    </style>
-
-    <div class="container-fluid mt-4">
-
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white border-0 py-3">
-                {{-- Thêm thông báo sân này thuộc Venue nào (nếu có) --}}
-                @if (request('venue_id') && ($venue = \App\Models\Venue::find(request('venue_id'))))
-                    <small class="text-muted">
-                        — cho thương hiệu: <span class="text-success fw-bold">{{ $venue->name }}</span>
-                    </small>
-                @endif
-            </div>
-            <div class="card-body">
-                @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <strong>Có lỗi xảy ra!</strong>
-                        <ul>
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
+                <fieldset class="mb-4">
+                    <legend class="h6 text-primary">1. Thông tin cơ bản</legend>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Tên sân <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name"
+                                value="{{ old('name') }}" required>
+                        </div>
                     </div>
-                @endif
 
-                <form action="{{ route('owner.venues.courts.store', ['venue' => $venue->id]) }}" method="POST"> @csrf
-                    <input type="hidden" name="venue_id" value="{{ $venue->id }}">
-
-                    <fieldset class="mb-4">
-                        <legend class="h6 text-primary">1. Thông tin cơ bản</legend>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="name" class="form-label">Tên sân <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="name" name="name"
-                                    value="{{ old('name') }}" required>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="venue_type_id" class="form-label">Loại hình <span
-                                        class="text-danger">*</span></label>
-                                <select class="form-select" id="venue_type_id" name="venue_type_id" required>
-                                    <option value="" disabled selected>-- Chọn loại hình --</option>
-                                    @foreach ($venueTypes as $venueType)
-                                        <option value="{{ $venueType->id }}"
-                                            {{ old('venue_type_id') == $venueType->id ? 'selected' : '' }}>
-                                            {{ $venueType->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="is_indoor" class="form-label">Loại sân <span
-                                        class="text-danger">*</span></label>
-                                <select class="form-select" id="is_indoor" name="is_indoor" required>
-                                    <option value="1" {{ old('is_indoor', '1') == '1' ? 'selected' : '' }}>Trong nhà
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="venue_type_id" class="form-label">Loại hình <span
+                                    class="text-danger">*</span></label>
+                            <select class="form-select" id="venue_type_id" name="venue_type_id" required>
+                                <option value="" disabled selected>-- Chọn loại hình --</option>
+                                @foreach ($venueTypes as $venueType)
+                                    <option value="{{ $venueType->id }}"
+                                        {{ old('venue_type_id') == $venueType->id ? 'selected' : '' }}>
+                                        {{ $venueType->name }}
                                     </option>
-                                    <option value="0" {{ old('is_indoor', '0') == '0' ? 'selected' : '' }}>Ngoài trời
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="surface" class="form-label">Bề mặt sân</label>
-                                <input type="text" class="form-control" id="surface" name="surface"
-                                    value="{{ old('surface') }}" placeholder="Ví dụ: Cỏ nhân tạo, Sàn gỗ">
-                            </div>
+                                @endforeach
+                            </select>
                         </div>
-                    </fieldset>
-
-                    {{-- Khung giờ & giá giống như trước --}}
-                    <fieldset>
-                        <legend class="h6 text-primary">2. Khung giờ & Giá</legend>
-                        <p class="text-muted small">
-                            Thiết lập các khung giờ hoạt động và giá tiền tương ứng. Lịch hoạt động cho 30 ngày tới sẽ được
-                            tự động tạo. <strong>Bạn phải thêm ít nhất một khung giờ.</strong>
-                        </p>
-
-                        <div class="row gx-2 mb-2 d-none d-md-flex small text-muted fw-bold">
-                            <div class="col-md-3"><label>Giờ bắt đầu</label></div>
-                            <div class="col-md-3"><label>Giờ kết thúc</label></div>
-                            <div class="col-md-4"><label>Giá (VNĐ)</label></div>
-                            <div class="col-md-2 text-end"><label>Xóa</label></div>
+                        <div class="col-md-4 mb-3">
+                            <label for="is_indoor" class="form-label">Loại sân <span class="text-danger">*</span></label>
+                            <select class="form-select" id="is_indoor" name="is_indoor" required>
+                                <option value="1" {{ old('is_indoor', '1') == '1' ? 'selected' : '' }}>Trong nhà
+                                </option>
+                                <option value="0" {{ old('is_indoor', '0') == '0' ? 'selected' : '' }}>Ngoài trời
+                                </option>
+                            </select>
                         </div>
-
-                        <div id="time-slots-container" class="p-3 bg-light rounded border"></div>
-                        <button type="button" id="add-time-slot-btn" class="btn btn-outline-primary mt-3">
-                            <i class="fas fa-plus me-1"></i> Thêm khung giờ
-                        </button>
-                    </fieldset>
-
-                    <div class="card-footer bg-white text-end border-0 px-0 pt-4">
-                        <a href="/venue/{{ $venue->id }}" class="btn btn-secondary">Hủy bỏ</a>
-                        <button type="submit" class="btn btn-primary">Lưu lại</button>
+                        <div class="col-md-4 mb-3">
+                            <label for="surface" class="form-label">Bề mặt sân</label>
+                            <input type="text" class="form-control" id="surface" name="surface"
+                                value="{{ old('surface') }}" placeholder="Ví dụ: Cỏ nhân tạo, Sàn gỗ">
+                        </div>
                     </div>
-                </form>
+                </fieldset>
 
-            </div>
+                {{-- Khung giờ & giá giống như trước --}}
+                <fieldset>
+                    <legend class="h6 text-primary">2. Khung giờ & Giá</legend>
+                    <p class="text-muted small">
+                        Thiết lập các khung giờ hoạt động và giá tiền tương ứng. Lịch hoạt động cho 30 ngày tới sẽ được
+                        tự động tạo. <strong>Bạn phải thêm ít nhất một khung giờ.</strong>
+                    </p>
+
+                    <div class="row gx-2 mb-2 d-none d-md-flex small text-muted fw-bold">
+                        <div class="col-md-3"><label>Giờ bắt đầu</label></div>
+                        <div class="col-md-3"><label>Giờ kết thúc</label></div>
+                        <div class="col-md-4"><label>Giá (VNĐ)</label></div>
+                        <div class="col-md-2 text-end"><label>Xóa</label></div>
+                    </div>
+
+                    <div id="time-slots-container" class="p-3 bg-light rounded border"></div>
+                    <button type="button" id="add-time-slot-btn" class="btn btn-outline-primary mt-3">
+                        <i class="fas fa-plus me-1"></i> Thêm khung giờ
+                    </button>
+                </fieldset>
+
+                <div class="card-footer bg-white text-end border-0 px-0 pt-4">
+                    <a href="/venue/{{ $venue->id }}" class="btn btn-secondary">Hủy bỏ</a>
+                    <button type="submit" class="btn btn-primary">Lưu lại</button>
+                </div>
+            </form>
+
         </div>
     </div>
 @endsection

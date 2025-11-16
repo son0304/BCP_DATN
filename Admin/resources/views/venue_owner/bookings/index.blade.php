@@ -162,11 +162,11 @@
                                 $statusText = $statusLabels[$ticket->status] ?? 'Không xác định';
                                 @endphp
 
-                                <span class="badge 
-        @if($ticket->status=='pending') bg-warning 
-        @elseif($ticket->status=='confirmed') bg-success 
-        @elseif($ticket->status=='completed') bg-primary 
-        @elseif($ticket->status=='cancelled') bg-danger 
+                                <span class="badge
+        @if($ticket->status=='pending') bg-warning
+        @elseif($ticket->status=='confirmed') bg-success
+        @elseif($ticket->status=='completed') bg-primary
+        @elseif($ticket->status=='cancelled') bg-danger
         @else bg-secondary @endif">
                                     {{ $statusText }}
                                 </span>
@@ -182,10 +182,10 @@
                                 $paymentText = $paymentLabels[$ticket->payment_status] ?? 'Không xác định';
                                 @endphp
 
-                                <span class="badge 
-        @if($ticket->payment_status=='unpaid') bg-danger 
-        @elseif($ticket->payment_status=='paid') bg-success 
-        @elseif($ticket->payment_status=='refunded') bg-info text-dark 
+                                <span class="badge
+        @if($ticket->payment_status=='unpaid') bg-danger
+        @elseif($ticket->payment_status=='paid') bg-success
+        @elseif($ticket->payment_status=='refunded') bg-info text-dark
         @else bg-secondary @endif">
                                     {{ $paymentText }}
                                 </span>

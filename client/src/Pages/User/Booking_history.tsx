@@ -3,7 +3,6 @@ import type { User } from "../../Types/user";
 import { useFetchData } from "../../Hooks/useApi";
 import { Modal, Descriptions, List, Steps, Tag } from "antd";
 import type { Ticket } from "../../Types/tiket";
-import Detail_Booking from "./Detail_Booking";
 import { Link } from "react-router-dom";
 
 const BookingHistory = ({ user }: { user: User }) => {

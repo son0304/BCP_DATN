@@ -1,77 +1,6 @@
 @extends('app')
 
 @section('content')
-<style>
-    .btn-primary {
-        --bs-btn-hover-bg: #2d6a2d;
-        --bs-btn-hover-border-color: #2d6a2d;
-    }
-
-    .btn-accent {
-        --bs-btn-bg: #f97316;
-        --bs-btn-border-color: #f97316;
-        --bs-btn-hover-bg: #ea580c;
-        --bs-btn-hover-border-color: #ea580c;
-        --bs-btn-color: #fff;
-    }
-
-    .table-primary-green {
-        background-color: var(--bs-primary);
-        color: #fff;
-    }
-
-    .badge.bg-draft {
-        background-color: #f59e0b !important;
-        color: #fff !important;
-    }
-
-    :root {
-        --bs-primary-green: #348738;
-        --bs-primary-green-dark: #2d6a2d;
-    }
-
-    .bg-primary-green {
-        background-color: var(--bs-primary-green) !important;
-    }
-
-    .btn-primary-green {
-        background-color: var(--bs-primary-green);
-        border-color: var(--bs-primary-green);
-        color: #fff;
-    }
-
-    .btn-primary-green:hover {
-        background-color: var(--bs-primary-green-dark);
-        border-color: var(--bs-primary-green-dark);
-    }
-
-    .ticket-detail-modal {
-        border-radius: 12px;
-        overflow: hidden;
-    }
-
-    .ticket-detail-modal .info-box {
-        background-color: #fff;
-        border-radius: 10px;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-
-    .ticket-detail-modal .info-box h6 {
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: #666;
-    }
-
-    .ticket-detail-modal .booking-item {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .ticket-detail-modal .booking-item:hover {
-        transform: scale(1.01);
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-</style>
 
 <div class="mt-4">
     <div class="card shadow-sm border-0">
@@ -79,15 +8,14 @@
             <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <h1 class="h3 mb-0 fw-bold">Danh sách đơn đặt sân</h1>
 
-                <form method="GET" class="mb-3 d-flex gap-2" style="min-width: 300px;">
-                    <input type="text" name="search" class="form-control" placeholder="Tìm theo tên khách hàng" value="{{ $search ?? '' }}">
-                    <select name="venue" class="form-select">
-                        <option value="">Tất cả sân</option>
-                        @foreach($venues as $venue)
-                        <option value="{{ $venue->id }}" {{ ($venueId ?? '') == $venue->id ? 'selected' : '' }}>{{ $venue->name }}</option>
-                        @endforeach
-                    </select>
-                    <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> Tìm</button>
+                <form method="GET" class="mb-3 row g-2">
+                    <div class="col-12 col-md">
+                        <input type="text" name="search" class="form-control" placeholder="Tìm theo tên khách hàng" value="{{ $search ?? '' }}">
+                    </div>
+                  
+                    <div class="col-12 col-md-auto">
+                        <button class="btn btn-primary w-100" type="submit"><i class="fas fa-search"></i> Tìm</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -142,9 +70,16 @@
                                 </span>
                             </td>
                             <td>
-                                @foreach($ticket->items as $item)
+                                @php
+                                $uniqueVenues = $ticket->items
+                                ->pluck('booking.court.venue')
+                                ->filter() // loại bỏ null
+                                ->unique('id'); // lọc trùng theo id
+                                @endphp
+
+                                @foreach($uniqueVenues as $venue)
                                 <span class="badge bg-warning text-dark mb-1">
-                                    {{ $item->booking->court->venue->name ?? 'N/A' }}
+                                    {{ $venue->name }}
                                 </span>
                                 @endforeach
                             </td>
@@ -162,11 +97,11 @@
                                 $statusText = $statusLabels[$ticket->status] ?? 'Không xác định';
                                 @endphp
 
-                                <span class="badge 
-        @if($ticket->status=='pending') bg-warning 
-        @elseif($ticket->status=='confirmed') bg-success 
-        @elseif($ticket->status=='completed') bg-primary 
-        @elseif($ticket->status=='cancelled') bg-danger 
+                                <span class="badge
+        @if($ticket->status=='pending') bg-warning
+        @elseif($ticket->status=='confirmed') bg-success
+        @elseif($ticket->status=='completed') bg-primary
+        @elseif($ticket->status=='cancelled') bg-danger
         @else bg-secondary @endif">
                                     {{ $statusText }}
                                 </span>
@@ -182,10 +117,10 @@
                                 $paymentText = $paymentLabels[$ticket->payment_status] ?? 'Không xác định';
                                 @endphp
 
-                                <span class="badge 
-        @if($ticket->payment_status=='unpaid') bg-danger 
-        @elseif($ticket->payment_status=='paid') bg-success 
-        @elseif($ticket->payment_status=='refunded') bg-info text-dark 
+                                <span class="badge
+        @if($ticket->payment_status=='unpaid') bg-danger
+        @elseif($ticket->payment_status=='paid') bg-success
+        @elseif($ticket->payment_status=='refunded') bg-info text-dark
         @else bg-secondary @endif">
                                     {{ $paymentText }}
                                 </span>

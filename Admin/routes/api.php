@@ -35,6 +35,8 @@ Route::get('/province/{id}', [ProvinceApiController::class, 'show']);
 Route::get('/districts', [DistrictApiController::class, 'index']);
 Route::get('/district/{id}', [DistrictApiController::class, 'show']);
 Route::get('/districts/{province}', [LocationController::class, 'getDistrictsByProvince']);
+Route::get('/ticket/{id}', [TicketApiController::class, 'show']);
+Route::get('/tickets', [TicketApiController::class, 'index']);
 
 
 Route::get('/promotions', [PromotionApiController::class, 'index']);
@@ -51,7 +53,7 @@ Route::middleware(['jwt.auth'])->group(function () {
 
     // Tickets
     Route::get('/tickets', [TicketApiController::class, 'index']);
-    Route::get('/ticket/{id}', [TicketApiController::class, 'show']);
+    // Route::get('/ticket/{id}', [TicketApiController::class, 'show']);
     Route::post('/tickets', [TicketApiController::class, 'store']);
 
     // Venue (create)

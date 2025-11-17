@@ -125,7 +125,7 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('home.index')
+        return redirect()->route('login')
             ->with('success', 'Đăng xuất thành công!');
     }
 

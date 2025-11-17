@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
+use App\Models\Venue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -11,44 +12,55 @@ class BookingController extends Controller
 {
     public function index(Request $request)
     {
-        $user = $user ?? Auth::user();
+        $user = Auth::user();
         $search = $request->input('search');
         $status = $request->input('status');
-        $venueId = $request->input('venue'); // 🔹 Thêm lọc venue
+        $venueId = $request->input('venue');
 
-        // Query cơ bản: chỉ lấy ticket có sân thuộc chủ sân hiện tại
-        $query = Ticket::with([
-            'user',
-            'items.booking.court.venue', // 🔹 load venue
-            'items.booking.timeSlot',
-        ])->whereHas('items.booking.court.venue', function ($q) use ($user, $venueId) {
-            $q->where('owner_id', $user->id);
+        if ($user->role === 'venue_owner') {
+            $query = Ticket::with([
+                'user',
+                'items.booking.court.venue',
+                'items.booking.timeSlot',
+            ]);
+        } else {
+            $query = Ticket::with([
+                'user',
+                'items.booking.court.venue',
+                'items.booking.timeSlot',
+            ])->whereHas('items.booking.court', function ($q) use ($venueId) {
+                $q->whereHas('venue', function ($q2) use ( $venueId) {
+                    if ($venueId) {
+                        $q2->where('id', $venueId);
+                    }
+                });
+            });
+        }
 
-            if ($venueId) {
-                $q->where('id', $venueId); // lọc theo venue
-            }
-        });
-
-        // Lọc theo trạng thái đơn (nếu có)
         if ($status) {
             $query->where('status', $status);
         }
 
-        // Lọc theo tên người dùng (nếu có)
         if ($search) {
             $query->whereHas('user', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%");
             });
         }
 
-        // Lấy dữ liệu mới nhất
         $tickets = $query->orderBy('created_at', 'desc')->paginate(10);
 
-        // 🔹 Lấy danh sách venues để hiển thị dropdown
-        $venues = \App\Models\Venue::where('owner_id', $user->id)->orderBy('name')->get();
+        $venues = Venue::all();
 
-        return view('venue_owner.bookings.index', compact('tickets', 'search', 'status', 'venues', 'venueId'));
+
+        if ($user->role->name === 'venue_owner') {
+            return view('venue_owner.bookings.index', compact('tickets', 'search', 'status', 'venues', 'venueId'));
+        } elseif ($user->role->name === 'admin') {
+            return view('admin.bookings.index', compact('tickets', 'search', 'status', 'venues', 'venueId'));
+        } else {
+            // abort(403);
+        }
     }
+
 
 
     public function update(Request $request, $id)

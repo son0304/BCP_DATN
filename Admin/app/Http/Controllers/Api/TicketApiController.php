@@ -15,11 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class TicketApiController extends Controller
 {
-    
-    protected $ticketRelations = [
-        'items.booking.court.venue', // Tải: Item -> Booking -> Court -> Venue
-        'items.booking.timeSlot'     // Tải: Item -> Booking -> TimeSlot (để lấy start/end_time)
-    ];
+
+
 
     /**
      * Display a listing of the resource.
@@ -27,7 +24,13 @@ class TicketApiController extends Controller
     public function index()
     {
 
-        $tickets = Ticket::with($this->ticketRelations) 
+        $tickets = Ticket::with([
+            'user:id,name,email,role_id,phone,avt',
+            'items:id,ticket_id,booking_id,unit_price,discount_amount',
+            'items.booking:id,court_id,date,status,time_slot_id',
+            'items.booking.court:id,name',
+            'items.booking.timeSlot:id,end_time,start_time'
+        ])
             ->where('user_id', Auth::id())
             ->orderBy('created_at', 'desc')
             ->get();
@@ -44,15 +47,18 @@ class TicketApiController extends Controller
      */
     public function show($id)
     {
-
-        $ticket = Ticket::with($this->ticketRelations)
-            ->where('user_id', Auth::id())
-            ->find($id);
-
+        $ticket = Ticket::with([
+            'user:id,name,email,role_id,phone,avt',
+            'items:id,ticket_id,booking_id,unit_price,discount_amount',
+            'items.booking:id,court_id,date,status,time_slot_id',
+            'items.booking.court:id,name',
+            'items.booking.timeSlot:id,end_time,start_time'
+        ])->find($id);
         if (!$ticket) {
             return response()->json([
                 'success' => false,
-                'message' => 'Không tìm thấy vé.',
+                'message' => 'Ticket không tồn tại',
+
             ], 404);
         }
 
@@ -139,6 +145,8 @@ class TicketApiController extends Controller
                         ]);
                 }
 
+
+
                 return $ticket;
             });
 
@@ -155,11 +163,16 @@ class TicketApiController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Throwable $e) {
-            Log::error('Lỗi khi tạo ticket: '->getMessage());
+            Log::error('Lỗi khi tạo ticket: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Đã có lỗi xảy ra phía server.'
             ], 500);
         }
+    }
+
+    public function payment(Request $request, $id)
+    {
+        //
     }
 }

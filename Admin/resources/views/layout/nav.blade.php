@@ -89,11 +89,11 @@
     <!-- Logo -->
     <div class="logo-box">
         <a href="{{ route('home.index') }}" class="logo text-center">
-            <span class="logo-lg">
-                <img src="{{ asset('template/assets/images/logo.png') }}" alt="" height="64">
+            <span class="logo-lg rounded-full ">
+                <img src="{{ asset('template/assets/images/logo.png') }}" alt="Logo MyApp" width="64" height="64" class="rounded-circle bg-white p-1 shadow-sm">
             </span>
             <span class="logo-sm">
-                <img src="{{ asset('template/assets/images/logo.png') }}" alt="" height="24">
+                <img src="{{ asset('template/assets/images/logo.png') }}" alt="" height="32" class="rounded-circle bg-white p-1 shadow-sm">
             </span>
         </a>
     </div>

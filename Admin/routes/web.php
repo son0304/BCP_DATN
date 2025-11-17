@@ -85,6 +85,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::put('{promotion}', [PromotionController::class, 'update'])->name('update');
         Route::delete('{promotion}', [PromotionController::class, 'destroy'])->name('destroy');
     });
+
+    Route::prefix('bookings')->name('bookings.')->group(function () {
+        Route::get('/', [BookingController::class, 'index'])->name('index');
+
+    });
 });
 
 

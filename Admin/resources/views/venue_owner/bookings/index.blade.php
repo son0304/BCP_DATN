@@ -12,14 +12,7 @@
                     <div class="col-12 col-md">
                         <input type="text" name="search" class="form-control" placeholder="Tìm theo tên khách hàng" value="{{ $search ?? '' }}">
                     </div>
-                    <div class="col-12 col-md">
-                        <select name="venue" class="form-select">
-                            <option value="">Tất cả sân</option>
-                            @foreach($venues as $venue)
-                            <option value="{{ $venue->id }}" {{ ($venueId ?? '') == $venue->id ? 'selected' : '' }}>{{ $venue->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                  
                     <div class="col-12 col-md-auto">
                         <button class="btn btn-primary w-100" type="submit"><i class="fas fa-search"></i> Tìm</button>
                     </div>
@@ -104,11 +97,11 @@
                                 $statusText = $statusLabels[$ticket->status] ?? 'Không xác định';
                                 @endphp
 
-                                <span class="badge 
-        @if($ticket->status=='pending') bg-warning 
-        @elseif($ticket->status=='confirmed') bg-success 
-        @elseif($ticket->status=='completed') bg-primary 
-        @elseif($ticket->status=='cancelled') bg-danger 
+                                <span class="badge
+        @if($ticket->status=='pending') bg-warning
+        @elseif($ticket->status=='confirmed') bg-success
+        @elseif($ticket->status=='completed') bg-primary
+        @elseif($ticket->status=='cancelled') bg-danger
         @else bg-secondary @endif">
                                     {{ $statusText }}
                                 </span>
@@ -124,10 +117,10 @@
                                 $paymentText = $paymentLabels[$ticket->payment_status] ?? 'Không xác định';
                                 @endphp
 
-                                <span class="badge 
-        @if($ticket->payment_status=='unpaid') bg-danger 
-        @elseif($ticket->payment_status=='paid') bg-success 
-        @elseif($ticket->payment_status=='refunded') bg-info text-dark 
+                                <span class="badge
+        @if($ticket->payment_status=='unpaid') bg-danger
+        @elseif($ticket->payment_status=='paid') bg-success
+        @elseif($ticket->payment_status=='refunded') bg-info text-dark
         @else bg-secondary @endif">
                                     {{ $paymentText }}
                                 </span>

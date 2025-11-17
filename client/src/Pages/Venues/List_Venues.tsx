@@ -168,7 +168,7 @@ const List_Venue = ({ limit }: VenuesProps) => {
 
                       <button
                         onClick={() => navigate(`/venues/${venue.id}`)}
-                        className="mt-auto bg-[#F59E0B] hover:bg-[#D97706] text-white font-semibold text-[11px] sm:text-[13px] py-1.5 sm:py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+                        className="mt-auto c hover:bg-[#D97706] text-white font-semibold text-[11px] sm:text-[13px] py-1.5 sm:py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
                       >
                         Xem chi tiết
                       </button>

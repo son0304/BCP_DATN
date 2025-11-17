@@ -1,4 +1,5 @@
 <!-- Vendor js -->
+
 <script src="{{ asset('template/assets/js/vendor.min.js') }}"></script>
 <script src="{{ asset('template/assets/libs/jquery-knob/jquery.knob.min.js') }}"></script>
 <script src="{{ asset('template/assets/libs/peity/jquery.peity.min.js') }}"></script>

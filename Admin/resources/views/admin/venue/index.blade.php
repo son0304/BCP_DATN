@@ -44,6 +44,7 @@
 
                             <td>
                                 @if ($venue->start_time)
+
                                 <span class="badge bg-primary-subtle border border-primary-subtle text-primary-emphasis rounded-pill px-3 py-2">
                                     {{ \Carbon\Carbon::parse($venue->start_time)->format('H:i') }}
                                 </span>
@@ -54,6 +55,7 @@
 
                             <td>
                                 @if ($venue->end_time)
+
                                 <span class="badge bg-warning-subtle border border-warning-subtle text-warning-emphasis rounded-pill px-3 py-2">
                                     {{ \Carbon\Carbon::parse($venue->end_time)->format('H:i') }}
                                 </span>
@@ -63,6 +65,7 @@
                             </td>
                             <td>
                                 @if ($venue->is_active == 1)
+
                                 <span class="badge bg-success-subtle border border-success-subtle text-success-emphasis rounded-pill px-3 py-2">
                                     Hoạt động
                                 </span>

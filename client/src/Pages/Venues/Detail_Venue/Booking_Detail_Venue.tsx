@@ -25,9 +25,8 @@ export type Voucher = {
   type: '%' | 'VND';
   start_at: string;
   expires_at: string | null;
-  max_discount_amount: number | null; 
+  max_discount_amount: number | null;
 };
-
 
 type BookingDetailVenueProps = {
   venue: Venue;
@@ -62,59 +61,58 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
     return value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
   };
 
-  // Tạo hàm helper để tính toán chiết khấu chính xác =====
+  // ===== Helper tính discount
   const calculateDiscount = (voucher: Voucher | null, total: number): number => {
     if (!voucher) return 0;
+
+    // Kiểm tra voucher còn hạn
+    const now = new Date();
+    if (voucher.expires_at && new Date(voucher.expires_at) < now) return 0;
 
     let discount = 0;
     if (voucher.type === '%') {
       discount = (total * voucher.value) / 100;
-      // Áp dụng giới hạn (max_discount_amount)
-      if (voucher.max_discount_amount && voucher.max_discount_amount > 0 && discount > voucher.max_discount_amount) {
+      if (voucher.max_discount_amount && discount > voucher.max_discount_amount) {
         discount = voucher.max_discount_amount;
       }
-    } else { // type === 'VND'
+    } else {
       discount = voucher.value;
     }
-    
-    // Đảm bảo chiết khấu không vượt quá tổng tiền
     return Math.min(discount, total);
   };
-  // ========================================================================
 
-  // ===== Tính tổng tiền
+  // ===== Tính tổng tiền & discount
   useEffect(() => {
     const total = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
     setRawTotalPrice(total);
 
-    // ===== CẬP NHẬT (3): Sử dụng hàm helper mới =====
     const discount = calculateDiscount(selectedVoucher, total);
-    const finalPrice = total - discount;
-    // ================================================
+    setSelectedPrice(Math.max(0, total - discount));
+  }, [selectedItems, selectedVoucher]);
 
-    setSelectedPrice(Math.max(0, finalPrice));
-  }, [selectedItems, selectedVoucher]); // selectedVoucher đã bao gồm max_discount_amount
-
-  // ===== Khi đổi ngày => reset selectedItems
+  // ===== Khi đổi ngày => reset tất cả
   useEffect(() => {
     refetch();
     setSelectedItems([]);
+    setRawTotalPrice(0);
+    setSelectedPrice(0);
+    setSelectedVoucher(null);
   }, [selectedDate, refetch]);
 
-  // ===== Chọn sân con mặc định
+  // ===== Chọn court mặc định
   useEffect(() => {
     if (courts.length && activeCourtId === null) setActiveCourtId(courts[0].id);
   }, [courts, activeCourtId]);
 
-  // ===== Chọn slot
+  // ===== Chọn / bỏ chọn slot
   const handleSelectItem = (clickedItem: SelectedItem, status?: string | null) => {
     if (status !== 'open') {
       const msg =
         status === 'booked'
           ? 'Khung giờ này đã được người khác đặt trước.'
           : status === 'maintenance'
-          ? 'Khung giờ này đang bảo trì.'
-          : 'Khung giờ này không khả dụng.';
+            ? 'Khung giờ này đang bảo trì.'
+            : 'Khung giờ này không khả dụng.';
       return showNotification(msg, 'error');
     }
 
@@ -123,7 +121,9 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
     );
 
     setSelectedItems((prev) =>
-      isSelected ? prev.filter((i) => !(i.court_id === clickedItem.court_id && i.time_slot_id === clickedItem.time_slot_id)) : [...prev, clickedItem]
+      isSelected
+        ? prev.filter((i) => !(i.court_id === clickedItem.court_id && i.time_slot_id === clickedItem.time_slot_id))
+        : [...prev, clickedItem]
     );
   };
 
@@ -140,9 +140,8 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
       unit_price: item.price,
     }));
 
-    // ===== CẬP NHẬT (4): Sử dụng hàm helper mới để gửi discount_amount chính xác =====
-    const discount = calculateDiscount(selectedVoucher, rawTotalPrice);
-    // ==============================================================================
+    const total = selectedItems.reduce((sum, item) => sum + item.price, 0);
+    const discount = calculateDiscount(selectedVoucher, total);
 
     setIsSubmitting(true);
 
@@ -174,12 +173,8 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
         {/* Chọn ngày */}
         <div className="mb-4">
           <label className="text-base font-semibold text-[#4B5563]">Chọn ngày</label>
-          <input
-            type="date"
+          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={new Date().toISOString().slice(0, 10)}
             className="w-full mt-2 px-3 py-2 border border-[#E5E7EB] rounded-lg focus:ring-2 focus:ring-[#10B981] outline-none text-[#4B5563]"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            min={new Date().toISOString().slice(0, 10)}
           />
         </div>
 
@@ -188,12 +183,11 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
           <label className="text-base font-semibold text-[#4B5563]">Chọn sân con</label>
           <div className="mt-2 flex flex-wrap gap-2">
             {courts.map((court) => (
-              <button
-                key={court.id}
-                onClick={() => setActiveCourtId(court.id)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-200 ${
-                  activeCourtId === court.id ? 'bg-[#10B981] text-white shadow-md' : 'bg-[#F9FAFB] text-[#4B5563] hover:bg-gray-100 border-[#E5E7EB]'
-                }`}
+              <button key={court.id} onClick={() => setActiveCourtId(court.id)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-200 ${activeCourtId === court.id
+                  ? 'bg-[#10B981] text-white shadow-md'
+                  : 'bg-[#F9FAFB] text-[#4B5563] hover:bg-gray-100 border-[#E5E7EB]'
+                  }`}
               >
                 {court.name}
               </button>
@@ -206,7 +200,7 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
           <p className="text-base font-semibold text-[#4B5563] mb-3">
             Khung giờ có sẵn ({selectedItems.length} đã chọn)
           </p>
-          <div className="grid grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-1">
+          <div className="grid grid-cols-4 gap-2 max-h-80 overflow-y-auto pr-1">
             {courts
               .filter((c) => c.id === activeCourtId)
               .flatMap((court: any) => court.time_slots?.map((time: any) => ({ court, time })) ?? [])
@@ -219,8 +213,8 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
                   time.status === 'open'
                     ? 'bg-green-50 text-green-800 border border-green-200'
                     : time.status === 'booked'
-                    ? 'bg-red-100 text-red-600 cursor-not-allowed opacity-60'
-                    : 'bg-gray-100 text-gray-500 cursor-not-allowed';
+                      ? 'bg-red-100 text-red-600 cursor-not-allowed opacity-60'
+                      : 'bg-gray-100 text-gray-500 cursor-not-allowed';
 
                 if (isSelected) cls = 'bg-[#10B981] text-white ring-2 ring-green-300 shadow-md';
 
@@ -242,7 +236,7 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
                       )
                     }
                     disabled={time.status !== 'open'}
-                    className={`p-3 rounded-lg flex flex-col items-center font-semibold text-sm ${cls}`}
+                    className={`p-1 rounded-lg flex flex-col items-center font-semibold text-sm ${cls}`}
                   >
                     <div>{time.label ?? `${time.start_time.slice(0, 5)} - ${time.end_time.slice(0, 5)}`}</div>
                     <div className="text-xs mt-1">{formatPrice(time.price)}</div>
@@ -254,11 +248,7 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
 
         {/* Form tổng tiền */}
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          {/* Truyền prop totalPrice={rawTotalPrice} (Phần này đã đúng) */}
-          <Voucher_Detail_Venue 
-            onVoucherApply={setSelectedVoucher} 
-            totalPrice={rawTotalPrice} 
-          />
+          <Voucher_Detail_Venue onVoucherApply={setSelectedVoucher} totalPrice={rawTotalPrice} />
 
           <div className="pt-4 border-t border-gray-200">
             <div className="flex justify-between">
@@ -268,11 +258,14 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
             <button
               type="submit"
               disabled={selectedItems.length === 0 || isSubmitting}
-              className={`w-full mt-4 py-3 rounded-lg text-white font-semibold flex items-center justify-center gap-2 ${
-                selectedItems.length === 0 || isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600'
-              }`}
+              className={`w-full mt-4 py-3 rounded-lg text-white font-semibold flex items-center justify-center gap-2 ${selectedItems.length === 0 || isSubmitting
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-emerald-500 hover:bg-emerald-600'
+                }`}
             >
-              {isSubmitting && <span className="loader-border animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full" />}
+              {isSubmitting && (
+                <span className="loader-border animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+              )}
               {isSubmitting ? 'Đang đặt...' : `Đặt ngay (${selectedItems.length})`}
             </button>
           </div>

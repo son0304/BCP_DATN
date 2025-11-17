@@ -12,14 +12,7 @@
                     <div class="col-12 col-md">
                         <input type="text" name="search" class="form-control" placeholder="Tìm theo tên khách hàng" value="{{ $search ?? '' }}">
                     </div>
-                    <div class="col-12 col-md">
-                        <select name="venue" class="form-select">
-                            <option value="">Tất cả sân</option>
-                            @foreach($venues as $venue)
-                            <option value="{{ $venue->id }}" {{ ($venueId ?? '') == $venue->id ? 'selected' : '' }}>{{ $venue->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                  
                     <div class="col-12 col-md-auto">
                         <button class="btn btn-primary w-100" type="submit"><i class="fas fa-search"></i> Tìm</button>
                     </div>

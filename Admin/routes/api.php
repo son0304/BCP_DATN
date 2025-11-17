@@ -52,7 +52,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::post('/logout', [AuthApiController::class, 'logout']);
 
     // Tickets
-    // Route::get('/tickets', [TicketApiController::class, 'index']);
+    Route::get('/tickets', [TicketApiController::class, 'index']);
     // Route::get('/ticket/{id}', [TicketApiController::class, 'show']);
     Route::post('/tickets', [TicketApiController::class, 'store']);
 

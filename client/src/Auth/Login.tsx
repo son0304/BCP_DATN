@@ -49,7 +49,7 @@ const Login = () => {
                     console.error("Lỗi đăng nhập:", error.message);
                 }
             },
-            onSettled: () => setIsLoading(false), // Kết thúc loading dù success hay error
+            onSettled: () => setIsLoading(false), 
         });
     };
 

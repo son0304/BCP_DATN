@@ -8,7 +8,7 @@
             <p class="text-muted mb-0">{{ $court->venue->name ?? 'N/A' }}</p>
         </div>
         <div>
-            <a href="{{ route('courts.index') }}" class="btn btn-secondary">
+            <a href="/owner/venues/{{ $venue->id }}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left me-1"></i> Quay lại
             </a>
             <a href="{{ route('owner.venues.courts.edit', ['venue' => $venue->id, 'court' => $court->id]) }}"
@@ -201,36 +201,62 @@
                                 <div class="time-slot-list border rounded p-2"
                                     style="max-height: 300px; overflow-y: auto;">
                                     <ul class="list-group">
-                                        @foreach ($dayAvailabilities->sortBy('timeSlot.start_time') as $availability)
+                                        @php
+                                        $now = \Carbon\Carbon::now('Asia/Ho_Chi_Minh');
+                                        @endphp
+
+                                        @foreach ($dayAvailabilities->sortBy(fn($a) => $a->timeSlot->start_time) as $availability)
+
+                                        @php
+                                        $slotStart = \Carbon\Carbon::parse($availability->timeSlot->start_time, 'Asia/Ho_Chi_Minh');
+                                        $slotEnd = \Carbon\Carbon::parse($availability->timeSlot->end_time, 'Asia/Ho_Chi_Minh');
+                                        @endphp
+
+                                        {{-- Nếu là NGÀY HÔM NAY và khung giờ đã kết thúc → ẨN --}}
+                                        @if ($carbonDate->isToday() && $slotEnd->lt($now))
+                                        @continue
+                                        @endif
+
                                         <li class="list-group-item py-2">
                                             <div class="d-flex align-items-center">
-                                                <span
-                                                    class="fw-semibold">{{ $availability->timeSlot->label }}</span>
-                                                <div class="d-flex align-items-center ms-auto"
-                                                    style="gap: 40px;">
-                                                    <span class="fw-semibold text-success text-end"
-                                                        style="min-width: 95px;">
+
+                                                {{-- Khung giờ --}}
+                                                <span class="fw-semibold">{{ $availability->timeSlot->label }}</span>
+
+                                                <div class="d-flex align-items-center ms-auto" style="gap:40px;">
+
+                                                    {{-- Giá --}}
+                                                    <span class="fw-semibold text-success" style="min-width:95px;">
                                                         {{ number_format($availability->price, 0, ',', '.') }}₫
                                                     </span>
 
+                                                    {{-- Trạng thái --}}
                                                     @if ($availability->status === 'booked')
-                                                    <span class="badge bg-danger"
-                                                        style="min-width: 90px;">Đã đặt</span>
+                                                    <span class="badge bg-danger" style="min-width:90px;">Đã đặt</span>
                                                     @else
-                                                    <div class="form-check form-switch ms-1"
-                                                        style="min-width: 90px;">
-                                                        <input type="hidden"
+                                                    <div class="form-check form-switch ms-1" style="min-width:90px;">
+                                                        <input type="hidden" name="statuses[{{ $availability->id }}]" value="maintenance">
+
+                                                        <input
+                                                            class="form-check-input"
+                                                            type="checkbox"
                                                             name="statuses[{{ $availability->id }}]"
-                                                            value="maintenance">
-                                                        <input class="form-check-input" type="checkbox"
-                                                            name="statuses[{{ $availability->id }}]"
-                                                            value="open" @checked($availability->status === 'open')>
+                                                            value="open"
+                                                            @checked($availability->status === 'open')
+                                                        {{-- Nếu khung giờ đã qua & hôm nay → khóa switch --}}
+                                                        @if ($carbonDate->isToday() && $slotEnd->lt($now))
+                                                        disabled
+                                                        @endif
+                                                        >
                                                     </div>
                                                     @endif
                                                 </div>
+
                                             </div>
                                         </li>
+
                                         @endforeach
+
                                     </ul>
                                 </div>
                             </div>

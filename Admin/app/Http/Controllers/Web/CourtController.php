@@ -238,8 +238,10 @@ class CourtController extends Controller
 
         $court->update($validated);
 
-        return redirect()->route('venue.courts.index', $venue->id)
-            ->with('success', 'Cập nhật sân thành công!');
+        return redirect()->route('owner.venues.courts.show', [
+            'venue' => $venue->id,
+            'court' => $court->id,
+        ])->with('success', 'Cập nhật sân thành công!');
     }
 
 

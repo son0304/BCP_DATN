@@ -28,6 +28,9 @@
                 method="POST"> @csrf
                 @method('PUT')
 
+                <input type="hidden" name="venue_id" value="{{ $venue->id }}">
+
+
                 {{-- THÔNG TIN CƠ BẢN --}}
                 <fieldset class="mb-4">
                     <legend class="h6">1. Thông tin cơ bản</legend>
@@ -79,38 +82,38 @@
                         lai.
                     </p>
 
-                    <div id="time-slots-container" class="p-3 bg-light rounded border">
+                    <div class="p-3 bg-light rounded border">
                         <div class="row gx-2 mb-2 fw-bold text-muted small d-none d-md-flex">
                             <div class="col-md-3">Giờ bắt đầu</div>
                             <div class="col-md-3">Giờ kết thúc</div>
                             <div class="col-md-4">Giá (VNĐ)</div>
                             <div class="col-md-2 text-end">Hành động</div>
                         </div>
-                        @foreach ($currentPricesDetailed as $i => $item)
-                        <div class="row align-items-center mb-2 time-slot-row p-2 bg-white rounded border">
-                            <div class="col-md-3">
-                                <input type="time" class="form-control form-control-sm"
-                                    name="time_slots[{{ $i }}][start_time]"
-                                    value="{{ \Carbon\Carbon::parse($item['start_time'])->format('H:i') }}"
-                                    required>
+                        <div id="time-slots-container">
+                            @foreach ($currentPricesDetailed as $i => $item)
+                            <div class="row align-items-center mb-2 time-slot-row p-2 bg-white rounded border">
+                                <div class="col-md-3">
+                                    <input type="time" class="form-control form-control-sm start"
+                                        name="time_slots[{{ $i }}][start_time]"
+                                        value="{{ \Carbon\Carbon::parse($item['start_time'])->format('H:i') }}" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="time" class="form-control form-control-sm end"
+                                        name="time_slots[{{ $i }}][end_time]"
+                                        value="{{ \Carbon\Carbon::parse($item['end_time'])->format('H:i') }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="number" class="form-control form-control-sm price"
+                                        name="time_slots[{{ $i }}][price]" value="{{ $item['price'] }}" min="0" step="1000" required>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-center justify-content-end">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-slot-btn">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="col-md-3">
-                                <input type="time" class="form-control form-control-sm"
-                                    name="time_slots[{{ $i }}][end_time]"
-                                    value="{{ \Carbon\Carbon::parse($item['end_time'])->format('H:i') }}" required>
-                            </div>
-                            <div class="col-md-4">
-                                <input type="number" class="form-control form-control-sm"
-                                    name="time_slots[{{ $i }}][price]" value="{{ $item['price'] }}"
-                                    min="0" step="1000" required>
-                            </div>
-                            <div class="col-md-2 d-flex align-items-center justify-content-end">
-                                <button type="button" class="btn btn-sm btn-outline-danger remove-slot-btn">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
+                            @endforeach
                         </div>
-                        @endforeach
                     </div>
 
                     <button type="button" id="add-time-slot-btn" class="btn btn-outline-primary mt-3">

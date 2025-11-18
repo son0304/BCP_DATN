@@ -37,10 +37,10 @@
                                             {{ request('role_id') == $role->id ? 'selected' : '' }}>
                                             @if ($role->name === 'admin')
                                             👑 Admin
-                                            @elseif ($role->name === 'user')
-                                            👔 Manager
                                             @elseif ($role->name === 'venue_owner')
-                                            🔑 Owner
+                                            👔 Chủ sân
+                                            @elseif ($role->name === 'user')
+                                            👤 Khách hàng
 
                                             @endif
                                         </option>

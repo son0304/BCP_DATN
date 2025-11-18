@@ -91,12 +91,18 @@
                                 <tr>
                                     <td><strong>{{ $court->name }}</strong></td>
                                     <td>{{ $court->venueType->name ?? 'N/A' }}</td>
-                                    <td>{{ number_format($court->price_per_hour, 0, ',', '.') }}</td>
                                     <td>
+                                        @php
+                                        $minPrice = $court->availabilities->min('price');
+                                        @endphp
+                                        {{ $minPrice ? number_format($minPrice, 0, ',', '.') . ' đ' : 'N/A' }}
+                                    </td>
+
+                                    <td class="text-center">
                                         @if ($court->is_indoor)
-                                        <span class="badge badge-primary py-1 px-2">Trong nhà</span>
+                                        <span class="badge bg-info text-dark">Trong nhà</span>
                                         @else
-                                        <span class="badge badge-accent py-1 px-2">Ngoài trời</span>
+                                        <span class="badge bg-warning text-dark">Ngoài trời</span>
                                         @endif
                                     </td>
                                     <td>

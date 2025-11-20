@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNotification } from '../../../Components/Notification';
-import type { Venue, EnrichedTimeSlot } from '../../../Types/venue'; // Import đúng Type bạn vừa gửi
+import type { Venue, EnrichedTimeSlot } from '../../../Types/venue';
 import type { User } from '../../../Types/user';
 import { usePostData } from '../../../Hooks/useApi';
 import type { ApiResponse } from '../../../Types/api';
@@ -113,8 +113,6 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
       let msg = 'Khung giờ này không khả dụng.';
       if (status === 'booked') msg = 'Khung giờ này đã được người khác đặt trước.';
       if (status === 'maintenance') msg = 'Khung giờ này đang bảo trì.';
-      // Nếu frontend tự tính ra passed thì ko lọt vào đây, nhưng cứ handle cho chắc
-      // if (status === 'passed') msg = 'Khung giờ này đã qua.'; 
       
       return showNotification(msg, 'error');
     }
@@ -276,13 +274,12 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
                           date: selectedDate,
                           price: Number(time.price) || 0,
                         },
-                        time.status // Truyền status chuẩn từ Type
+                        time.status
                       )
                     }
                     disabled={isDisabled}
                     className={`p-1 rounded-lg flex flex-col items-center font-semibold text-sm transition-all ${cls}`}
                   >
-                    {/* start_time và end_time là chuỗi, dùng slice an toàn */}
                     <div>{time.label ?? `${time.start_time.slice(0, 5)} - ${time.end_time.slice(0, 5)}`}</div>
                     <div className="text-xs mt-1">{formatPrice(time.price)}</div>
                   </button>

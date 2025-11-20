@@ -70,8 +70,6 @@ const PaymentMomo = ({ ticket, onSuccess }: PaymentMomoProps) => {
           // Nếu thanh toán thành công
           if (data.status === 'confirmed' || data.payment_status === 'paid') {
             clearInterval(intervalId); // Dừng kiểm tra
-
-            // Hiện thông báo đẹp thay vì alert
             showNotification('Thanh toán thành công! Cảm ơn quý khách.', 'success');
 
             // Gọi callback để reload trang cha

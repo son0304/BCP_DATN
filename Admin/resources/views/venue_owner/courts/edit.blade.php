@@ -24,8 +24,8 @@
             </div>
             @endif
 
-            <form action="{{ route('owner.venues.courts.update', ['venue' => $court->venue, 'court' => $court]) }}"
-                method="POST"> @csrf
+            <form action="{{ route('owner.venues.courts.update', ['venue' => $court->venue_id, 'court' => $court->id]) }}" method="POST">
+                @csrf
                 @method('PUT')
 
                 <input type="hidden" name="venue_id" value="{{ $venue->id }}">

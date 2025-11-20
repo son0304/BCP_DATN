@@ -17,7 +17,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="card-body">
                     <div class="row">
                         <!-- Thông tin cơ bản -->
@@ -48,21 +48,21 @@
                                             <td><strong>Vai trò:</strong></td>
                                             <td>
                                                 @if($user->role->name === 'Admin')
-                                                    <span class="badge badge-danger">
-                                                        <i class="fas fa-crown"></i> {{ $user->role->name }}
-                                                    </span>
+                                                <span class="badge badge-danger">
+                                                    <i class="fas fa-crown"></i> {{ $user->role->name }}
+                                                </span>
                                                 @elseif($user->role->name === 'Manager')
-                                                    <span class="badge badge-warning">
-                                                        <i class="fas fa-user-tie"></i> {{ $user->role->name }}
-                                                    </span>
+                                                <span class="badge badge-warning">
+                                                    <i class="fas fa-user-tie"></i> {{ $user->role->name }}
+                                                </span>
                                                 @elseif($user->role->name === 'Owner')
-                                                    <span class="badge badge-success">
-                                                        <i class="fas fa-key"></i> {{ $user->role->name }}
-                                                    </span>
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-key"></i> {{ $user->role->name }}
+                                                </span>
                                                 @else
-                                                    <span class="badge badge-info">
-                                                        <i class="fas fa-user"></i> {{ $user->role->name }}
-                                                    </span>
+                                                <span class="badge badge-info">
+                                                    <i class="fas fa-user"></i> {{ $user->role->name }}
+                                                </span>
                                                 @endif
                                             </td>
                                         </tr>
@@ -103,130 +103,157 @@
                                             <td><strong>Quận/Huyện:</strong></td>
                                             <td>{{ $user->district->name ?? 'N/A' }}</td>
                                         </tr>
-                                        <tr>
-                                            <td><strong>Vĩ độ:</strong></td>
-                                            <td>{{ $user->lat ?? 'N/A' }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Kinh độ:</strong></td>
-                                            <td>{{ $user->lng ?? 'N/A' }}</td>
-                                        </tr>
                                     </table>
-                                    
-                                    @if($user->lat && $user->lng)
-                                        <div class="mt-3">
-                                            <strong>Vị trí trên bản đồ:</strong>
-                                            <div class="mt-2">
-                                                <iframe 
-                                                    width="100%" 
-                                                    height="200" 
-                                                    frameborder="0" 
-                                                    style="border:0"
-                                                    src="https://www.google.com/maps/embed/v1/view?key=YOUR_API_KEY&center={{ $user->lat }},{{ $user->lng }}&zoom=15&maptype=roadmap"
-                                                    allowfullscreen>
-                                                </iframe>
-                                            </div>
-                                        </div>
-                                    @endif
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Danh sách đặt sân gần đây -->
-                    @if($bookings->count() > 0)
-                        <div class="row mt-4">
-                            <div class="col-md-12">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h5 class="card-title">Đặt sân gần đây ({{ $bookings->total() }} lượt)</h5>
+                    @if($tickets->count() > 0)
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Đơn đặt sân gần đây ({{ $tickets->total() }} đơn)</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered">
+                                            <thead class="text-center">
+                                                <tr>
+                                                    <th>Mã đơn (Ticket ID)</th>
+                                                    <th>Thương hiệu</th>
+                                                    <th>Chi tiết đặt (Sân - Khung giờ)</th>
+                                                    <th>Tổng tiền</th>
+                                                    <th>Ngày tạo đơn</th>
+                                                    <th>Trạng thái</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="text-center">
+                                                @foreach($tickets as $ticket)
+                                                <tr>
+                                                    <td>#{{ $ticket->id }}</td>
+
+                                                    <td>
+                                                        @if($ticket->items->isNotEmpty())
+                                                        {{ $ticket->items->first()->booking->court->venue->name ?? 'N/A' }}
+                                                        @else
+                                                        <span class="text-muted">N/A</span>
+                                                        @endif
+                                                    </td>
+
+                                                    <td>
+                                                        @foreach($ticket->items as $item)
+                                                        <div class="small mb-1">
+                                                            <strong>{{ $item->booking->court->name ?? 'Sân?' }}</strong> -
+                                                            {{ \Carbon\Carbon::parse($item->booking->date)->format('d/m') }}
+                                                            <br>
+                                                            @if($item->booking->timeSlot)
+                                                            ({{ \Carbon\Carbon::parse($item->booking->timeSlot->start_time)->format('H:i') }} -
+                                                            {{ \Carbon\Carbon::parse($item->booking->timeSlot->end_time)->format('H:i') }})
+                                                            @endif
+                                                        </div>
+                                                        @endforeach
+                                                    </td>
+
+                                                    <td>{{ number_format($ticket->total_amount, 0, ',', '.') }} ₫</td>
+
+                                                    <td>{{ $ticket->created_at->format('d/m/Y H:i') }}</td>
+
+                                                    <td>
+                                                        @php
+                                                        $status = trim(strtolower($ticket->status));
+                                                        $statusLabel = $status;
+                                                        $statusClass = 'badge-secondary';
+
+                                                        switch ($status) {
+                                                        case 'pending':
+                                                        $statusLabel = 'Chờ xác nhận';
+                                                        $statusClass = 'badge-warning';
+                                                        break;
+                                                        case 'confirmed':
+                                                        $statusLabel = 'Đã xác nhận';
+                                                        $statusClass = 'badge-success';
+                                                        break;
+                                                        case 'completed':
+                                                        $statusLabel = 'Hoàn thành';
+                                                        $statusClass = 'badge-primary';
+                                                        break;
+                                                        case 'cancelled':
+                                                        $statusLabel = 'Đã hủy';
+                                                        $statusClass = 'badge-danger';
+                                                        break;
+                                                        }
+                                                        @endphp
+                                                        <span class="badge {{ $statusClass }}">{{ $statusLabel }}</span>
+                                                    </td>
+                                                </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <div class="card-body">
-                                        <div class="table-responsive">
-                                            <table class="table table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th>ID</th>
-                                                        <th>Địa điểm</th>
-                                                        <th>Sân</th>
-                                                        <th>Ngày</th>
-                                                        <th>Giờ</th>
-                                                        <th>Trạng thái</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach($bookings as $booking)
-                                                        <tr>
-                                                            <td>{{ $booking->id }}</td>
-                                                            <td>{{ $booking->court->venue->name ?? 'N/A' }}</td>
-                                                            <td>{{ $booking->court->name ?? 'N/A' }}</td>
-                                                            <td>{{ $booking->date ?? 'N/A' }}</td>
-                                                            <td>{{ $booking->timeSlot->start_time ?? 'N/A' }}</td>
-                                                            <td>
-                                                                <span class="badge badge-info">{{ $booking->status ?? 'N/A' }}</span>
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        
-                                        <!-- Pagination for bookings -->
-                                        <div class="d-flex justify-content-center mt-3">
-                                            {{ $bookings->links() }}
-                                        </div>
+
+                                    <div class="d-flex justify-content-center mt-3">
+                                        {{ $tickets->links() }}
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
                     @endif
 
                     <!-- Danh sách địa điểm sở hữu -->
                     @if($venues->count() > 0)
-                        <div class="row mt-4">
-                            <div class="col-md-12">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h5 class="card-title">Địa điểm sở hữu ({{ $venues->total() }} địa điểm)</h5>
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Thương hiệu sở hữu ({{ $venues->total() }})</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered">
+                                            <thead class="text-center">
+                                                <tr>
+                                                    <th>ID</th>
+                                                    <th>Tên thương hiệu</th>
+                                                    <th>Địa chỉ</th>
+                                                    <th>Số sân</th>
+                                                    <th>Trạng thái</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="text-center">
+                                                @foreach($venues as $venue)
+                                                <tr>
+                                                    <td>{{ $venue->id }}</td>
+                                                    <td>{{ $venue->name }}</td>
+                                                    <td>
+                                                        {{ $venue->address_detail }},
+                                                        {{ $venue->district->name ?? '' }},
+                                                        {{ $venue->province->name ?? '' }}
+                                                    </td>
+
+                                                    <td>{{ $venue->courts->count() }}</td>
+                                                    <td>
+                                                        <span class="badge {{ $venue->is_active ? 'badge-success' : 'badge-danger' }}">
+                                                            {{ $venue->is_active ? 'Hoạt động' : 'Không hoạt động' }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <div class="card-body">
-                                        <div class="table-responsive">
-                                            <table class="table table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th>ID</th>
-                                                        <th>Tên địa điểm</th>
-                                                        <th>Địa chỉ</th>
-                                                        <th>Số sân</th>
-                                                        <th>Trạng thái</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach($venues as $venue)
-                                                        <tr>
-                                                            <td>{{ $venue->id }}</td>
-                                                            <td>{{ $venue->name }}</td>
-                                                            <td>{{ $venue->address_detail }}</td>
-                                                            <td>{{ $venue->courts->count() }}</td>
-                                                            <td>
-                                                                <span class="badge {{ $venue->is_active ? 'badge-success' : 'badge-danger' }}">
-                                                                    {{ $venue->is_active ? 'Hoạt động' : 'Không hoạt động' }}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        
-                                        <!-- Pagination for venues -->
-                                        <div class="d-flex justify-content-center mt-3">
-                                            {{ $venues->links() }}
-                                        </div>
+
+                                    <!-- Pagination for venues -->
+                                    <div class="d-flex justify-content-center mt-3">
+                                        {{ $venues->links() }}
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
                     @endif
                 </div>
             </div>

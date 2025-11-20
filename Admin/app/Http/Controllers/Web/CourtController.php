@@ -229,6 +229,12 @@ class CourtController extends Controller
             'venue_type_id' => 'required|exists:venue_types,id',
             'surface' => 'nullable|string|max:255',
             'is_indoor' => 'required|boolean',
+            'time_slots' => 'required|array|min:1',
+            'time_slots.*.start_time' => 'required|date_format:H:i',
+            'time_slots.*.end_time' => 'required|date_format:H:i|after:time_slots.*.start_time',
+            'time_slots.*.price' => 'required|numeric|min:0',
+        ], [
+            'time_slots.required' => 'Bạn phải thêm ít nhất một khung giờ.',
         ]);
 
         $user = Auth::user();
@@ -236,14 +242,66 @@ class CourtController extends Controller
             abort(403, 'Bạn không có quyền cập nhật sân này.');
         }
 
-        $court->update($validated);
+        DB::beginTransaction();
+        try {
+            // 1. Cập nhật thông tin cơ bản sân
+            $court->update([
+                'name' => $validated['name'],
+                'venue_id' => $validated['venue_id'],
+                'venue_type_id' => $validated['venue_type_id'],
+                'surface' => $validated['surface'] ?? null,
+                'is_indoor' => $validated['is_indoor'],
+            ]);
 
-        return redirect()->route('owner.venues.courts.show', [
-            'venue' => $venue->id,
-            'court' => $court->id,
-        ])->with('success', 'Cập nhật sân thành công!');
+            $now = Carbon::now();
+
+            // 2. Xóa các Availability chưa được đặt (status = 'open') từ hôm nay trở đi
+            Availability::where('court_id', $court->id)
+                ->where('date', '>=', Carbon::today())
+                ->where('status', 'open')
+                ->delete();
+
+            // 3. Thêm TimeSlot mới và tạo Availability 30 ngày
+            $availabilitiesToInsert = [];
+            foreach ($validated['time_slots'] as $slot) {
+                $timeSlot = TimeSlot::firstOrCreate(
+                    [
+                        'court_id' => $court->id,
+                        'start_time' => $slot['start_time'],
+                        'end_time' => $slot['end_time'],
+                    ],
+                    [
+                        'label' => $slot['start_time'] . ' - ' . $slot['end_time']
+                    ]
+                );
+
+                for ($i = 0; $i < 30; $i++) {
+                    $availabilitiesToInsert[] = [
+                        'court_id' => $court->id,
+                        'date' => Carbon::today()->addDays($i)->toDateString(),
+                        'slot_id' => $timeSlot->id,
+                        'price' => $slot['price'],
+                        'status' => 'open',
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+            }
+
+            Availability::insert($availabilitiesToInsert);
+
+            DB::commit();
+
+            return redirect()->route('owner.venues.courts.show', [
+                'venue' => $venue->id,
+                'court' => $court->id,
+            ])->with('success', 'Cập nhật sân và khung giờ thành công!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Court update error: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Đã có lỗi xảy ra khi cập nhật sân: ' . $e->getMessage());
+        }
     }
-
 
     /**
      * Xóa sân

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNotification } from '../../../Components/Notification';
-import type { Venue } from '../../../Types/venue';
+import type { Venue, EnrichedTimeSlot } from '../../../Types/venue'; // Import đúng Type bạn vừa gửi
 import type { User } from '../../../Types/user';
 import { usePostData } from '../../../Hooks/useApi';
 import type { ApiResponse } from '../../../Types/api';
@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import type { QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
 import Voucher_Detail_Venue from './Voucher_Detail_Venue';
 
+// Type cho item được chọn (để tính tiền)
 type SelectedItem = {
   court_id: number;
   name: string;
@@ -18,6 +19,7 @@ type SelectedItem = {
   price: number;
 };
 
+// Type cho Voucher (giữ nguyên nếu chưa có file riêng)
 export type Voucher = {
   id: number;
   code: string;
@@ -54,9 +56,10 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
   const { mutate } = usePostData<ApiResponse<number>, any>('tickets');
   const navigate = useNavigate();
 
+  // Lấy danh sách courts từ venue, mặc định là mảng rỗng nếu null
   const courts = venue.courts ?? [];
 
-  const formatPrice = (price: number | string) => {
+  const formatPrice = (price: number | string | null) => {
     const value = Number(price) || 0;
     return value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
   };
@@ -64,8 +67,6 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
   // ===== Helper tính discount
   const calculateDiscount = (voucher: Voucher | null, total: number): number => {
     if (!voucher) return 0;
-
-    // Kiểm tra voucher còn hạn
     const now = new Date();
     if (voucher.expires_at && new Date(voucher.expires_at) < now) return 0;
 
@@ -85,7 +86,6 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
   useEffect(() => {
     const total = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
     setRawTotalPrice(total);
-
     const discount = calculateDiscount(selectedVoucher, total);
     setSelectedPrice(Math.max(0, total - discount));
   }, [selectedItems, selectedVoucher]);
@@ -99,20 +99,23 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
     setSelectedVoucher(null);
   }, [selectedDate, refetch]);
 
-  // ===== Chọn court mặc định
+  // ===== Chọn court mặc định khi load xong
   useEffect(() => {
-    if (courts.length && activeCourtId === null) setActiveCourtId(courts[0].id);
+    if (courts.length > 0 && activeCourtId === null) {
+      setActiveCourtId(courts[0].id);
+    }
   }, [courts, activeCourtId]);
 
   // ===== Chọn / bỏ chọn slot
-  const handleSelectItem = (clickedItem: SelectedItem, status?: string | null) => {
+  const handleSelectItem = (clickedItem: SelectedItem, status: string | null) => {
+    // Chỉ cho phép chọn nếu status là 'open'
     if (status !== 'open') {
-      const msg =
-        status === 'booked'
-          ? 'Khung giờ này đã được người khác đặt trước.'
-          : status === 'maintenance'
-            ? 'Khung giờ này đang bảo trì.'
-            : 'Khung giờ này không khả dụng.';
+      let msg = 'Khung giờ này không khả dụng.';
+      if (status === 'booked') msg = 'Khung giờ này đã được người khác đặt trước.';
+      if (status === 'maintenance') msg = 'Khung giờ này đang bảo trì.';
+      // Nếu frontend tự tính ra passed thì ko lọt vào đây, nhưng cứ handle cho chắc
+      // if (status === 'passed') msg = 'Khung giờ này đã qua.'; 
+      
       return showNotification(msg, 'error');
     }
 
@@ -173,7 +176,11 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
         {/* Chọn ngày */}
         <div className="mb-4">
           <label className="text-base font-semibold text-[#4B5563]">Chọn ngày</label>
-          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={new Date().toISOString().slice(0, 10)}
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            min={new Date().toISOString().slice(0, 10)}
             className="w-full mt-2 px-3 py-2 border border-[#E5E7EB] rounded-lg focus:ring-2 focus:ring-[#10B981] outline-none text-[#4B5563]"
           />
         </div>
@@ -183,11 +190,14 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
           <label className="text-base font-semibold text-[#4B5563]">Chọn sân con</label>
           <div className="mt-2 flex flex-wrap gap-2">
             {courts.map((court) => (
-              <button key={court.id} onClick={() => setActiveCourtId(court.id)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-200 ${activeCourtId === court.id
-                  ? 'bg-[#10B981] text-white shadow-md'
-                  : 'bg-[#F9FAFB] text-[#4B5563] hover:bg-gray-100 border-[#E5E7EB]'
-                  }`}
+              <button
+                key={court.id}
+                onClick={() => setActiveCourtId(court.id)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-200 ${
+                  activeCourtId === court.id
+                    ? 'bg-[#10B981] text-white shadow-md'
+                    : 'bg-[#F9FAFB] text-[#4B5563] hover:bg-gray-100 border-[#E5E7EB]'
+                }`}
               >
                 {court.name}
               </button>
@@ -203,20 +213,54 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
           <div className="grid grid-cols-4 gap-2 max-h-80 overflow-y-auto pr-1">
             {courts
               .filter((c) => c.id === activeCourtId)
-              .flatMap((court: any) => court.time_slots?.map((time: any) => ({ court, time })) ?? [])
-              .map(({ court, time }: any) => {
+              .flatMap((court) => 
+                // Sử dụng EnrichedTimeSlot ở đây
+                court.time_slots?.map((time: EnrichedTimeSlot) => ({ court, time })) ?? []
+              )
+              .filter(({ time }) => {
+                // 1. Safety Check: Dùng Type EnrichedTimeSlot đảm bảo ta biết nó có start_time
+                if (!time || !time.start_time) return false;
+                
+                // --- LOGIC THỜI GIAN ---
+                const now = new Date();
+                const [year, month, day] = selectedDate.split('-').map(Number);
+                const [hour, minute] = time.start_time.split(':').map(Number);
+
+                // Tạo Date object chuẩn cho slot
+                const slotDateTime = new Date(year, month - 1, day, hour, minute, 0);
+
+                // So sánh: Nếu slot <= hiện tại -> Ẩn
+                if (slotDateTime <= now) {
+                    return false;
+                }
+                return true;
+              })
+              .map(({ court, time }) => {
+                if (!time) return null;
+
                 const isSelected = selectedItems.some(
                   (it) => it.court_id === court.id && it.time_slot_id === time.id
                 );
 
-                let cls =
-                  time.status === 'open'
-                    ? 'bg-green-50 text-green-800 border border-green-200'
-                    : time.status === 'booked'
-                      ? 'bg-red-100 text-red-600 cursor-not-allowed opacity-60'
-                      : 'bg-gray-100 text-gray-500 cursor-not-allowed';
+                // Logic hiển thị màu sắc dựa trên status
+                let cls = '';
+                let isDisabled = false;
 
-                if (isSelected) cls = 'bg-[#10B981] text-white ring-2 ring-green-300 shadow-md';
+                if (time.status === 'booked') {
+                    cls = 'bg-red-100 text-red-600 cursor-not-allowed opacity-60';
+                    isDisabled = true;
+                } else if (time.status === 'maintenance' || time.status === 'closed') {
+                    cls = 'bg-gray-100 text-gray-500 cursor-not-allowed';
+                    isDisabled = true;
+                } else {
+                    // status === 'open' hoặc null (fallback)
+                    cls = 'bg-green-50 text-green-800 border border-green-200 hover:bg-green-100';
+                    isDisabled = false;
+                }
+
+                if (isSelected) {
+                    cls = 'bg-[#10B981] text-white ring-2 ring-green-300 shadow-md';
+                }
 
                 return (
                   <button
@@ -232,12 +276,13 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
                           date: selectedDate,
                           price: Number(time.price) || 0,
                         },
-                        time.status
+                        time.status // Truyền status chuẩn từ Type
                       )
                     }
-                    disabled={time.status !== 'open'}
-                    className={`p-1 rounded-lg flex flex-col items-center font-semibold text-sm ${cls}`}
+                    disabled={isDisabled}
+                    className={`p-1 rounded-lg flex flex-col items-center font-semibold text-sm transition-all ${cls}`}
                   >
+                    {/* start_time và end_time là chuỗi, dùng slice an toàn */}
                     <div>{time.label ?? `${time.start_time.slice(0, 5)} - ${time.end_time.slice(0, 5)}`}</div>
                     <div className="text-xs mt-1">{formatPrice(time.price)}</div>
                   </button>
@@ -246,7 +291,7 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
           </div>
         </div>
 
-        {/* Form tổng tiền */}
+        {/* Form tổng tiền (Giữ nguyên) */}
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <Voucher_Detail_Venue onVoucherApply={setSelectedVoucher} totalPrice={rawTotalPrice} />
 
@@ -258,10 +303,11 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
             <button
               type="submit"
               disabled={selectedItems.length === 0 || isSubmitting}
-              className={`w-full mt-4 py-3 rounded-lg text-white font-semibold flex items-center justify-center gap-2 ${selectedItems.length === 0 || isSubmitting
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-emerald-500 hover:bg-emerald-600'
-                }`}
+              className={`w-full mt-4 py-3 rounded-lg text-white font-semibold flex items-center justify-center gap-2 ${
+                selectedItems.length === 0 || isSubmitting
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-emerald-500 hover:bg-emerald-600'
+              }`}
             >
               {isSubmitting && (
                 <span className="loader-border animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full" />

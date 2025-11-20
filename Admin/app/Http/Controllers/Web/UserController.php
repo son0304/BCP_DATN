@@ -121,13 +121,15 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        // Laravel tự động validate ID user tồn tại nhờ Route Model Binding
         $user->load(['role', 'province', 'district']);
 
-        $bookings = $user->bookings()
-            ->with(['court.venue', 'timeSlot'])
+        $tickets = $user->tickets()
+            ->with([
+                'items.booking.court.venue',
+                'items.booking.timeSlot'
+            ])
             ->orderBy('created_at', 'desc')
-            ->paginate(5, ['*'], 'bookings_page');
+            ->paginate(5, ['*'], 'tickets_page');
 
         $venues = $user->venues()
             ->with(['province', 'district'])
@@ -136,7 +138,26 @@ class UserController extends Controller
 
         $roles = Role::select('id', 'name')->get();
 
-        return view('admin.users.show', compact('user', 'bookings', 'venues', 'roles'));
+        return view('admin.users.show', compact('user', 'tickets', 'venues', 'roles'));
+    }
+
+    public function destroy(User $user)
+    {
+        DB::beginTransaction();
+        try {
+            if ($user->tickets()->exists() || $user->venues()->exists()) {
+                return back()->with('error', 'Không thể xóa người dùng này vì họ có dữ liệu liên quan (đơn đặt sân hoặc sở hữu địa điểm)!');
+            }
+
+            $user->delete();
+
+            DB::commit();
+            return redirect()->route('admin.users.index')
+                ->with('success', 'Người dùng đã được xóa thành công!');
+        } catch (\Exception $e) {
+            DB::rollback();
+            return back()->with('error', 'Lỗi khi xóa: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -147,7 +168,7 @@ class UserController extends Controller
         $roles = Role::select('id', 'name')->get();
         $provinces = Province::select('id', 'name')->get();
         $districts = District::select('id', 'name', 'province_id')->get();
-        
+
         return view('admin.users.edit', compact('user', 'roles', 'provinces', 'districts'));
     }
 
@@ -159,7 +180,6 @@ class UserController extends Controller
         // 3. Validate Cập nhật trực tiếp tại đây
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
-            // Unique email nhưng trừ ID của user hiện tại ra
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:6|confirmed',
             'role_id' => 'required|integer|exists:roles,id',
@@ -202,29 +222,6 @@ class UserController extends Controller
             DB::rollback();
             return back()->withInput()
                 ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(User $user)
-    {
-        DB::beginTransaction();
-        try {
-            // Kiểm tra ràng buộc dữ liệu trước khi xóa
-            if ($user->bookings()->exists() || $user->venues()->exists()) {
-                return back()->with('error', 'Không thể xóa người dùng này vì họ có dữ liệu liên quan (sân hoặc lịch đặt)!');
-            }
-
-            $user->delete();
-
-            DB::commit();
-            return redirect()->route('admin.users.index')
-                ->with('success', 'Người dùng đã được xóa thành công!');
-        } catch (\Exception $e) {
-            DB::rollback();
-            return back()->with('error', 'Lỗi khi xóa: ' . $e->getMessage());
         }
     }
 

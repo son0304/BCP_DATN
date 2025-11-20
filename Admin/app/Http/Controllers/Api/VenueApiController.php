@@ -103,6 +103,40 @@ class VenueApiController extends Controller
             ->groupBy('court_id')
             ->map(fn($items) => $items->keyBy('slot_id'));
 
+        $now = Carbon::now(); // Lấy thời gian thực tế hiện tại của server
+        $isToday = $now->toDateString() === $date; // Kiểm tra ngày khách chọn có phải hôm nay không
+
+        foreach ($venue->courts as $court) {
+            $courtAvailabilities = $availabilities->get($court->id, collect());
+
+            foreach ($court->timeSlots as $slot) {
+                $availability = $courtAvailabilities->get($slot->id);
+
+                // 1. Lấy trạng thái gốc từ DB
+                $status = $availability->status ?? 'unavailable';
+                $price = $availability->price ?? null;
+
+                // 2. Logic kiểm tra giờ quá khứ
+                if ($isToday) {
+                    try {
+                        // Parse giờ của slot
+                        $slotTime = Carbon::createFromFormat('H:i:s', $slot->start_time);
+
+                        // Gán ngày hiện tại vào để so sánh đầy đủ ngày + giờ
+                        $slotDateTime = $slotTime->setDate($now->year, $now->month, $now->day);
+
+                        // Nếu giờ slot nhỏ hơn giờ hiện tại -> Đánh dấu là đã qua
+                        if ($slotDateTime->lt($now)) {
+                            $status = 'passed'; // Trạng thái mới: Đã qua
+                        }
+                    } catch (\Exception $e) {
+                    }
+                }
+
+                $slot->status = $status;
+                $slot->price = $price;
+            }
+        }
         foreach ($venue->courts as $court) {
             $courtAvailabilities = $availabilities->get($court->id, collect());
             foreach ($court->timeSlots as $slot) {

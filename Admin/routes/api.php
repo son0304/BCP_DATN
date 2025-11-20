@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ReviewApiController;
 use App\Http\Controllers\Api\TicketApiController;
 use App\Http\Controllers\Api\TimeSlotApiController;
 use App\Http\Controllers\Api\VenueApiController;
+use App\Http\Controllers\Api\PaymentApiController;
 use App\Http\Controllers\Web\LocationController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +38,11 @@ Route::get('/district/{id}', [DistrictApiController::class, 'show']);
 Route::get('/districts/{province}', [LocationController::class, 'getDistrictsByProvince']);
 Route::get('/ticket/{id}', [TicketApiController::class, 'show']);
 Route::get('/tickets', [TicketApiController::class, 'index']);
+
+
+Route::post('/payment/momo', [PaymentApiController::class, 'paymentMomo']);
+Route::post('/payment/momo/ipn', [PaymentApiController::class, 'ipn']);
+Route::get('/payment/check-status/{id}', [PaymentApiController::class, 'checkTransactionStatus']);
 
 
 Route::get('/promotions', [PromotionApiController::class, 'index']);

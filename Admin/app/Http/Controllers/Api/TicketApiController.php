@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Availability;
 use App\Models\Booking;
 use App\Models\Item;
+use App\Models\Promotion;
 use App\Models\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -118,6 +119,12 @@ class TicketApiController extends Controller
                     'status' => 'pending',
                     'payment_status' => 'unpaid',
                 ]);
+                if (!empty($validated['promotion_id'])) {
+                    Promotion::where('id', $validated['promotion_id'])
+                        ->update([
+                            'usage_limit' => DB::raw('usage_limit - 1')
+                        ]);
+                }
 
                 // 4. Tạo Booking, Item và Cập nhật Availability
                 foreach ($validated['bookings'] as $bookingData) {

@@ -259,7 +259,7 @@
                             <label class="form-label fw-bold">Giờ mở cửa</label>
                             <input type="time" name="start_time"
                                 class="form-control custom-input @error('start_time') is-invalid @enderror"
-                                value="{{ old('start_time', '06:00') }}">
+                                value="{{ old('start_time') }}">
                             @error('start_time')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -269,7 +269,7 @@
                             <label class="form-label fw-bold">Giờ đóng cửa</label>
                             <input type="time" name="end_time"
                                 class="form-control custom-input @error('end_time') is-invalid @enderror"
-                                value="{{ old('end_time', '22:00') }}">
+                                value="{{ old('end_time') }}">
                             @error('end_time')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -335,39 +335,53 @@
 
         function splitTimeIntoHourlySlots(startTime, endTime, price) {
             // CẤU HÌNH GIỜ VÀNG
-            const GOLDEN_HOUR_START = 17;
+            const GOLDEN_HOUR_START = 17; // 5 PM (17:00)
             const GOLDEN_HOUR_MULTIPLIER = 1.5;
             const slots = [];
-            const start = new Date('2000-01-01 ' + startTime);
-            const end = new Date('2000-01-01 ' + endTime);
-            const basePrice = Number(price);
 
+            // Khởi tạo ngày/giờ ảo
+            const today = new Date('2000-01-01');
+            const startParts = startTime.split(':').map(Number);
+            const endParts = endTime.split(':').map(Number);
+
+            let start = new Date(today);
+            start.setHours(startParts[0], startParts[1], 0, 0);
+
+            let end = new Date(today);
+            end.setHours(endParts[0], endParts[1], 0, 0);
+
+            // Xử lý trường hợp xuyên đêm (End time nhỏ hơn Start time, ví dụ 22:00 -> 06:00)
+            // Hoặc trường hợp kết thúc vào 00:00 (End time = Start time)
             if (end <= start) {
                 end.setDate(end.getDate() + 1);
             }
 
+            const basePrice = Number(price);
             let current = new Date(start);
 
+            // Lặp chừng nào giờ bắt đầu hiện tại còn trước giờ kết thúc
             while (current < end) {
-                const nextHour = new Date(current);
-                nextHour.setHours(nextHour.getHours() + 1);
+                const next = new Date(current);
+                next.setHours(next.getHours() + 1);
 
-                // Nếu slot tiếp theo vượt quá thời gian kết thúc, dừng lại
-                if (nextHour > end) {
+                // Giờ kết thúc thực tế của slot phải là min(next full hour, global end time)
+                // Điều chỉnh nextHour chỉ bằng end nếu nextHour vượt quá end
+                const nextHour = (next > end) ? end : next;
+
+                // Nếu giờ bắt đầu và giờ kết thúc slot trùng nhau (chỉ xảy ra nếu current = end), thì dừng
+                if (current.getTime() === nextHour.getTime()) {
                     break;
                 }
 
-
                 let currentPrice;
-                // Kiểm tra xem giờ bắt đầu của slot có phải là giờ vàng không
+                // Kiểm tra giờ vàng (Áp dụng nếu slot bắt đầu từ 17:00 trở đi)
                 if (current.getHours() >= GOLDEN_HOUR_START) {
-                    // Nếu đúng, nhân giá với hệ số 1.5
                     currentPrice = basePrice * GOLDEN_HOUR_MULTIPLIER;
                 } else {
-                    // Nếu không, giữ nguyên giá gốc
                     currentPrice = basePrice;
                 }
                 currentPrice = Math.round(currentPrice);
+
                 const slotStart = current.toTimeString().substring(0, 5);
                 const slotEnd = nextHour.toTimeString().substring(0, 5);
 
@@ -377,12 +391,16 @@
                     price: currentPrice
                 });
 
-                current = nextHour;
+                current = nextHour; // Chuyển sang giờ tiếp theo
+
+                // Nếu đã đạt đến thời gian kết thúc (end), dừng
+                if (current.getTime() === end.getTime()) {
+                    break;
+                }
             }
 
             return slots;
         }
-
 
         // Hàm cập nhật tên input cho time slots
         function updateTimeSlotNames() {

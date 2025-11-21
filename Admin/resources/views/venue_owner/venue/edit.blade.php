@@ -160,7 +160,6 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold d-block">Loại hình sân <span class="text-danger">*</span></label>
 
-                            {{-- 1. Wrapper Div: Thêm class border-danger nếu có lỗi --}}
                             <div class="py-2 px-3 border rounded bg-light @error('venue_types') border-danger @enderror"
                                 style="max-height: 200px; overflow-y: auto;">
 
@@ -170,7 +169,6 @@
                                         name="venue_types[]"
                                         value="{{ $type->id }}"
                                         id="type_{{ $type->id }}"
-                                        {{-- Logic Checked: Nếu validate fail thì lấy old(), nếu không thì lấy từ DB --}}
                                         @checked( in_array($type->id, old('venue_types', $venue->venueTypes->pluck('id')->toArray())) )
                                     >
                                     <label class="form-check-label" for="type_{{ $type->id }}">

@@ -22,6 +22,38 @@
                 </div>
                 <div class="card-body">
 
+                    <style>
+                        .info-card .label {
+                            font-size: 0.85rem;
+                            color: #6c757d;
+                        }
+
+                        .info-card .value {
+                            font-size: 1rem;
+                            font-weight: 600;
+                        }
+
+                        .info-card .icon-badge {
+                            width: 36px;
+                            height: 36px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 1rem;
+                            border-radius: 50%;
+                        }
+
+                        .info-card .info-row {
+                            margin-bottom: 12px;
+                            display: flex;
+                            align-items: center;
+                        }
+
+                        .info-card .info-row .text-container {
+                            flex: 1;
+                        }
+                    </style>
+
                     <!-- Tên sân -->
                     <div class="info-row">
                         <span class="badge bg-success text-white icon-badge me-3">

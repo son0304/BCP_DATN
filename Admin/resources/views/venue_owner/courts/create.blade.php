@@ -7,13 +7,13 @@
 
     <div class="card shadow-sm border-0">
         <div class="card-header bg-white border-0 py-3">
-            {{-- Thêm thông báo sân này thuộc Venue nào (nếu có) --}}
-            @if (request('venue_id') && ($venue = \App\Models\Venue::find(request('venue_id'))))
-            <small class="text-muted">
-                — cho thương hiệu: <span class="text-success fw-bold">{{ $venue->name }}</span>
-            </small>
-            @endif
+            <h3 class="mb-1">Thêm sân mới</h3>
+            <div class="text-muted small">
+                Thuộc thương hiệu:
+                <span class="fw-semibold text-success">{{ $venue->name }}</span>
+            </div>
         </div>
+
         <div class="card-body">
             @if ($errors->any())
             <div class="alert alert-danger">
@@ -45,7 +45,7 @@
                                     class="text-danger">*</span></label>
                             <select class="form-select" id="venue_type_id" name="venue_type_id" required>
                                 <option value="" disabled selected>-- Chọn loại hình --</option>
-                                @foreach ($venueTypes as $venueType)
+                                @foreach ($venue->venueTypes as $venueType)
                                 <option value="{{ $venueType->id }}"
                                     {{ old('venue_type_id') == $venueType->id ? 'selected' : '' }}>
                                     {{ $venueType->name }}
@@ -71,7 +71,6 @@
                     </div>
                 </fieldset>
 
-                {{-- Khung giờ & giá giống như trước --}}
                 <fieldset>
                     <legend class="h6 text-primary">2. Khung giờ & Giá</legend>
                     <p class="text-muted small">
@@ -79,20 +78,27 @@
                         tự động tạo. <strong>Bạn phải thêm ít nhất một khung giờ.</strong>
                     </p>
 
-                    <div class="p-3 bg-light rounded border">
-                        <div class="row gx-2 mb-2 d-none d-md-flex small text-muted fw-bold">
-                            <div class="col-md-3"><label>Giờ bắt đầu</label></div>
-                            <div class="col-md-3"><label>Giờ kết thúc</label></div>
-                            <div class="col-md-4"><label>Giá (VNĐ)</label></div>
-                            <div class="col-md-2 text-end"><label>Hành động</label></div>
-                        </div>
-                        <div id="time-slots-container"></div>
+                    <div class="table-responsive bg-light rounded border p-2">
+                        <table class="table table-bordered align-middle mb-0">
+                            <thead class="table-light small text-muted fw-bold">
+                                <tr>
+                                    <th style="width: 30%">Giờ bắt đầu</th>
+                                    <th style="width: 30%">Giờ kết thúc</th>
+                                    <th style="width: 30%">Giá (VNĐ)</th>
+                                    <th style="width: 10%" class="text-center">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="time-slots-container">
+                                {{-- JS sẽ append các dòng vào đây --}}
+                            </tbody>
+                        </table>
                     </div>
 
                     <button type="button" id="add-time-slot-btn" class="btn btn-outline-primary mt-3">
                         <i class="fas fa-plus me-1"></i> Thêm khung giờ
                     </button>
                 </fieldset>
+
 
                 <div class="card-footer bg-white text-end border-0 px-0 pt-4">
                     <a href="/owner/venues/{{ $venue->id }}" class="btn btn-secondary">Hủy bỏ</a>
@@ -115,50 +121,75 @@
 
         const container = $('#time-slots-container');
 
-        // --- ĐÃ SỬA LẠI HTML TRONG HÀM NÀY CHO ĐẸP HƠN ---
         function createTimeSlotRow() {
             return `
-                <div class="row gx-2 align-items-center mb-2 time-slot-row p-2 bg-white rounded border">
-                    <div class="col-md-3">
-                        <label class="form-label d-md-none small">Giờ bắt đầu</label>
-                        <input type="time" class="form-control form-control-sm time-start" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label d-md-none small">Giờ kết thúc</label>
-                        <input type="time" class="form-control form-control-sm time-end" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label d-md-none small">Giá (VNĐ)</label>
-                        <input type="number" class="form-control form-control-sm time-price" placeholder="Nhập giá (VNĐ)" min="0" step="1000" required>
-                    </div>
-                    <div class="col-md-2 d-flex align-items-center justify-content-end">
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-slot-btn" title="Xóa khung giờ">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>`;
+        <tr class="time-slot-row">
+            <td>
+                <input type="time" class="form-control form-control-sm time-start" required>
+            </td>
+            <td>
+                <input type="time" class="form-control form-control-sm time-end" required>
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm time-price"
+                       placeholder="Nhập giá (VNĐ)" min="0" step="1000" required>
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-slot-btn" title="Xóa khung giờ">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `;
         }
-
-        // --- TOÀN BỘ LOGIC CÒN LẠI GIỮ NGUYÊN ---
-
         function splitTimeIntoHourlySlots(startTime, endTime, price) {
+            // CẤU HÌNH GIỜ VÀNG
+            const GOLDEN_HOUR_START = 17; // 5 PM (17:00)
+            const GOLDEN_HOUR_MULTIPLIER = 1.5;
             const slots = [];
-            const start = new Date('2000-01-01 ' + startTime);
-            const end = new Date('2000-01-01 ' + endTime);
 
+            // Khởi tạo ngày/giờ ảo
+            const today = new Date('2000-01-01');
+            const startParts = startTime.split(':').map(Number);
+            const endParts = endTime.split(':').map(Number);
+
+            let start = new Date(today);
+            start.setHours(startParts[0], startParts[1], 0, 0);
+
+            let end = new Date(today);
+            end.setHours(endParts[0], endParts[1], 0, 0);
+
+            // Xử lý trường hợp xuyên đêm (End time nhỏ hơn Start time, ví dụ 22:00 -> 06:00)
+            // Hoặc trường hợp kết thúc vào 00:00 (End time = Start time)
             if (end <= start) {
                 end.setDate(end.getDate() + 1);
             }
 
+            const basePrice = Number(price);
             let current = new Date(start);
 
+            // Lặp chừng nào giờ bắt đầu hiện tại còn trước giờ kết thúc
             while (current < end) {
-                const nextHour = new Date(current);
-                nextHour.setHours(nextHour.getHours() + 1);
+                const next = new Date(current);
+                next.setHours(next.getHours() + 1);
 
-                if (nextHour > end) {
+                // Giờ kết thúc thực tế của slot phải là min(next full hour, global end time)
+                // Điều chỉnh nextHour chỉ bằng end nếu nextHour vượt quá end
+                const nextHour = (next > end) ? end : next;
+
+                // Nếu giờ bắt đầu và giờ kết thúc slot trùng nhau (chỉ xảy ra nếu current = end), thì dừng
+                if (current.getTime() === nextHour.getTime()) {
                     break;
                 }
+
+                let currentPrice;
+                // Kiểm tra giờ vàng (Áp dụng nếu slot bắt đầu từ 17:00 trở đi)
+                if (current.getHours() >= GOLDEN_HOUR_START) {
+                    currentPrice = basePrice * GOLDEN_HOUR_MULTIPLIER;
+                } else {
+                    currentPrice = basePrice;
+                }
+                currentPrice = Math.round(currentPrice);
 
                 const slotStart = current.toTimeString().substring(0, 5);
                 const slotEnd = nextHour.toTimeString().substring(0, 5);
@@ -166,11 +197,17 @@
                 slots.push({
                     start_time: slotStart,
                     end_time: slotEnd,
-                    price: price
+                    price: currentPrice
                 });
 
-                current = nextHour;
+                current = nextHour; // Chuyển sang giờ tiếp theo
+
+                // Nếu đã đạt đến thời gian kết thúc (end), dừng
+                if (current.getTime() === end.getTime()) {
+                    break;
+                }
             }
+
             return slots;
         }
 
@@ -178,14 +215,12 @@
             let slotIndex = 0;
             container.find('.time-slot-row').each(function() {
                 const $row = $(this);
-                // Đổi lại name cho đúng format Laravel mong muốn
                 $row.find('.time-start').attr('name', `time_slots[${slotIndex}][start_time]`);
                 $row.find('.time-end').attr('name', `time_slots[${slotIndex}][end_time]`);
                 $row.find('.time-price').attr('name', `time_slots[${slotIndex}][price]`);
                 slotIndex++;
             });
         }
-
 
         $(document).on('click', '#add-time-slot-btn', function(e) {
             e.preventDefault();

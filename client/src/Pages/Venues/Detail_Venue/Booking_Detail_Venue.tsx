@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNotification } from '../../../Components/Notification';
-import type { Venue } from '../../../Types/venue';
+import type { Venue, EnrichedTimeSlot } from '../../../Types/venue';
 import type { User } from '../../../Types/user';
 import { usePostData } from '../../../Hooks/useApi';
 import type { ApiResponse } from '../../../Types/api';
@@ -19,6 +19,7 @@ type SelectedItem = {
   price: number;
 };
 
+// Type cho Voucher (giữ nguyên nếu chưa có file riêng)
 export type Voucher = {
   id: number;
   code: string;
@@ -55,9 +56,10 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
   const { mutate } = usePostData<ApiResponse<number>, any>('tickets');
   const navigate = useNavigate();
 
+  // Lấy danh sách courts từ venue, mặc định là mảng rỗng nếu null
   const courts = venue.courts ?? [];
 
-  const formatPrice = (price: number | string) => {
+  const formatPrice = (price: number | string | null) => {
     const value = Number(price) || 0;
     return value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
   };
@@ -84,7 +86,6 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
   useEffect(() => {
     const total = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
     setRawTotalPrice(total);
-
     const discount = calculateDiscount(selectedVoucher, total);
     setSelectedPrice(Math.max(0, total - discount));
   }, [selectedItems, selectedVoucher]);
@@ -100,7 +101,9 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
 
   // Set court mặc định
   useEffect(() => {
-    if (courts.length && activeCourtId === null) setActiveCourtId(courts[0].id);
+    if (courts.length > 0 && activeCourtId === null) {
+      setActiveCourtId(courts[0].id);
+    }
   }, [courts, activeCourtId]);
 
   // --- Chọn / bỏ chọn khung giờ ---

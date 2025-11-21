@@ -10,7 +10,7 @@
         @include('layout.nav')
         @include('layout.sidebar')
         <div class="content-page">
-            <div class="content">
+            <div class="py-4">
                 <div class="container-fluid">
                     @yield('content')
                 </div>

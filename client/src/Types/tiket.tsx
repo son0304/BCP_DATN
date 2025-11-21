@@ -13,7 +13,7 @@ export interface TicketItem {
     id: number;
     court_id: number;
     date: ISODateTimeString;
-    status: "pending" | "confirmed" | "cancelled";
+    status: "pending" | "confirmed"| "completed" | "cancelled";
     court?: {
       id: number;
       name: string;

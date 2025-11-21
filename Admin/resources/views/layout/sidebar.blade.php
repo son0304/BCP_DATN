@@ -7,7 +7,7 @@
 
             <ul class="metismenu" id="side-menu">
 
-                <li class="menu-title">Navigation</li>
+                <li class="menu-title">Menu điều khiển</li>
 
                 {{-- Menu chung --}}
                 @if (auth()->check())
@@ -15,12 +15,12 @@
                         @if (auth()->user()->role->name === 'admin')
                             <a href="{{ route('admin.dashboard') }}" class="waves-effect">
                                 <i class="remixicon-dashboard-line"></i>
-                                <span> Dashboard </span>
+                                <span> Thống kê </span>
                             </a>
                         @elseif(auth()->user()->role->name === 'venue_owner')
                             <a href="{{ route('owner.dashboard') }}" class="waves-effect">
                                 <i class="remixicon-dashboard-line"></i>
-                                <span> Dashboard </span>
+                                <span> Thống kê </span>
                             </a>
                         @endif
                     </li>
@@ -37,12 +37,6 @@
                             <a href="{{ route('admin.venues.index') }}" class="waves-effect">
                                 <i class="remixicon-store-2-line"></i>
                                 <span> Quản lý Thương hiệu </span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('admin.bookings.index') }}" class="waves-effect">
-                                <i class="ri-ticket-line"></i>
-                                <span> Đơn đặt sân </span>
                             </a>
                         </li>
                         <li>

@@ -52,11 +52,11 @@ class AuthController extends Controller
 
         // Tạo user mới với trạng thái chưa xác nhận email
         // Xác định role mặc định là 'User' (tạo nếu chưa tồn tại)
-        $defaultRoleId = Role::where('name', 'User')->value('id');
+        $defaultRoleId = Role::where('name', 'user')->value('id');
         if (!$defaultRoleId) {
             $role = Role::firstOrCreate(
-                ['name' => 'User'],
-                ['description' => 'User role']
+                ['name' => 'user'],
+                ['description' => 'user role']
             );
             $defaultRoleId = $role->id;
         }

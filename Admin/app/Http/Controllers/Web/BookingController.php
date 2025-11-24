@@ -17,23 +17,18 @@ class BookingController extends Controller
         $status = $request->input('status');
         $venueId = $request->input('venue');
 
-        if ($user->role === 'venue_owner') {
+        if ($user->role !== 'venue_owner') {
+            // abort(403);
+
             $query = Ticket::with([
                 'user',
                 'items.booking.court.venue',
                 'items.booking.timeSlot',
-            ]);
-        } else {
-            $query = Ticket::with([
-                'user',
-                'items.booking.court.venue',
-                'items.booking.timeSlot',
-            ])->whereHas('items.booking.court', function ($q) use ($venueId) {
-                $q->whereHas('venue', function ($q2) use ( $venueId) {
-                    if ($venueId) {
-                        $q2->where('id', $venueId);
-                    }
-                });
+            ])->whereHas('items.booking.court.venue', function ($q) use ($user, $venueId) {
+                $q->where('owner_id', $user->id);
+                if ($venueId) {
+                    $q->where('id', $venueId);
+                }
             });
         }
 
@@ -49,16 +44,10 @@ class BookingController extends Controller
 
         $tickets = $query->orderBy('created_at', 'desc')->paginate(10);
 
-        $venues = Venue::all();
+        $venues = Venue::where('owner_id', $user->id)->get();
 
 
-        if ($user->role->name === 'venue_owner') {
-            return view('venue_owner.bookings.index', compact('tickets', 'search', 'status', 'venues', 'venueId'));
-        } elseif ($user->role->name === 'admin') {
-            return view('admin.bookings.index', compact('tickets', 'search', 'status', 'venues', 'venueId'));
-        } else {
-            // abort(403);
-        }
+         return view('venue_owner.bookings.index', compact('tickets', 'search', 'status', 'venues', 'venueId'));
     }
 
 

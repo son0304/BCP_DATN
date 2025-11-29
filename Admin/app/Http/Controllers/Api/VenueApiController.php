@@ -119,76 +119,15 @@ class VenueApiController extends Controller
         ]);
     }
 
-    /**
-     * Tạo mới venue kèm ảnh upload
-     */
-    // public function store(Request $request)
-    // {
-    //     $validatedData = $request->validate([
-    //         'user_id' => 'required|integer|exists:users,id',
-    //         'name' => 'required|string|max:255',
-    //         'phone' => 'required|string|max:20',
-    //         'provinceId' => 'required|integer|exists:provinces,id',
-    //         'districtId' => 'required|integer|exists:districts,id',
-    //         'address' => 'required|string',
-    //         'start_time' => 'required|date_format:H:i',
-    //         'end_time' => 'required|date_format:H:i|after:start_time',
-    //         'description' => 'nullable|string',
-    //         'images' => 'required|array|min:1',
-    //         'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:10240',
-    //         'mainImageIndex' => 'required|integer|min:0',
-    //     ]);
 
-    //     DB::beginTransaction();
-
-    //     try {
-    //         $venue = Venue::create([
-    //             'owner_id' => $validatedData['user_id'],
-    //             'name' => $validatedData['name'],
-    //             'phone' => $validatedData['phone'],
-    //             'province_id' => $validatedData['provinceId'],
-    //             'district_id' => $validatedData['districtId'],
-    //             'address_detail' => $validatedData['address'],
-    //             'start_time' => $validatedData['start_time'],
-    //             'end_time' => $validatedData['end_time'],
-    //             'is_active' => false,
-    //         ]);
-
-    //         $files = $request->file('images');
-
-    //         foreach ($files as $index => $file) {
-    //             $path = $file->store('uploads/venues', 'public');
-    //             $url = asset('storage/' . $path);
-
-    //             // ✅ Dùng quan hệ morphMany
-    //             $venue->images()->create([
-    //                 'url' => $url,
-    //                 'is_primary' => $index == $validatedData['mainImageIndex'],
-    //             ]);
-    //         }
-
-    //         DB::commit();
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'data' => $venue->load('images')
-    //         ], 201);
-    //     } catch (Throwable $e) {
-    //         DB::rollBack();
-    //         Log::error('Lỗi tạo venue: ' . $e->getMessage());
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
 
     public function store(Request $request)
     {
-        $user = $request->input('owner_id'); // Hoặc $request->input('owner_id') 
+        Log::info('Request to create venue', $request->all());
+        $userId = $request->input('owner_id'); // owner_id là INT
 
         // Kiểm tra user đã có venue chưa
-        $existingVenue = Venue::where('owner_id', $user->id)->first();
+        $existingVenue = Venue::where('owner_id', $userId)->first();
         if ($existingVenue) {
             return response()->json([
                 'success' => false,
@@ -216,6 +155,8 @@ class VenueApiController extends Controller
             'courts.*.time_slots.*.end_time' => 'required_with:courts.*.time_slots|date_format:H:i|after:courts.*.time_slots.*.start_time',
             'courts.*.time_slots.*.price' => 'required_with:courts.*.time_slots|numeric|min:0',
         ];
+
+
 
         $validator = Validator::make($request->all(), $rules);
         $validator->after(function ($validator) use ($request) {

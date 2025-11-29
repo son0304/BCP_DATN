@@ -66,7 +66,9 @@ const Index_Detail_Venue: React.FC = () => {
       {/* 2. BODY: BOOKING (LEFT) & DETAIL INFO (RIGHT) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         
-        {/* Booking Section (Main) */}
+        {/* Booking Section (Main) - Vị trí bên TRÁI */}
+        {/* Lưu ý: Nếu trong file Booking_Detail_Venue.tsx có class 'lg:order-2', 
+            bạn nên sửa nó thành 'lg:order-1' hoặc xóa class order đi để nó tự động nằm bên trái. */}
         <Booking_Detail_Venue
             venue={venue}
             user={user}
@@ -75,8 +77,9 @@ const Index_Detail_Venue: React.FC = () => {
             setSelectedDate={setSelectedDate}
         />
 
-        {/* Info Detail Section (Sidebar) */}
-        <div className="lg:col-span-2 order-2 lg:order-1 space-y-6">
+        {/* Info Detail Section (Sidebar) - Vị trí bên PHẢI */}
+        {/* Thay đổi: lg:order-1 thành lg:order-2 (hoặc last) */}
+        <div className="lg:col-span-2 order-2 lg:order-2 space-y-6">
             <Info_Detail_Venue venue={venue} formatPrice={formatPrice} />
             
             {/* Related Venues Placeholder */}
@@ -88,10 +91,9 @@ const Index_Detail_Venue: React.FC = () => {
                     <div className="text-xs text-gray-400 italic">Đang tải...</div>
                 ) : (
                     <div className="space-y-3">
-                         {/* Placeholder item */}
                         {relatedVenues.length > 0 ? relatedVenues.map(v => (
                             <div key={v.id} className="flex gap-2 items-center hover:bg-gray-50 p-1 rounded cursor-pointer transition">
-                                <div className="w-12 h-12 bg-gray-200 rounded overflow-hidden">
+                                <div className="w-12 h-12 bg-gray-200 rounded overflow-hidden flex-shrink-0">
                                      <img src={(v as any).images?.[0]?.url || 'https://via.placeholder.com/50'} className="w-full h-full object-cover" alt=""/>
                                 </div>
                                 <div>

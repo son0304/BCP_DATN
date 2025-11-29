@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\PaymentApiController;
 use App\Http\Controllers\Api\TransactionApiController;
 use App\Http\Controllers\Api\WalletApiController;
 use App\Http\Controllers\Web\LocationController;
+use App\Http\Controllers\Api\VenueTypeApiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -55,6 +56,8 @@ Route::get('/promotions', [PromotionApiController::class, 'index']);
 
 Route::apiResource('reviews', ReviewApiController::class)
     ->only(['index', 'show']);
+
+Route::get('/venue_types', [VenueTypeApiController::class, 'index']);
 
 // ==================== PROTECTED ROUTES ====================
 // Những route này cần JWT token

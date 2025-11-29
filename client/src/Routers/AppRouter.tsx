@@ -15,6 +15,7 @@ import Index_Blog from '../Pages/Blog/Index_Blog';
 import Detail_Blog from '../Pages/Blog/Detail_Blog';
 import Index_Detail_Venue from '../Pages/Venues/Detail_Venue/Index_Detail_Venue'
 import Ticket_Detail from '../Pages/Ticket/Ticket_Detail'
+import Map_Venue from '../Pages/Maps/Map_Venue'
 const AppRouter = () => {
     return (
         <Routes>
@@ -31,14 +32,16 @@ const AppRouter = () => {
                 <Route path='venues/:id' element={<Index_Detail_Venue />} />
                 <Route path='booking/:id' element={<Ticket_Detail />} />
 
-                <Route path='profile' element={<Detail_User />}/>
+                <Route path='profile' element={<Detail_User />} />
                 {/* <Route path='profile/edit' element={< Edit_Profile />} /> */}
 
-                
+
                 <Route path='partner' element={<Home_Partner />}>
                     <Route index element={<Index_Partner />} />
                     <Route path="create_venue" element={<Create_Venue />} />
                 </Route>
+
+                <Route path='map' element={<Map_Venue />} />
 
                 {/* === BLOG === */}
                 <Route path="blog" element={<Home_Blog />}>

@@ -101,6 +101,7 @@ const Header = () => {
         <nav className="hidden md:flex items-center gap-8 lg:gap-10">
           <NavLink to="/" className={getNavLinkClass}>Trang chủ</NavLink>
           <NavLink to="/partner" className={getNavLinkClass}>Đối tác</NavLink>
+          <NavLink to="/map" className={getNavLinkClass}>Bản Đồ</NavLink>
           <NavLink to="/blog" className={getNavLinkClass}>Tin tức</NavLink>
           <NavLink to="/contacts" className={getNavLinkClass}>Liên hệ</NavLink>
           <NavLink to="/tournaments" className={getNavLinkClass}>Giải đấu</NavLink>

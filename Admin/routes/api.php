@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthApiController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DistrictApiController;
 use App\Http\Controllers\Api\ImageApiController;
 use App\Http\Controllers\Api\PromotionApiController;
@@ -10,6 +11,8 @@ use App\Http\Controllers\Api\TicketApiController;
 use App\Http\Controllers\Api\TimeSlotApiController;
 use App\Http\Controllers\Api\VenueApiController;
 use App\Http\Controllers\Api\PaymentApiController;
+use App\Http\Controllers\Api\TransactionApiController;
+use App\Http\Controllers\Api\WalletApiController;
 use App\Http\Controllers\Web\LocationController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +27,9 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [AuthApiController::class, 'register']);
 Route::post('/login', [AuthApiController::class, 'login']);
 Route::post('/verify-email', [AuthApiController::class, 'verifyEmail']);
+Route::get('/user', [AuthApiController::class, 'showuer']);
+Route::get('/transaction', [TransactionApiController::class, 'index']);
+
 
 Route::get('/venues', [VenueApiController::class, 'index']);
 Route::get('/venue/{id}', [VenueApiController::class, 'show']);
@@ -39,10 +45,10 @@ Route::get('/districts/{province}', [LocationController::class, 'getDistrictsByP
 Route::get('/ticket/{id}', [TicketApiController::class, 'show']);
 Route::get('/tickets', [TicketApiController::class, 'index']);
 
-
 Route::post('/payment/momo', [PaymentApiController::class, 'paymentMomo']);
 Route::post('/payment/momo/ipn', [PaymentApiController::class, 'ipn']);
-Route::get('/payment/check-status/{id}', [PaymentApiController::class, 'checkTransactionStatus']);
+
+
 
 
 Route::get('/promotions', [PromotionApiController::class, 'index']);
@@ -57,10 +63,13 @@ Route::middleware(['jwt.auth'])->group(function () {
     // Logout
     Route::post('/logout', [AuthApiController::class, 'logout']);
 
+    Route::get('/wallet', [WalletApiController::class, 'myWallet']);
     // Tickets
     Route::get('/tickets', [TicketApiController::class, 'index']);
     // Route::get('/ticket/{id}', [TicketApiController::class, 'show']);
     Route::post('/tickets', [TicketApiController::class, 'store']);
+    Route::delete('/item/{id}', [TicketApiController::class, 'destroyItem']);
+    Route::delete('/ticket/{id}', [TicketApiController::class, 'destroyTicket']);
 
     // Venue (create)
     Route::post('/venues', [VenueApiController::class, 'store']);
@@ -71,4 +80,12 @@ Route::middleware(['jwt.auth'])->group(function () {
     // Reviews (protected actions)
     Route::apiResource('reviews', ReviewApiController::class)
         ->only(['store', 'update', 'destroy']);
+
+    // Payments
+
+
+    Route::post('/payment/wallet', [PaymentApiController::class, 'paymentWallet']);
+
+
+    Route::get('/payment/check-status/{id}', [PaymentApiController::class, 'checkTransactionStatus']);
 });

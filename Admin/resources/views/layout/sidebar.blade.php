@@ -11,22 +11,16 @@
 
                 {{-- Menu chung --}}
                 @if (auth()->check())
-                    <li>
-                        @if (auth()->user()->role->name === 'admin')
-                            <a href="{{ route('admin.dashboard') }}" class="waves-effect">
-                                <i class="remixicon-dashboard-line"></i>
-                                <span> Dashboard </span>
-                            </a>
-                        @elseif(auth()->user()->role->name === 'venue_owner')
-                            <a href="{{ route('owner.dashboard') }}" class="waves-effect">
-                                <i class="remixicon-dashboard-line"></i>
-                                <span> Dashboard </span>
-                            </a>
-                        @endif
-                    </li>
+
 
                     {{-- Admin menu --}}
                     @if (auth()->user()->role->name === 'admin')
+                        <li>
+                            <a href="{{ route('admin.statistics.index') }}" class="waves-effect">
+                                <i class="remixicon-dashboard-line"></i>
+                                <span> Thống kê Sàn </span>
+                            </a>
+                        </li>
                         <li>
                             <a href="{{ route('admin.users.index') }}" class="waves-effect">
                                 <i class="remixicon-user-line"></i>
@@ -57,11 +51,26 @@
                                 <span> Voucher </span>
                             </a>
                         </li>
+
+                        <li>
+                            <a href="{{ route('admin.transactions.index') }}" class="waves-effect">
+                                {{-- Icon hóa đơn --}}
+                                <i class="ri-file-list-3-line"></i>
+                                <span> Quản lý giao dịch </span>
+                            </a>
+                        </li>
                     @endif
 
                     {{-- Venue Owner menu --}}
                     @if (auth()->user()->role->name === 'venue_owner')
                         <li>
+                            <a href="{{ route('owner.statistics.index') }}" class="waves-effect">
+                                <i class="remixicon-dashboard-line"></i>
+                                <span> Thống kê Sàn </span>
+                            </a>
+                        </li>
+                        <li>
+
                             <a href="{{ route('owner.venues.index') }}" class="waves-effect">
                                 <i class="remixicon-store-2-line"></i>
                                 <span> Thương Hiệu </span>

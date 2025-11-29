@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\EmailVerificationMail;
+use App\Models\Wallet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -24,8 +25,6 @@ class AuthApiController extends Controller
 {
     public function register(Request $request)
     {
-        // --- ĐÃ SỬA: Lỗi validation 'require' và 'number' ---
-        // --- ĐÃ SỬA: Đồng bộ tên cột 'province_id' và 'district_id' ---
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -33,9 +32,6 @@ class AuthApiController extends Controller
             'phone' => 'required|string|max:20',
             'province_id' => 'required|numeric|exists:provinces,id',
             'district_id' => 'required|numeric|exists:districts,id',
-        ], [
-            'email.unique' => 'Email này đã được sử dụng.',
-            'password.confirmed' => 'Xác nhận mật khẩu không khớp.',
         ]);
 
         if ($validator->fails()) {
@@ -54,22 +50,29 @@ class AuthApiController extends Controller
             );
 
             $verificationToken = Str::random(60);
+
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'phone' => $request->phone,
-                'province_id' => $request->province_id, // <-- Đã sửa
-                'district_id' => $request->district_id, // <-- Đã sửa
+                'province_id' => $request->province_id,
+                'district_id' => $request->district_id,
                 'role_id' => $defaultRole->id,
                 'is_active' => false,
                 'is_email_verified' => false,
                 'email_verification_token' => $verificationToken,
             ]);
 
+            Wallet::create([
+                'user_id' => $user->id,
+                'status' => 'active',
+                'balance' => 0,
+            ]);
+
+            // Gửi email xác nhận
             $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
             $verificationUrl = $frontendUrl . '/verify-email?token=' . $verificationToken;
-
             Mail::to($user->email)->send(new EmailVerificationMail($user, $verificationUrl));
 
             DB::commit();
@@ -82,7 +85,7 @@ class AuthApiController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
             Log::error('Lỗi khi đăng ký user: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Đã có lỗi xảy ra, vui lòng thử lại.'], 500);
+            return response()->json(['success' => false, 'message' => 'Đã có lỗi xảy ra.'], 500);
         }
     }
 

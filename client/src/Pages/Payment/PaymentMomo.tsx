@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { usePostData } from '../../Hooks/useApi';
-import { useNotification } from '../../Components/Notification'; // Import hook thông báo
+import { useNotification } from '../../Components/Notification';
 import type { Ticket } from '../../Types/tiket';
 import axios from 'axios';
 
@@ -12,7 +12,7 @@ interface PaymentMomoProps {
 
 const PaymentMomo = ({ ticket, onSuccess }: PaymentMomoProps) => {
   const { mutate } = usePostData('payment/momo');
-  const { showNotification } = useNotification(); // Sử dụng hook
+  const { showNotification } = useNotification();
 
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +26,6 @@ const PaymentMomo = ({ ticket, onSuccess }: PaymentMomoProps) => {
     setError(null);
     setQrUrl(null);
 
-    // Gọi API tạo mã (nhớ làm tròn tiền)
     mutate(
       {
         id: ticket.id,
@@ -36,8 +35,6 @@ const PaymentMomo = ({ ticket, onSuccess }: PaymentMomoProps) => {
         onSuccess: (res: any) => {
           if (res.success && res.payUrl) {
             setQrUrl(res.payUrl);
-            // Thông báo nhẹ để user biết đã tạo mã xong
-            // showNotification('Đã tạo mã thanh toán MoMo', 'info'); 
           } else {
             const msg = 'Không nhận được link thanh toán từ MoMo';
             setError(msg);
@@ -55,24 +52,18 @@ const PaymentMomo = ({ ticket, onSuccess }: PaymentMomoProps) => {
     );
   }, [ticket, mutate, showNotification]);
 
-  // --- 2. POLLING: KIỂM TRA TRẠNG THÁI (3s/lần) ---
+  // --- 2. POLLING (3s/lần) ---
   useEffect(() => {
     let intervalId: number;
 
     if (qrUrl) {
       intervalId = setInterval(async () => {
         try {
-          // Gọi API check status
-          // Lưu ý: URL này phải khớp với route bạn định nghĩa trong api.php
           const res = await axios.get(`http://localhost:8000/api/payment/check-status/${ticket.id}`);
           const data = res.data;
-
-          // Nếu thanh toán thành công
           if (data.status === 'confirmed' || data.payment_status === 'paid') {
-            clearInterval(intervalId); // Dừng kiểm tra
+            clearInterval(intervalId);
             showNotification('Thanh toán thành công! Cảm ơn quý khách.', 'success');
-
-            // Gọi callback để reload trang cha
             onSuccess();
           }
         } catch (err) {
@@ -87,46 +78,74 @@ const PaymentMomo = ({ ticket, onSuccess }: PaymentMomoProps) => {
   }, [qrUrl, ticket.id, onSuccess, showNotification]);
 
   return (
-    <div className="flex flex-col items-center p-6 bg-white rounded-xl shadow-sm border border-gray-100 animate-fadeIn">
-      <h3 className="mb-4 text-lg font-bold text-[#a50064]">Quét mã để thanh toán</h3>
-
+    <div className="flex flex-col items-center bg-white rounded-xl p-4 animate-fade-in mt-4">
+      
+      {/* Loading State */}
       {isLoading && (
-        <div className="flex items-center gap-2 text-gray-600 mb-4">
-          <i className="fa-solid fa-circle-notch fa-spin text-[#a50064]"></i>
-          <span>Đang kết nối với MoMo...</span>
+        <div className="py-8 text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-[#D82D8B] border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-sm font-semibold text-gray-600">Đang khởi tạo giao dịch MoMo...</p>
         </div>
       )}
 
+      {/* Error State */}
       {error && (
-        <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm mb-4 text-center">
-          <i className="fa-solid fa-circle-exclamation mr-2"></i>
-          {error}
+        <div className="w-full p-4 bg-red-50 text-red-600 rounded-lg text-xs md:text-sm text-center border border-red-100 flex flex-col items-center gap-2">
+          <i className="fa-solid fa-triangle-exclamation text-xl"></i>
+          <span>{error}</span>
+          <button 
+             onClick={() => window.location.reload()} 
+             className="mt-2 text-xs font-bold underline hover:text-red-800"
+          >
+             Thử lại
+          </button>
         </div>
       )}
 
+      {/* QR Code Display */}
       {qrUrl && (
-        <div className="flex flex-col items-center">
-          <div className="p-3 border-4 border-[#a50064] rounded-2xl bg-white shadow-inner">
-            <QRCodeSVG
-              value={qrUrl}
-              size={220}
-              level="H"
-              imageSettings={{
-                src: "/momo.png", 
-                x: undefined,
-                y: undefined,
-                height: 40,
-                width: 40,
-                excavate: true,
-              }}
-            />
+        <div className="w-full flex flex-col items-center">
+          <div className="relative bg-[#FFF0F6] p-4 rounded-2xl border-2 border-[#D82D8B]/20 shadow-sm">
+             {/* Logo MoMo góc */}
+             <div className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full p-1 shadow border border-gray-100 z-10">
+                <img src="/momo.png" alt="logo" className="w-full h-full object-contain" />
+             </div>
+
+             <div className="bg-white p-2 rounded-xl">
+                <QRCodeSVG
+                value={qrUrl}
+                size={200}
+                level="H"
+                imageSettings={{
+                    src: "/momo.png", 
+                    x: undefined,
+                    y: undefined,
+                    height: 36,
+                    width: 36,
+                    excavate: true,
+                }}
+                />
+             </div>
           </div>
-          <p className="mt-4 text-sm text-[#a50064] text-center animate-pulse font-semibold flex items-center gap-2">
-            <i className="fa-solid fa-spinner fa-spin"></i>
-            Đang chờ xác nhận thanh toán...
-          </p>
-          <p className="text-xs text-gray-400 mt-2">
-            Vui lòng không tắt trình duyệt cho đến khi hoàn tất.
+          
+          <div className="mt-5 text-center space-y-2">
+             <h4 className="text-[#D82D8B] font-bold text-sm uppercase tracking-wide">Quét mã để thanh toán</h4>
+             <p className="text-xs text-gray-500 max-w-[250px] mx-auto">
+                Sử dụng App <b>MoMo</b> hoặc ứng dụng Camera hỗ trợ QR code để quét.
+             </p>
+          </div>
+
+          {/* Polling Indicator */}
+          <div className="mt-6 flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-full border border-gray-200">
+             <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D82D8B] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#D82D8B]"></span>
+             </span>
+             <p className="text-xs font-semibold text-gray-600">Đang chờ xác nhận...</p>
+          </div>
+          
+          <p className="text-[10px] text-gray-400 mt-2 italic">
+            Vui lòng không tắt trình duyệt.
           </p>
         </div>
       )}

@@ -1,5 +1,12 @@
 // src/types/User.ts
 
+export interface Wallet {
+  id: number;
+  user_id: number;
+  balance: string | number; // DB trả string (decimal) nhưng có thể dùng number
+}
+
+
 export interface User {
   id: number;                   // ID của user
   name: string;                 // Họ tên
@@ -10,4 +17,6 @@ export interface User {
   district?: string | null;  // District ID (có thể null)
   province?: string | null;  // Province ID (có thể null)
   is_active: boolean;           // Trạng thái active
+  wallet?: Wallet;            // Thông tin ví tiền (có thể null)
+
 }

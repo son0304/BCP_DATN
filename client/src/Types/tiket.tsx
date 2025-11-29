@@ -8,6 +8,7 @@ export interface TicketItem {
   booking_id: number;
   unit_price: string | number;
   discount_amount: string | number;
+  status: "active" | "refund" ;
   is_booking?: boolean | null;
   booking?: {
     id: number;

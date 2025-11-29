@@ -26,6 +26,11 @@ class Venue extends Model
         'is_active',
     ];
 
+    public function moneyFlows()
+    {
+        return $this->hasMany(MoneyFlow::class);
+    }
+
     public function images()
     {
         return $this->morphMany(Image::class, 'imageable');

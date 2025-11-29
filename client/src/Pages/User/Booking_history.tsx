@@ -4,224 +4,260 @@ import { useFetchData } from "../../Hooks/useApi";
 import type { Ticket } from "../../Types/tiket";
 import { Link } from "react-router-dom";
 
+// --- TYPES (Giữ nguyên) ---
+interface WalletLog {
+  id: number;
+  type: string;
+  amount: string | number;
+  before_balance: string | number;
+  after_balance: string | number;
+  description: string | null;
+  created_at: string;
+  ticket_id?: number | null;
+}
+
+interface Wallet {
+  id: number;
+  user_id: number;
+  balance: string | number;
+  status: string;
+  logs: WalletLog[];
+}
+
 const BookingHistory = ({ user }: { user: User }) => {
+  const [activeTab, setActiveTab] = useState<'bookings' | 'transactions'>('bookings');
   const [filterStatus, setFilterStatus] = useState("all");
 
-  // --- CONFIG ---
-  const statusConfig: Record<string, { label: string; class: string; icon: string }> = {
-    pending: { label: "Chờ xác nhận", class: "bg-yellow-50 text-yellow-700 border border-yellow-200", icon: "fa-hourglass-half" },
-    confirmed: { label: "Đã xác nhận", class: "bg-blue-50 text-blue-700 border border-blue-200", icon: "fa-check-circle" },
-    completed: { label: "Hoàn thành", class: "bg-emerald-50 text-emerald-700 border border-emerald-200", icon: "fa-flag-checkered" },
-    cancelled: { label: "Đã hủy", class: "bg-red-50 text-red-700 border border-red-200", icon: "fa-xmark" },
+  const { data: ticketData, isLoading: isLoadingTickets } = useFetchData("tickets");
+  const { data: walletData, isLoading: isLoadingWallet } = useFetchData("wallet");
+
+  const listBooking: Ticket[] = (ticketData?.data as Ticket[]) ?? [];
+  const wallet: Wallet | null = (walletData?.data as Wallet) ?? null;
+  const transactions: WalletLog[] = wallet?.logs || [];
+
+  const formatCurrency = (value: string | number | undefined) => {
+    if (value === undefined || value === null) return "0đ";
+    return Number(value).toLocaleString("vi-VN", { maximumFractionDigits: 0 }) + "đ";
   };
 
-  const paymentConfig: Record<string, { label: string; class: string }> = {
-    unpaid: { label: "Chưa thanh toán", class: "text-gray-500 bg-gray-100" },
-    paid: { label: "Đã thanh toán", class: "text-emerald-600 bg-emerald-100" },
-    refunded: { label: "Đã hoàn tiền", class: "text-orange-600 bg-orange-100" },
+  const statusConfig: Record<string, any> = {
+    pending: { label: "Chờ xác nhận", color: "text-yellow-600 bg-yellow-50 border-yellow-200", icon: "fa-hourglass-half" },
+    confirmed: { label: "Đã xác nhận", color: "text-blue-600 bg-blue-50 border-blue-200", icon: "fa-check" },
+    completed: { label: "Hoàn thành", color: "text-emerald-600 bg-emerald-50 border-emerald-200", icon: "fa-check-double" },
+    cancelled: { label: "Đã hủy", color: "text-red-600 bg-red-50 border-red-200", icon: "fa-xmark" },
+    canceled: { label: "Đã hủy", color: "text-red-600 bg-red-50 border-red-200", icon: "fa-xmark" },
   };
 
-  const tabs = [
-    { key: "all", label: "Tất cả" },
-    { key: "pending", label: "Chờ xử lý" },
-    { key: "confirmed", label: "Sắp tới" },
-    { key: "completed", label: "Hoàn thành" },
-    { key: "cancelled", label: "Đã hủy" },
-  ];
+  const transactionConfig: Record<string, any> = {
+    deposit: { label: "Nạp tiền", color: "text-emerald-600 bg-emerald-50", icon: "fa-arrow-down", sign: "+" },
+    refund: { label: "Hoàn tiền", color: "text-blue-600 bg-blue-50", icon: "fa-rotate-left", sign: "+" },
+    payment: { label: "Thanh toán", color: "text-red-600 bg-red-50", icon: "fa-arrow-up", sign: "-" },
+    withdraw: { label: "Rút tiền", color: "text-orange-600 bg-orange-50", icon: "fa-money-bill-transfer", sign: "-" },
+  };
 
-  // --- DATA HANDLING ---
-  const { data, isLoading } = useFetchData("tickets");
-  const listBooking: Ticket[] = (data?.data as Ticket[]) ?? [];
-
-  const filteredList = useMemo(() => {
+  const filteredBookings = useMemo(() => {
     let list = listBooking;
-    if (filterStatus !== "all") {
-      list = list.filter((b) => b.status === filterStatus);
-    }
+    if (filterStatus !== "all") list = list.filter((b) => b.status === filterStatus);
     return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [listBooking, filterStatus]);
 
-  // Thống kê nhanh
-  const stats = {
-    total: listBooking.length,
-    spent: listBooking
-      .filter(t => t.payment_status === 'paid')
-      .reduce((acc, curr) => acc + Number(curr.total_amount), 0)
-  };
+  const sortedTransactions = useMemo(() => {
+    return [...transactions].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [transactions]);
 
-  const formatCurrency = (value: string | number) =>
-    Number(value).toLocaleString("vi-VN", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + "₫";
+  const bookingTabs = [
+    { key: "all", label: "Tất cả" },
+    { key: "pending", label: "Chờ xử lý" },
+    { key: "confirmed", label: "Sắp tới" },
+    { key: "completed", label: "Lịch sử" },
+    { key: "cancelled", label: "Đã hủy" },
+  ];
 
-  // --- RENDER ---
   return (
-    <div className="min-h-screen bg-gray-50/50 font-sans p-4 md:p-8">
+    <div className="space-y-6 font-sans">
+      
+      {/* === 1. WALLET CARD (Redesign) === */}
+      <div className="bg-gradient-to-br from-[#10B981] to-[#059669] rounded-2xl shadow-xl p-6 text-white relative overflow-hidden group">
+        <div className="absolute -top-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/5 rounded-full blur-2xl"></div>
 
-      {/* 1. HEADER & STATS */}
-      <div className="max-w-6xl mx-auto mb-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center relative z-10 gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Lịch sử đặt sân</h1>
-            <p className="text-gray-500 mt-1">Quản lý và theo dõi các đơn đặt sân của bạn</p>
+            <div className="flex items-center gap-2 mb-2 opacity-90">
+               <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center text-xs backdrop-blur-sm">
+                  <i className="fa-solid fa-wallet"></i>
+               </div>
+               <span className="text-xs font-bold uppercase tracking-widest">Ví cá nhân</span>
+            </div>
+            
+            <div className="text-3xl md:text-4xl font-extrabold tracking-tight">
+              {isLoadingWallet ? (
+                <div className="h-9 w-32 bg-white/20 animate-pulse rounded"></div>
+              ) : (
+                formatCurrency(wallet?.balance)
+              )}
+            </div>
+            
+            <p className="text-[10px] md:text-xs mt-1 opacity-70 font-mono">
+              ID: {wallet?.id ? String(wallet.id).padStart(6, '0') : '---'}
+            </p>
           </div>
 
-          {/* Stats Card Mini */}
-          <div className="flex gap-4">
-            <div className="bg-white p-3 px-5 rounded-2xl shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-400 uppercase font-semibold">Tổng đơn</p>
-              <p className="text-xl font-bold text-gray-800">{stats.total}</p>
-            </div>
-            <div className="bg-white p-3 px-5 rounded-2xl shadow-sm border border-gray-100">
-              <p className="text-xs text-gray-400 uppercase font-semibold">Đã chi tiêu</p>
-              <p className="text-xl font-bold text-emerald-600">{formatCurrency(stats.spent)}</p>
-            </div>
-          </div>
+          <button className="bg-white text-[#059669] px-5 py-2 rounded-lg shadow-lg hover:shadow-xl hover:bg-green-50 active:scale-95 transition-all text-xs font-bold flex items-center gap-2 uppercase tracking-wide">
+            <i className="fa-solid fa-circle-plus"></i> Nạp thêm
+          </button>
         </div>
+      </div>
 
-        {/* 2. TABS FILTER */}
-        <div className="flex overflow-x-auto pb-2 md:pb-0 gap-2 mb-6 scrollbar-hide">
-          {tabs.map((tab) => (
+      {/* === 2. TABS & CONTENT === */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px] flex flex-col">
+        
+        {/* Navigation Tabs */}
+        <div className="flex border-b border-gray-100 bg-gray-50/30">
+          {[
+            { id: 'bookings', icon: 'fa-ticket', label: 'Lịch sử đặt sân' },
+            { id: 'transactions', icon: 'fa-clock-rotate-left', label: 'Lịch sử giao dịch' }
+          ].map(tab => (
             <button
-              key={tab.key}
-              onClick={() => setFilterStatus(tab.key)}
-              className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${filterStatus === tab.key
-                ? "bg-gray-900 text-white shadow-lg shadow-gray-200 transform -translate-y-0.5"
-                : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
-                }`}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 py-3.5 text-xs md:text-sm font-bold text-center transition-all relative
+                ${activeTab === tab.id ? 'text-[#10B981] bg-white' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}
+              `}
             >
-              {tab.label}
+              <i className={`fa-solid ${tab.icon} mr-2`}></i> {tab.label}
+              {activeTab === tab.id && <div className="absolute top-0 left-0 w-full h-0.5 bg-[#10B981]"></div>}
             </button>
           ))}
         </div>
 
-        {/* 3. CONTENT */}
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => <div key={i} className="h-20 bg-gray-200 rounded-xl animate-pulse"></div>)}
-          </div>
-        ) : filteredList.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-gray-100 shadow-sm">
-            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-300">
-              <i className="fa-regular fa-calendar-xmark text-3xl"></i>
-            </div>
-            <h3 className="text-lg font-bold text-gray-800">Chưa có đơn đặt sân nào</h3>
-            <p className="text-gray-500 mb-6">Hãy đặt sân ngay để trải nghiệm dịch vụ tốt nhất</p>
-            <Link to="/venues" className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition">
-              Đặt sân ngay
-            </Link>
-          </div>
-        ) : (
-          <>
-            {/* --- VIEW MOBILE (CARD) --- */}
-            <div className="grid grid-cols-1 gap-4 md:hidden">
-              {filteredList.map((ticket) => {
-                const status = statusConfig[ticket.status] || statusConfig.pending;
-                const payment = paymentConfig[ticket.payment_status] || paymentConfig.unpaid;
-                return (
-                  <Link to={`/booking/${ticket.id}`} key={ticket.id} className="block">
-                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 active:scale-98 transition-transform">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <span className="text-xs font-bold text-gray-400 uppercase">#{ticket.id}</span>
-                          <h4 className="font-bold text-gray-800 text-lg">{formatCurrency(ticket.total_amount)}</h4>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${status.class}`}>
-                          <i className={`fa-solid ${status.icon}`}></i> {status.label}
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 text-sm text-gray-600 mb-4">
-                        <div className="flex items-center gap-2">
-                          <i className="fa-regular fa-calendar w-4"></i>
-                          {new Date(ticket.created_at).toLocaleDateString('vi-VN')}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <i className="fa-solid fa-wallet w-4"></i>
-                          <span className={`font-medium ${ticket.payment_status === 'paid' ? 'text-emerald-600' : 'text-gray-500'}`}>
-                            {payment.label}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
-                        <span className="text-xs text-gray-400 italic truncate max-w-[150px]">
-                          {ticket.notes || "Không có ghi chú"}
-                        </span>
-                        <span className="text-emerald-600 text-sm font-bold flex items-center gap-1">
-                          Chi tiết <i className="fa-solid fa-chevron-right text-xs"></i>
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+        {/* --- BOOKINGS TAB --- */}
+        {activeTab === 'bookings' && (
+          <div className="flex-1 flex flex-col">
+            {/* Filter Tabs */}
+            <div className="p-3 border-b border-gray-50 flex gap-2 overflow-x-auto no-scrollbar bg-white sticky top-0 z-20">
+              {bookingTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setFilterStatus(tab.key)}
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold whitespace-nowrap transition-all border
+                    ${filterStatus === tab.key
+                      ? "bg-green-50 text-green-700 border-green-200 shadow-sm"
+                      : "bg-white text-gray-500 border-gray-100 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
 
-            {/* --- VIEW DESKTOP (TABLE) --- */}
-            <div className="hidden md:block bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* List */}
+            <div className="flex-1 overflow-x-auto">
               <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50/50 border-b border-gray-100 text-xs uppercase text-gray-500 font-semibold tracking-wider">
-                    <th className="px-6 py-5">Mã đơn</th>
-                    <th className="px-6 py-5">Ngày tạo</th>
-                    <th className="px-6 py-5 text-center">Trạng thái</th>
-                    <th className="px-6 py-5 text-center">Thanh toán</th>
-                    <th className="px-6 py-5 text-right">Tổng tiền</th>
-                    <th className="px-6 py-5 text-center">Hành động</th>
+                <thead className="bg-gray-50 text-[10px] uppercase font-bold text-gray-400">
+                  <tr>
+                    <th className="px-4 py-3 w-20">Mã vé</th>
+                    <th className="px-4 py-3">Ngày đặt</th>
+                    <th className="px-4 py-3 text-right">Tổng tiền</th>
+                    <th className="px-4 py-3 text-center">Trạng thái</th>
+                    <th className="px-4 py-3 w-10"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredList.map((ticket) => {
-                    const status = statusConfig[ticket.status] || statusConfig.pending;
-                    const payment = paymentConfig[ticket.payment_status] || paymentConfig.unpaid;
-
-                    return (
-                      <tr key={ticket.id} className="hover:bg-gray-50/80 transition-colors group">
-                        <td className="px-6 py-4">
-                          <span className="font-mono font-bold text-gray-800 text-sm bg-gray-100 px-2 py-1 rounded">
-                            #{ticket.id}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium text-gray-700">
-                              {new Date(ticket.created_at).toLocaleDateString('vi-VN')}
+                <tbody className="divide-y divide-gray-50 text-xs md:text-sm text-gray-600">
+                  {isLoadingTickets ? (
+                    <tr><td colSpan={5} className="p-8 text-center text-gray-400 text-xs">Đang tải dữ liệu...</td></tr>
+                  ) : filteredBookings.length === 0 ? (
+                    <tr><td colSpan={5} className="p-12 text-center text-gray-400 italic text-xs">Không tìm thấy vé nào</td></tr>
+                  ) : (
+                    filteredBookings.map((ticket) => {
+                      const status = statusConfig[ticket.status] || statusConfig.pending;
+                      return (
+                        <tr key={ticket.id} className="hover:bg-gray-50/80 transition-colors group">
+                          <td className="px-4 py-3 font-mono font-bold text-gray-500 group-hover:text-[#10B981]">#{ticket.id}</td>
+                          <td className="px-4 py-3">
+                            <div className="font-semibold text-gray-700">{new Date(ticket.created_at).toLocaleDateString('vi-VN')}</div>
+                            <div className="text-[10px] text-gray-400">{new Date(ticket.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-gray-800">{formatCurrency(ticket.total_amount)}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold border ${status.color}`}>
+                              <i className={`fa-solid ${status.icon}`}></i> {status.label}
                             </span>
-                            <span className="text-xs text-gray-400">
-                              {new Date(ticket.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${status.class}`}>
-                            <i className={`fa-solid ${status.icon}`}></i> {status.label}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium ${payment.class}`}>
-                            {payment.label}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="text-base font-bold text-gray-800 group-hover:text-emerald-600 transition-colors">
-                            {formatCurrency(ticket.total_amount)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <Link
-                            to={`/booking/${ticket.id}`}
-                            className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-all mx-auto shadow-sm"
-                            title="Xem chi tiết"
-                          >
-                            <i className="fa-solid fa-arrow-right"></i>
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <Link to={`/booking/${ticket.id}`} className="w-6 h-6 rounded-full flex items-center justify-center text-gray-300 hover:text-[#10B981] hover:bg-green-50 transition-all">
+                               <i className="fa-solid fa-angle-right"></i>
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
-          </>
+          </div>
+        )}
+
+        {/* --- TRANSACTIONS TAB --- */}
+        {activeTab === 'transactions' && (
+          <div className="flex-1 overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-gray-50 text-[10px] uppercase font-bold text-gray-400">
+                <tr>
+                  <th className="px-4 py-3 w-32">Loại GD</th>
+                  <th className="px-4 py-3 text-right w-28">Số tiền</th>
+                  <th className="px-4 py-3">Nội dung</th>
+                  <th className="px-4 py-3 text-right w-32">Thời gian</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50 text-xs md:text-sm text-gray-600">
+                {isLoadingWallet ? (
+                  <tr><td colSpan={5} className="p-8 text-center text-gray-400 text-xs">Đang tải lịch sử...</td></tr>
+                ) : sortedTransactions.length === 0 ? (
+                  <tr><td colSpan={5} className="p-12 text-center text-gray-400 italic text-xs">Chưa có giao dịch nào</td></tr>
+                ) : (
+                  sortedTransactions.map((log) => {
+                    const config = transactionConfig[log.type] || transactionConfig.payment;
+                    const isPositive = log.type === 'deposit' || log.type === 'refund';
+
+                    return (
+                      <tr key={log.id} className="hover:bg-gray-50/80 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] ${config.color}`}>
+                              <i className={`fa-solid ${config.icon}`}></i>
+                            </div>
+                            <span className="font-semibold text-gray-700 text-xs">{config.label}</span>
+                          </div>
+                        </td>
+
+                        <td className={`px-4 py-3 text-right font-bold text-xs md:text-sm ${isPositive ? 'text-emerald-600' : 'text-red-500'}`}>
+                          {isPositive ? '+' : '-'}{formatCurrency(log.amount)}
+                        </td>
+
+                        <td className="px-4 py-3">
+                            <div className="max-w-[200px] md:max-w-xs text-xs text-gray-500 leading-snug break-words">
+                                {log.description || "Không có nội dung"}
+                            </div>
+                            {log.ticket_id && (
+                                <Link to={`/booking/${log.ticket_id}`} className="inline-block mt-1 text-[10px] font-bold text-[#10B981] hover:underline bg-green-50 px-1.5 py-0.5 rounded border border-green-100">
+                                <i className="fa-solid fa-ticket mr-1"></i>Vé #{log.ticket_id}
+                                </Link>
+                            )}
+                        </td>
+
+                        <td className="px-4 py-3 text-right">
+                          <div className="text-gray-700 font-medium text-xs">{new Date(log.created_at).toLocaleDateString('vi-VN')}</div>
+                          <div className="text-gray-400 text-[10px] font-mono">{new Date(log.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

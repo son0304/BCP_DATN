@@ -9,7 +9,7 @@ class Item extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['ticket_id', 'booking_id', 'unit_price', 'discount_amount'];
+    protected $fillable = ['ticket_id', 'booking_id', 'unit_price', 'status', 'discount_amount'];
 
     protected $appends = ['is_booking'];
 
@@ -30,7 +30,7 @@ class Item extends Model
     {
         return $this->belongsTo(Court::class, 'court_id');
     }
-    
+
     public function slot()
     {
         return $this->belongsTo(TimeSlot::class, 'slot_id');

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('ticket_id')->constrained('tickets')->cascadeOnDelete();
             $table->foreignId('booking_id')->constrained('bookings')->cascadeOnDelete();
             $table->decimal('unit_price', 10, 2)->default(0);
+            $table->enum('status', ['active', 'refund'])->default('active');
             $table->decimal('discount_amount', 10, 2)->default(0);
             $table->timestamps();
             $table->softDeletes();

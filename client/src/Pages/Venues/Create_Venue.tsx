@@ -151,8 +151,8 @@ const Create_Venue = () => {
 
   const { data: venueTypesData } = useFetchData('venue_types');
   const venueTypes: VenueType[] = (venueTypesData?.data as VenueType[]) || [];
-
-  const { mutate, loading } = usePostData('venues');
+ 
+  const { mutate,loading } = usePostData('venues');
   const navigate = useNavigate();
 
   // 2. Local State

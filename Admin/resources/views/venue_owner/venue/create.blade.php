@@ -534,46 +534,236 @@
     </script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        $(document).ready(function() {
-            // Khi người dùng thay đổi lựa chọn trong ô Tỉnh/Thành
-            $('#province_id').on('change', function() {
-                var provinceId = $(this).val(); // Lấy ID của tỉnh/thành đã chọn
-                var districtSelect = $('#district_id'); // Tham chiếu đến ô quận/huyện
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- FIX 1: Khởi tạo index dựa trên số lượng phần tử hiện có ---
+            const courtList = document.getElementById('court-list');
+            let courtIndex = courtList.querySelectorAll('.court-item').length;
+            const addCourtBtn = document.getElementById('add-court-btn');
 
-                // Xóa các lựa chọn cũ và vô hiệu hóa
+            // Hàm lấy danh sách loại sân đã check
+            function getSelectedVenueTypes() {
+                const checkedBoxes = document.querySelectorAll('.venue-type-checkbox:checked');
+                return Array.from(checkedBoxes).map(cb => ({
+                    id: cb.value,
+                    name: cb.nextElementSibling.textContent.trim()
+                }));
+            }
+
+            function renderVenueTypeOptions(selectedTypes) {
+                if (selectedTypes.length === 0) {
+                    return `<option value="">-- Vui lòng chọn loại hình sân ở cột phải --</option>`;
+                }
+                return selectedTypes.map(type => `<option value="${type.id}">${type.name}</option>`).join('');
+            }
+
+            // Cập nhật lại name cho các input thời gian để đảm bảo index đúng
+            function updateTimeSlotNames() {
+                document.querySelectorAll('.court-item').forEach((courtItem, cIdx) => {
+                    // Cập nhật lại thuộc tính name cho sân nếu cần (Optional, nhưng an toàn hơn)
+                    // courtItem.querySelectorAll('[name^="courts["]').forEach(el => { ... logic regex replace ... })
+
+                    // Cập nhật name cho Time Slots
+                    const tbody = courtItem.querySelector('tbody');
+                    const rows = tbody.querySelectorAll('tr');
+
+                    rows.forEach((row, slotIdx) => {
+                        const inputs = row.querySelectorAll('input');
+                        inputs.forEach(input => {
+                            if (input.classList.contains('time-start'))
+                                input.name =
+                                `courts[${cIdx}][time_slots][${slotIdx}][start_time]`;
+                            if (input.classList.contains('time-end'))
+                                input.name =
+                                `courts[${cIdx}][time_slots][${slotIdx}][end_time]`;
+                            if (input.classList.contains('time-price'))
+                                input.name =
+                                `courts[${cIdx}][time_slots][${slotIdx}][price]`;
+                        });
+                    });
+                });
+            }
+
+            // Thêm sân mới
+            addCourtBtn.addEventListener('click', () => {
+                const selectedTypes = getSelectedVenueTypes();
+                // Kiểm tra xem người dùng đã chọn loại hình sân chưa
+                if (selectedTypes.length === 0) {
+                    alert("Vui lòng chọn 'Loại hình sân' ở cột bên phải trước khi thêm sân.");
+                    return;
+                }
+
+                const options = renderVenueTypeOptions(selectedTypes);
+
+                // Lưu ý: Dùng courtIndex++ ngay tại đây để tạo index mới
+                const currentIdx = courtIndex++;
+
+                const newCourt = `
+                <div class="border rounded p-3 mb-3 court-item" data-index="${currentIdx}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0 fw-bold">Sân Mới #${currentIdx + 1}</h6>
+                        <button type="button" class="btn btn-sm btn-danger remove-court">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tên sân</label>
+                            <input type="text" name="courts[${currentIdx}][name]" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Loại sân</label>
+                            <select name="courts[${currentIdx}][venue_type_id]" class="form-select court-type-select" required>
+                                ${options}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Mặt sân</label>
+                            <input type="text" name="courts[${currentIdx}][surface]" class="form-control" placeholder="Ví dụ: Cỏ nhân tạo">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Trong nhà / Ngoài trời</label>
+                            <select name="courts[${currentIdx}][is_indoor]" class="form-select">
+                                <option value="0">Ngoài trời</option>
+                                <option value="1">Trong nhà</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold mt-3 d-flex justify-content-between align-items-center">
+                        <span>Khung giờ và giá</span>
+                        <button type="button" class="btn btn-sm btn-outline-success add-time-slot">
+                            <i class="fas fa-plus"></i> Thêm khung giờ
+                        </button>
+                    </h6>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-bordered table-sm align-middle time-slot-table">
+                            <thead>
+                                <tr class="bg-light">
+                                    <th>Bắt đầu</th>
+                                    <th>Kết thúc</th>
+                                    <th>Giá (VNĐ)</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                 <tr>
+                                    <td><input type="time" name="courts[${currentIdx}][time_slots][0][start_time]" class="form-control form-control-sm time-start" required></td>
+                                    <td><input type="time" name="courts[${currentIdx}][time_slots][0][end_time]" class="form-control form-control-sm time-end" required></td>
+                                    <td><input type="number" name="courts[${currentIdx}][time_slots][0][price]" class="form-control form-control-sm time-price" required></td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+                courtList.insertAdjacentHTML('beforeend', newCourt);
+            });
+
+            // Event Delegation cho các nút xóa và thêm slot
+            document.addEventListener('click', e => {
+                // Xóa sân
+                if (e.target.closest('.remove-court')) {
+                    if (confirm('Bạn có chắc muốn xóa sân này?')) {
+                        e.target.closest('.court-item').remove();
+                        // Lưu ý: Không giảm courtIndex để tránh trùng index cũ, chỉ cần updateTimeSlotNames nếu cần thiết logic backend
+                    }
+                }
+
+                // Thêm slot thời gian
+                if (e.target.closest('.add-time-slot')) {
+                    const courtItem = e.target.closest('.court-item');
+                    const tbody = courtItem.querySelector('tbody');
+                    // Tìm index của sân hiện tại từ thuộc tính name của input đầu tiên tìm thấy hoặc data-attribute
+                    // Cách an toàn nhất là chạy updateTimeSlotNames sau khi thêm
+
+                    tbody.insertAdjacentHTML('beforeend', `
+                        <tr>
+                            <td><input type="time" class="form-control form-control-sm time-start" required></td>
+                            <td><input type="time" class="form-control form-control-sm time-end" required></td>
+                            <td><input type="number" class="form-control form-control-sm time-price" required></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `);
+                    updateTimeSlotNames();
+                }
+
+                // Xóa slot thời gian
+                if (e.target.closest('.remove-slot')) {
+                    e.target.closest('tr').remove();
+                    updateTimeSlotNames();
+                }
+            });
+
+            // Đồng bộ checkbox loại sân vào các dropdown
+            document.querySelectorAll('.venue-type-checkbox').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const selectedTypes = getSelectedVenueTypes();
+                    const options = renderVenueTypeOptions(selectedTypes);
+                    document.querySelectorAll('.court-type-select').forEach(select => {
+                        const currentVal = select.value;
+                        select.innerHTML = options;
+                        select.value = currentVal; // Cố gắng giữ lại giá trị cũ
+                    });
+                });
+            });
+
+            // TÍNH NĂNG TỰ ĐỘNG CHIA GIỜ (Đã sửa để không bị lỗi UX)
+            // Chỉ chạy khi người dùng có thể bấm một nút "Tự động chia giờ" hoặc xác nhận
+            // Ở đây mình tạm bỏ logic tự động xóa row khi change để tránh lỗi UX,
+            // bạn có thể thêm một nút "Tách giờ" bên cạnh mỗi dòng nếu muốn.
+        });
+
+        // --- FIX 2: Xử lý AJAX Quận/Huyện ---
+        $(document).ready(function() {
+            const provinceSelect = $('#province_id');
+            const districtSelect = $('#district_id');
+            const oldDistrictId = "{{ old('district_id') }}"; // Lấy giá trị cũ từ Laravel
+
+            function loadDistricts(provinceId, selectedDistrictId = null) {
+                if (!provinceId) {
+                    districtSelect.html('<option value="">-- Vui lòng chọn Tỉnh/Thành trước --</option>');
+                    districtSelect.prop('disabled', true);
+                    return;
+                }
+
                 districtSelect.html('<option value="">-- Đang tải... --</option>');
                 districtSelect.prop('disabled', true);
 
-                // Nếu đã chọn một tỉnh/thành hợp lệ
-                if (provinceId) {
-                    // Gửi yêu cầu AJAX đến server
-                    $.ajax({
-                        url: '/api/districts/' + provinceId,
-                        type: 'GET',
-                        dataType: 'json',
-                        success: function(data) {
-                            // Khi nhận được dữ liệu thành công
-                            districtSelect.prop('disabled', false); // Kích hoạt lại ô
-                            districtSelect.html(
-                                '<option value="" disabled selected>-- Chọn Quận/Huyện --</option>'
-                            );
-                            // Lặp qua dữ liệu trả về và thêm vào ô select
-                            $.each(data, function(key, value) {
-                                districtSelect.append('<option value="' + value.id +
-                                    '">' + value.name + '</option>');
-                            });
-                        },
-                        error: function() {
-                            districtSelect.html(
-                                '<option value="">-- Có lỗi xảy ra --</option>');
-                            console.error('Lỗi khi tải danh sách quận/huyện.');
-                        }
-                    });
-                } else {
-                    districtSelect.html('<option value="">-- Vui lòng chọn Tỉnh/Thành trước --</option>');
-                    districtSelect.prop('disabled', true);
-                }
+                $.ajax({
+                    url: '/api/districts/' + provinceId, // Đảm bảo route này tồn tại
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        districtSelect.prop('disabled', false);
+                        districtSelect.html('<option value="">-- Chọn Quận/Huyện --</option>');
+                        $.each(data, function(key, value) {
+                            let isSelected = (selectedDistrictId == value.id) ? 'selected' : '';
+                            districtSelect.append(
+                                `<option value="${value.id}" ${isSelected}>${value.name}</option>`
+                                );
+                        });
+                    },
+                    error: function() {
+                        districtSelect.html('<option value="">-- Lỗi tải dữ liệu --</option>');
+                    }
+                });
+            }
+
+            // Sự kiện change
+            provinceSelect.on('change', function() {
+                loadDistricts($(this).val());
             });
+
+            // Kích hoạt ngay khi trang load nếu đã có old('province_id')
+            if (provinceSelect.val()) {
+                loadDistricts(provinceSelect.val(), oldDistrictId);
+            }
         });
     </script>
 @endsection

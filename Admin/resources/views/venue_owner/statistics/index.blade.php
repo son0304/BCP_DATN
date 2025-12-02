@@ -90,7 +90,7 @@
                                 <td>{{ \Carbon\Carbon::parse($historyPayment->created_at)->format('d/m/Y H:i') }}</td>
 
                                 <td>
-                                    @if ($historyPayment->status == 'COMPLETED')
+                                    @if ($historyPayment->status == 'completed')
                                         <span class="badge bg-success">Thành công</span>
                                     @elseif($historyPayment->status == 'pending')
                                         <span class="badge bg-warning text-dark">Đang chờ</span>

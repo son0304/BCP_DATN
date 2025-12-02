@@ -151,7 +151,7 @@ class VenueController extends Controller
             'name.required' => 'Tên thương hiệu không được bỏ trống.',
         ];
 
-        // validate khung giờ 
+        // validate khung giờ
         $validator = Validator::make($request->all(), $rules, $messages);
         $validator->after(function ($validator) use ($request) {
             $venueStartTimeStr = $request->input('start_time');

@@ -89,7 +89,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     });
 
     Route::prefix('bookings')->name('bookings.')->group(function () {
-        Route::get('/', [BookingController::class, 'index'])->name('index');
+        Route::get('/', [BookingController::class, 'booking_admin'])->name('index');
     });
 
     Route::prefix('transactions')->name('transactions.')->group(function () {
@@ -138,7 +138,7 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
 
     // --- BOOKINGS MANAGE BY OWNER ---
     Route::prefix('bookings')->name('bookings.')->group(function () {
-        Route::get('/', [BookingController::class, 'index'])->name('index');
+        Route::get('/', [BookingController::class, 'booking_venue'])->name('index');
         Route::get('{booking}', [BookingController::class, 'show'])->name('show');
         Route::post('/', [BookingController::class, 'store'])->name('store');
         Route::put('{booking}', [BookingController::class, 'update'])->name('update');

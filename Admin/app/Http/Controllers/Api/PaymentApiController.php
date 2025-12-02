@@ -279,6 +279,7 @@ class PaymentApiController extends Controller
 
     public function paymentWallet(Request $request)
     {
+        // 1. Validate dữ liệu đầu vào
         $validated = $request->validate([
             'ticket_id' => 'required|exists:tickets,id',
             'total_amount' => 'required|numeric|min:0'
@@ -286,9 +287,13 @@ class PaymentApiController extends Controller
 
         $userId = Auth::id();
         Log::info("User $userId đang thanh toán vé #" . $validated['ticket_id'] . " qua ví với số tiền " . $validated['total_amount']);
-        $ticket = Ticket::find($validated['ticket_id']);
+
+        // 2. Load dữ liệu cần thiết
+        // Dùng lockForUpdate để tránh việc 2 request thanh toán cùng lúc cho 1 vé
+        $ticket = Ticket::where('id', $validated['ticket_id'])->lockForUpdate()->first();
         $wallet = Wallet::where('user_id', $userId)->first();
 
+        // 3. Các bước kiểm tra điều kiện (Guard clauses)
         if (!$ticket) {
             return response()->json(['message' => 'Không tìm thấy vé'], 404);
         }
@@ -296,34 +301,82 @@ class PaymentApiController extends Controller
         if ($ticket->status === 'confirmed') {
             return response()->json(['message' => 'Vé này đã được thanh toán rồi.'], 400);
         }
+
         if (!$wallet) {
             return response()->json(['message' => 'Không tìm thấy ví người dùng. Vui lòng tạo ví trước khi thanh toán.'], 404);
         }
 
-        if (!$wallet || $wallet->balance < $validated['total_amount']) {
+        // Kiểm tra số dư ví
+        $paymentAmount = (float)$validated['total_amount'];
+        if ($wallet->balance < $paymentAmount) {
             return response()->json(['message' => 'Số dư ví không đủ.'], 400);
         }
 
+        // Kiểm tra số tiền thanh toán có khớp với giá vé không
+        if ($paymentAmount < (float)$ticket->total_price) {
+            return response()->json(['message' => 'Số tiền thanh toán không đủ so với giá vé.'], 400);
+        }
+
+        // 4. Lấy Venue ID (Logic giống hệt bên MoMo IPN)
+        $venue_id = \Illuminate\Support\Facades\DB::table('items')
+            ->join('bookings', 'items.booking_id', '=', 'bookings.id')
+            ->join('courts', 'bookings.court_id', '=', 'courts.id')
+            ->where('items.ticket_id', $ticket->id)
+            ->value('courts.venue_id');
+
+        if (!$venue_id) {
+            return response()->json(['message' => 'Lỗi dữ liệu: Không tìm thấy thông tin sân đấu.'], 500);
+        }
+
+        // 5. Tính toán Money Flow (Logic giống hệt bên MoMo IPN)
+        // Lưu ý: Logic này nên refactor ra 1 Service riêng để dùng chung, tránh lặp code
+        $commission = 0.20; // 20%
+        $discount = (float)($ticket->discount_amount ?? 0);
+
+        // Tính toán chia tiền (Giả sử logic đơn giản: Admin lấy hoa hồng trên tổng tiền thực thu)
+        $adminAmount = $paymentAmount * $commission;
+        $venueOwnerAmount = $paymentAmount - $adminAmount;
+
+
         try {
-            DB::transaction(function () use ($ticket, $wallet, $validated) {
-                $wallet->decrement('balance', $validated['total_amount']);
+            DB::transaction(function () use ($ticket, $wallet, $paymentAmount, $venue_id, $discount, $adminAmount, $venueOwnerAmount) {
+                // A. Trừ tiền ví
+                $beforeBalance = $wallet->balance;
+                $wallet->decrement('balance', $paymentAmount);
+                $afterBalance = $beforeBalance - $paymentAmount; // Tính thủ công để chính xác trong transaction
+
+                // B. Update trạng thái Vé
                 $ticket->update([
                     'status' => 'confirmed',
                     'payment_status' => 'paid'
                 ]);
 
+                // C. Lưu Log Ví (WalletLog)
                 WalletLog::create([
                     'wallet_id'   => $wallet->id,
                     'type'        => 'payment',
-                    'amount'      => $validated['total_amount'],
-                    'before_balance' => $wallet->balance,
-                    'after_balance'  => $wallet->balance - $validated['total_amount'],
+                    'amount'      => $paymentAmount,
+                    'before_balance' => $beforeBalance,
+                    'after_balance'  => $afterBalance,
                     'description' => 'Thanh toán vé #' . $ticket->id,
+                ]);
+
+                // D. Tạo MoneyFlow (Quan trọng: Tạo dòng tiền cho chủ sân và admin)
+                MoneyFlow::create([
+                    'booking_id' => $ticket->id,
+                    'total_amount' => $paymentAmount,
+                    'promotion_id' => $ticket->promotion_id ?? null,
+                    'promotion_amount' => $discount,
+                    'venue_id' => $venue_id,
+                    'admin_amount' => $adminAmount,
+                    'venue_owner_amount' => $venueOwnerAmount,
+                    'status' => 'pending' // pending: Tiền đã thu nhưng chưa đối soát trả chủ sân
                 ]);
             });
 
             return response()->json(['message' => 'Thanh toán thành công!'], 200);
         } catch (\Exception $e) {
+            Log::error("Lỗi thanh toán ví Ticket #{$ticket->id}: " . $e->getMessage());
             return response()->json(['message' => 'Lỗi giao dịch: ' . $e->getMessage()], 500);
         }
     }

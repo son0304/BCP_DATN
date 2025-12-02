@@ -81,7 +81,9 @@ class VenueApiController extends Controller
             'owner:id,name,email',
             'province:id,name',
             'reviews:id,user_id,venue_id,rating,comment,created_at,updated_at',
-            'reviews.user:id,name,avt'
+            'reviews.images:id,imageable_id,imageable_type,url',
+            'reviews.user:id,name,avt',
+            'reviews.user.images:id,imageable_id,imageable_type,url',
 
         ])
             ->withAvg('reviews', 'rating')

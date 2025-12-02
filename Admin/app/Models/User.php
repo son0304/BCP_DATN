@@ -68,6 +68,10 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasOne(Wallet::class, 'user_id');
     }
+    public function images()
+    {
+        return $this->morphMany(Image::class, 'imageable');
+    }
 
 
 

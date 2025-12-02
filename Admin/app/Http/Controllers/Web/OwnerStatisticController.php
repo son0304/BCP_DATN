@@ -29,8 +29,8 @@ class OwnerStatisticController extends Controller
         $queryPending = MoneyFlow::whereIn('venue_id', $myVenueIds)
             ->whereBetween('created_at', [$start, $end])
             ->where('status', 'pending');
-        $historyPayments = MoneyFlow::where('venue_id', $myVenueIds)->get();
-        // 3. Tính toán KPI
+            $historyPayments = MoneyFlow::whereIn('venue_id', $myVenueIds)->get();
+            // 3. Tính toán KPI
         $totalComplete  = $query->sum('venue_owner_amount'); // Tiền thực nhận
         $totalPending   = $queryPending->sum('venue_owner_amount'); // Tiền chờ duyệt
         $totalBookings = $query->count();

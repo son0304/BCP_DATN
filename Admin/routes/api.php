@@ -48,6 +48,7 @@ Route::get('/tickets', [TicketApiController::class, 'index']);
 
 Route::post('/payment/momo', [PaymentApiController::class, 'paymentMomo']);
 Route::post('/payment/momo/ipn', [PaymentApiController::class, 'ipn']);
+Route::get('/user', [AuthApiController::class, 'index']);
 
 
 
@@ -73,22 +74,23 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::post('/tickets', [TicketApiController::class, 'store']);
     Route::delete('/item/{id}', [TicketApiController::class, 'destroyItem']);
     Route::delete('/ticket/{id}', [TicketApiController::class, 'destroyTicket']);
-
     // Venue (create)
     Route::post('/venues', [VenueApiController::class, 'store']);
 
     // Upload image
     Route::post('/upload', [ImageApiController::class, 'store']);
+    //Reviews
+    Route::post('/reviews', [ReviewApiController::class, 'store']);
+    Route::post('/reviews/{id}', [ReviewApiController::class, 'update']);
+    Route::delete('/reviews/{id}', [ReviewApiController::class, 'destroy']);
+
+
 
     // Reviews (protected actions)
     Route::apiResource('reviews', ReviewApiController::class)
         ->only(['store', 'update', 'destroy']);
-
-    // Payments
-
+    // Payment
 
     Route::post('/payment/wallet', [PaymentApiController::class, 'paymentWallet']);
-
-
     Route::get('/payment/check-status/{id}', [PaymentApiController::class, 'checkTransactionStatus']);
 });

@@ -22,6 +22,8 @@ const Detail_User = () => {
             <i className="fa-solid fa-circle-exclamation mr-2"></i> {error || "Đang tải..."}
         </div>
     );
+    console.log(user.avt);
+
 
     const avatarUrl = user.avt || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=10B981&color=fff`;
 
@@ -39,15 +41,28 @@ const Detail_User = () => {
                         {/* Header Avatar */}
                         <div className="flex flex-col items-center text-center mb-6">
                             <div className="relative group cursor-pointer">
-                                <img
-                                    src={avatarUrl}
-                                    alt="avt"
-                                    className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md group-hover:opacity-90 transition-opacity"
-                                />
+                                {user.avt && user.avt.length > 0 ? (
+                                    user.avt.map((avtItem: any) => (
+                                        <img
+                                            key={avtItem.id}
+                                            src={avtItem.url}
+                                            alt="Avatar"
+                                            className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-sm"
+                                        />
+                                    ))
+                                ) : (
+                                    <img
+                                        src="/default-avatar.png"
+                                        alt={user.name}
+                                        className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-sm"
+                                    />
+                                )}
+
                                 <div className="absolute bottom-0 right-0 w-6 h-6 bg-[#10B981] border-2 border-white rounded-full flex items-center justify-center text-white text-[10px]">
                                     <i className="fa-solid fa-pen"></i>
                                 </div>
                             </div>
+
 
                             <h2 className="text-lg font-bold text-gray-800 mt-3">{user.name}</h2>
                             <p className="text-xs text-gray-500 font-medium">{user.email}</p>

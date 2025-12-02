@@ -116,13 +116,29 @@ const Ticket_Detail = () => {
   const items = ticket.items ?? [];
   const status = getStatusConfig(ticket.status);
   const isTicketCancelled = ticket.status === 'cancelled';
+  const isTicketCompleted = ticket.status === 'completed';
+  const isTicketPending = ticket.status === 'pending';
+
+  // Lấy thông tin Venue từ item đầu tiên (vì 1 vé thường đặt tại 1 venue)
+  const venueInfo = items.length > 0 ? items[0].booking?.court?.venue : null;
+
+
+  let headerGradient = 'from-[#10B981] via-teal-500 to-[#059669]'; // Mặc định: Xanh lá (Confirmed)
+
+  if (isTicketCancelled) {
+    headerGradient = 'from-red-400 to-red-600'; // Đã hủy: Đỏ
+  } else if (isTicketPending) {
+    headerGradient = 'from-yellow-400 to-orange-500'; // Chờ thanh toán: Vàng cam
+  } else if (isTicketCompleted) {
+    headerGradient = 'from-blue-400 to-blue-600'; // Hoàn thành: Xanh dương
+  }
 
   return (
     <div className="bg-[#F3F4F6] min-h-screen py-8 px-4 font-sans flex justify-center">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 relative">
 
         {/* --- Top Decoration --- */}
-        <div className={`h-1.5 w-full bg-gradient-to-r ${isTicketCancelled ? 'from-red-400 to-red-600' : 'from-[#10B981] via-teal-500 to-[#059669]'}`}></div>
+        <div className={`h-1.5 w-full bg-gradient-to-r ${headerGradient}`}></div>
 
         {/* === HEADER === */}
         <div className="p-6 md:p-8 text-center border-b border-gray-100 border-dashed">
@@ -132,6 +148,14 @@ const Ticket_Detail = () => {
           </div>
 
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 uppercase tracking-tight">Hóa đơn đặt sân</h1>
+
+          {/* --- HIỂN THỊ TÊN VENUE (THƯƠNG HIỆU) TẠI ĐÂY --- */}
+          {venueInfo && (
+            <h2 className="text-base font-bold text-[#10B981] mt-1 flex items-center justify-center gap-1">
+              <i className="fa-solid fa-location-dot text-xs"></i> {venueInfo.name}
+            </h2>
+          )}
+
           <div className="flex items-center justify-center gap-2 mt-2 text-sm text-gray-500">
             <span>Mã vé:</span>
             <span className="font-mono font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">#{ticket.id}</span>
@@ -148,22 +172,36 @@ const Ticket_Detail = () => {
         {/* === CONTENT BODY === */}
         <div className="p-6 md:p-8 space-y-8">
 
-          {/* 1. Customer Info */}
+          {/* 1. Customer Info & Venue Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Cột trái: Thông tin khách hàng */}
             <div className="space-y-1">
               <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Khách hàng</p>
               <p className="font-bold text-gray-800 text-sm md:text-base">{ticket.user.name}</p>
               <p className="text-xs text-gray-500 flex items-center gap-2"><i className="fa-solid fa-phone w-3 text-center"></i> {ticket.user.phone}</p>
               <p className="text-xs text-gray-500 flex items-center gap-2"><i className="fa-solid fa-envelope w-3 text-center"></i> {ticket.user.email}</p>
             </div>
-            <div className="space-y-1 md:text-right">
-              <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Thời gian tạo</p>
-              <p className="font-bold text-gray-800 text-sm md:text-base">
-                {new Date(ticket.created_at).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}
-              </p>
-              <p className="text-xs text-gray-500">
-                {new Date(ticket.created_at).toLocaleDateString("vi-VN", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-              </p>
+
+            {/* Cột phải: Thông tin Venue & Thời gian */}
+            <div className="space-y-4 md:text-right">
+
+              {/* Thêm mục Venue ở cột phải để cân đối */}
+              {venueInfo && (
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Địa điểm sân</p>
+                  <p className="font-bold text-[#10B981] text-sm md:text-base">{venueInfo.name}</p>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Thời gian tạo</p>
+                <p className="font-bold text-gray-800 text-sm md:text-base">
+                  {new Date(ticket.created_at).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {new Date(ticket.created_at).toLocaleDateString("vi-VN", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -265,7 +303,8 @@ const Ticket_Detail = () => {
         </div>
 
         {/* === FOOTER PAYMENT SECTION === */}
-        {!isTicketCancelled && ticket.status !== "confirmed" && (
+        {/* ... (Phần Payment và Footer giữ nguyên như cũ) ... */}
+        {!isTicketCancelled && ticket.status == "pending" && (
           <div className="bg-gray-50 p-6 md:p-8 border-t border-gray-200">
             <h3 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide flex items-center gap-2">
               <i className="fa-regular fa-credit-card text-[#10B981]"></i> Phương thức thanh toán
@@ -331,7 +370,6 @@ const Ticket_Detail = () => {
           </div>
         )}
 
-        {/* Footer Info (Cancelled / Confirmed) */}
         {isTicketCancelled && (
           <div className="bg-red-50 p-6 text-center border-t border-red-100">
             <i className="fa-solid fa-circle-xmark text-3xl text-red-400 mb-2"></i>
@@ -351,6 +389,30 @@ const Ticket_Detail = () => {
             <Link to="/" className="inline-block mt-4 text-xs font-bold text-white bg-[#10B981] hover:bg-[#059669] px-4 py-2 rounded-lg transition">
               Về trang chủ
             </Link>
+          </div>
+        )}
+
+        {ticket.status === "completed" && (
+          <div className="bg-blue-50 p-6 text-center border-t border-blue-100">
+            <i className="fa-solid fa-medal text-3xl text-blue-500 mb-2"></i>
+            <h3 className="text-blue-800 font-bold text-lg">Đơn hàng đã hoàn thành</h3>
+            <p className="text-blue-600 text-sm mt-1 mb-4">
+              Cảm ơn bạn đã sử dụng dịch vụ. Hãy cho chúng tôi biết cảm nhận của bạn nhé!
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link to="/" className="inline-block text-sm font-bold text-blue-600 bg-white border border-blue-200 hover:bg-blue-50 px-6 py-3 rounded-lg transition">
+                Về trang chủ
+              </Link>
+
+              <Link to={`/venues/${venueInfo?.id}`}>
+                <button
+                  className="inline-block text-sm font-bold text-white bg-yellow-500 hover:bg-yellow-600 px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                >
+                  <i className="fa-regular fa-star"></i> Viết đánh giá
+                </button>
+              </Link>
+            </div>
           </div>
         )}
       </div>

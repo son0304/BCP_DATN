@@ -32,7 +32,8 @@ class TicketApiController extends Controller
             'user:id,name,email,role_id,phone,avt',
             'items:id,ticket_id,booking_id,unit_price,discount_amount',
             'items.booking:id,court_id,date,status,time_slot_id',
-            'items.booking.court:id,name',
+            'items.booking.court:id,name,venue_id',
+            'items.booking.court.venue:id,name',
             'items.booking.timeSlot:id,end_time,start_time'
         ])
             ->where('user_id', Auth::id())
@@ -56,7 +57,8 @@ class TicketApiController extends Controller
             'user.wallet:id,user_id,balance', // select đúng cột 'user_id', không phải 'owner_id'
             'items:id,ticket_id,booking_id,unit_price,discount_amount,status',
             'items.booking:id,court_id,date,status,time_slot_id',
-            'items.booking.court:id,name',
+            'items.booking.court:id,name,venue_id',
+            'items.booking.court.venue:id,name',
             'items.booking.timeSlot:id,start_time,end_time',
         ])->find($id);
 

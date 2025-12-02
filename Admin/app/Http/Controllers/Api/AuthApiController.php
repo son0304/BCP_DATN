@@ -23,6 +23,11 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AuthApiController extends Controller
 {
+    public function index()
+    {
+        $user = User::with(['role', 'district', 'province', 'images'])->get();
+        return response()->json(['user' => $user], 200);
+    }
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -96,12 +101,13 @@ class AuthApiController extends Controller
             'password' => 'required|string',
         ]);
 
+
         if ($validator->fails()) {
             return response()->json(['success' => false, 'message' => 'Dữ liệu không hợp lệ.', 'errors' => $validator->errors()], 422);
         }
 
         // 2. Tìm người dùng bằng email
-        $user = User::where('email', $request->email)->with(['role', 'district', 'province'])->first();
+        $user = User::where('email', $request->email)->with(['role', 'district', 'province', 'images'])->first();
 
         // 3. Kiểm tra mật khẩu
         if (!$user || !Hash::check($request->password, $user->password)) {
@@ -136,7 +142,7 @@ class AuthApiController extends Controller
                     'email' => $user->email,
                     'role_id' => $user->role->id ?? 2,
                     'phone' => $user->phone,
-                    'avt' => $user->avt ?? null,
+                    'avt' => $user->images ?? null,
                     // --- ĐÃ SỬA: Sửa tên quan hệ (singular) ---
                     'district' => $user->district->name ?? null,
                     'province' => $user->province->name ?? null,

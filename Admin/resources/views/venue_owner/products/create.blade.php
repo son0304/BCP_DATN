@@ -48,7 +48,7 @@
                                     @error('sku')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    <small class="form-text text-muted">Mã SKU sẽ được tự động chuyển thành chữ in hoa</small>
+                                    <small class="form-text text-muted">Mã SKU (mã sp)</small>
                                 </div>
                             </div>
                         </div>
@@ -84,7 +84,7 @@
                                     @error('venue_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    <small class="form-text text-muted">Để trống nếu sản phẩm này dùng chung cho tất cả thương hiệu</small>
+                                    <small class="form-text text-muted">Để trống nếu để cho toàn bộ thương hiệu (set cho all venue đều có sản phẩm đó)</small>
                                 </div>
                             </div>
 
@@ -189,7 +189,7 @@
                                     @error('min_stock_level')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    <small class="form-text text-muted">Cảnh báo khi tồn kho ≤ mức này</small>
+                                    <small class="form-text text-muted">Cảnh báo khi sắp hết hànghàng</small>
                                 </div>
                             </div>
 

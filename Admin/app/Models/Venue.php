@@ -73,4 +73,9 @@ class Venue extends Model
             'venue_type_id'
         )->withPivot('created_at', 'updated_at');
     }
+
+    public function products()
+    {
+        return $this->hasMany(Product::class);
+    }
 }

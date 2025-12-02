@@ -61,6 +61,18 @@
                                 <span> Thương Hiệu </span>
                             </a>
                         </li>
+                         <li>
+                            <a href="{{ route('owner.products.index') }}" class="waves-effect">
+                                <i class="remixicon-store-2-line"></i>
+                                <span> Sản phẩm </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('owner.product_categories.index') }}" class="waves-effect">
+                                <i class="ri-folder-line"></i>
+                                <span> Danh mục Sản phẩm </span>
+                            </a>
+                        </li>
                         <li>
                             <a href="{{ route('owner.reviews.index') }}" class="waves-effect">
                                 <i class="remixicon-star-line"></i>

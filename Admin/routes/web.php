@@ -10,7 +10,9 @@ use App\Http\Controllers\Web\{
     BookingController,
     AuthController,
     VenueController,
-    PromotionController
+    PromotionController,
+    ProductController,
+    ProductCategoryController
 };
 
 // ==============================
@@ -138,5 +140,27 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
         Route::post('/', [BookingController::class, 'store'])->name('store');
         Route::put('{booking}', [BookingController::class, 'update'])->name('update');
         Route::delete('{booking}', [BookingController::class, 'destroy'])->name('destroy');
+    });
+
+    // --- PRODUCTS MANAGEMENT (Owner quản lý sản phẩm) ---
+    Route::prefix('products')->name('products.')->group(function () {
+        Route::get('/', [ProductController::class, 'index'])->name('index');
+        Route::get('create', [ProductController::class, 'create'])->name('create');
+        Route::post('/', [ProductController::class, 'store'])->name('store');
+        Route::get('{product}', [ProductController::class, 'show'])->name('show');
+        Route::get('{product}/edit', [ProductController::class, 'edit'])->name('edit');
+        Route::put('{product}', [ProductController::class, 'update'])->name('update');
+        Route::delete('{product}', [ProductController::class, 'destroy'])->name('destroy');
+    });
+
+    // --- PRODUCT CATEGORIES MANAGEMENT (Owner quản lý danh mục sản phẩm) ---
+    Route::prefix('product-categories')->name('product_categories.')->group(function () {
+        Route::get('/', [ProductCategoryController::class, 'index'])->name('index');
+        Route::get('create', [ProductCategoryController::class, 'create'])->name('create');
+        Route::post('/', [ProductCategoryController::class, 'store'])->name('store');
+        Route::get('{productCategory}', [ProductCategoryController::class, 'show'])->name('show');
+        Route::get('{productCategory}/edit', [ProductCategoryController::class, 'edit'])->name('edit');
+        Route::put('{productCategory}', [ProductCategoryController::class, 'update'])->name('update');
+        Route::delete('{productCategory}', [ProductCategoryController::class, 'destroy'])->name('destroy');
     });
 });

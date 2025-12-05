@@ -4,8 +4,6 @@
 @include('layout.head')
 
 <body>
-
-    <!-- Begin page -->
     <div id="wrapper">
         @include('layout.nav')
         @include('layout.sidebar')
@@ -16,16 +14,19 @@
                 </div>
 
             </div>
-            <!-- Footer Start -->
             @include('layout.footer')
-            <!-- end Footer -->
         </div>
     </div>
-   @include('layout.right-bar')
+    @include('layout.right-bar')
     <div class="rightbar-overlay"></div>
+    
+    <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
+
+    @vite(['resources/js/app.js'])
 
     @include('layout.scrip')
 
+    @stack('scripts')
 </body>
 
 </html>

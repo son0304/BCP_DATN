@@ -131,6 +131,12 @@
     </div>
     
     <!-- Bootstrap JS -->
+    @vite(['resources/js/app.js'])
+    
+    <script src="{{ asset('template/assets/js/vendor.min.js') }}"></script>
+    <script src="{{ asset('template/assets/js/app.min.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    @stack('scripts')
 </body>
 </html>

@@ -51,6 +51,12 @@
                                 <span> Voucher </span>
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('admin.chats.index') }}" class="waves-effect">
+                                <i class="remixicon-chat-3-line"></i>
+                                <span> Message </span>
+                            </a>
+                        </li>
                     @endif
 
                     {{-- Venue Owner menu --}}
@@ -71,6 +77,12 @@
                             <a href="{{ route('owner.bookings.index') }}" class="waves-effect">
                                 <i class="ri-ticket-line"></i>
                                 <span> Đơn đặt sân </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('owner.chats.index') }}" class="waves-effect">
+                                <i class="remixicon-chat-3-line"></i>
+                                <span> Message </span>
                             </a>
                         </li>
                     @endif

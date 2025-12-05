@@ -1,5 +1,6 @@
 <?php
 
+// use App\Http\Controllers\ChatController as ControllersChatController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\{
     AvailabilityController,
@@ -10,7 +11,8 @@ use App\Http\Controllers\Web\{
     BookingController,
     AuthController,
     VenueController,
-    PromotionController
+    PromotionController,
+    ChatController
 };
 
 // ==============================
@@ -41,6 +43,20 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     // Dashboard
     Route::get('/', [HomeController::class, 'dashboard'])->name('dashboard');
+
+    // --- CHAT MANAGEMENT (Admin) ---
+    // SỬA: Route gửi tin nhắn dùng otherUserId và trỏ đến sendOrStartChat
+    Route::prefix('chats')->name('chats.')->group(function () {
+        // Danh sách các cuộc hội thoại
+        Route::get('/', [ChatController::class, 'index'])->name('index');
+        
+        // Chi tiết cuộc hội thoại với một Venue Owner cụ thể
+        Route::get('{otherUserId}', [ChatController::class, 'show'])->name('show');
+        
+        // Gửi tin nhắn và TẠO Conversation nếu là tin nhắn đầu tiên
+        // Đã đổi {conversationId} thành {otherUserId} và sendMessage thành sendOrStartChat
+        Route::post('{otherUserId}/send', [ChatController::class, 'sendOrStartChat'])->name('send');
+    });
 
     // --- USERS MANAGEMENT ---
     Route::prefix('users')->name('users.')->group(function () {
@@ -100,6 +116,20 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
 
     // Dashboard
     Route::get('/', [HomeController::class, 'dashboard'])->name('dashboard');
+
+    // --- CHAT MANAGEMENT (Venue Owner) ---
+    // SỬA: Route gửi tin nhắn dùng otherUserId và trỏ đến sendOrStartChat
+    Route::prefix('chats')->name('chats.')->group(function () {
+        // Danh sách các cuộc hội thoại
+        Route::get('/', [ChatController::class, 'index'])->name('index');
+        
+        // Chi tiết cuộc hội thoại với một người dùng cụ thể
+        Route::get('{otherUserId}', [ChatController::class, 'show'])->name('show');
+        
+        // Gửi tin nhắn và TẠO Conversation nếu là tin nhắn đầu tiên
+        // Đã đổi {conversationId} thành {otherUserId} và sendMessage thành sendOrStartChat
+        Route::post('{otherUserId}/send', [ChatController::class, 'sendOrStartChat'])->name('send');
+    });
 
     // --- VENUES CRUD (Owner chỉ thao tác với sân của mình) ---
     Route::prefix('venues')->name('venues.')->group(function () {

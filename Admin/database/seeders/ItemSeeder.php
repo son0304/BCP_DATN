@@ -12,16 +12,21 @@ class ItemSeeder extends Seeder
         $tickets = Ticket::all();
 
         foreach ($tickets as $ticket) {
-            // Chọn một booking ngẫu nhiên cho ticket
-            $booking = Booking::inRandomOrder()->first();
-            if (!$booking) continue;
+            // Tạo mới một booking cho item này để đảm bảo dữ liệu sạch
+            // (Hoặc bạn có thể lấy booking có sẵn chưa được gán)
+            $booking = Booking::factory()->create();
 
             Item::create([
                 'ticket_id' => $ticket->id,
                 'booking_id' => $booking->id,
-                'unit_price' => $booking->court->price_per_hour,
+                // Lấy giá tiền từ bảng Courts thông qua quan hệ Booking
+                'unit_price' => $booking->court->price_per_hour ?? 100000,
                 'discount_amount' => 0,
+                'status' => 'active', // Mặc định là active
             ]);
+
+            // Cập nhật lại tổng tiền cho Ticket (tùy chọn, để dữ liệu đẹp)
+            // $ticket->refreshTotalAmount();
         }
     }
 }

@@ -13,7 +13,7 @@
     </div>
 </div>
 
-<form action="{{ route('owner.venues.store') }}" method="POST">
+<form action="{{ route('owner.venues.store') }}" method="POST" enctype="multipart/form-data">
     @csrf
     <div class="row">
         {{-- Cột trái: Thông tin chính --}}
@@ -50,6 +50,7 @@
                         <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                         @else
+                        <input type="hidden" name="owner_id" value="{{ auth()->user()->id }}">
                         <input type="text" class="form-control" value="{{ auth()->user()->name }}" disabled>
                         @endif
                     </div>
@@ -108,7 +109,6 @@
                     </button>
                 </div>
                 <div class="card-body" id="court-list">
-                    {{-- Loop hiển thị lại dữ liệu cũ khi validate fail --}}
                     @if (old('courts'))
                     @foreach (old('courts') as $courtIndex => $court)
                     <div class="border rounded p-3 mb-3 court-item" data-index="{{ $courtIndex }}">
@@ -276,6 +276,75 @@
                         </div>
                     </div>
 
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Hình ảnh thương hiệu (Tối đa 5) <span class="text-danger">*</span></label>
+                        
+                        <ul class="nav nav-tabs" id="imageTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-tab-pane" type="button" role="tab" aria-controls="file-tab-pane" aria-selected="true">Tải file</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="link-tab" data-bs-toggle="tab" data-bs-target="#link-tab-pane" type="button" role="tab" aria-controls="link-tab-pane" aria-selected="false">Chèn link</button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content border border-top-0 p-3 rounded-bottom" id="imageTabContent">
+                            {{-- Tab 1: Tải file --}}
+                            <div class="tab-pane fade show active" id="file-tab-pane" role="tabpanel" aria-labelledby="file-tab" tabindex="0">
+                                <input type="file" name="images[]" id="images_input"
+                                    class="form-control @error('images') is-invalid @enderror @error('images.*') is-invalid @enderror"
+                                    accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" multiple>
+                                <div class="form-text text-muted">Chọn file ảnh.</div>
+                            </div>
+
+                            {{-- Tab 2: Chèn link --}}
+                            <div class="tab-pane fade" id="link-tab-pane" role="tabpanel" aria-labelledby="link-tab" tabindex="0">
+                                 <div id="image-links-container">
+                                     @if(old('image_links'))
+                                         @foreach(old('image_links') as $i => $link)
+                                             <div class="input-group mb-2 image-link-item">
+                                                 <input type="url" name="image_links[]" class="form-control form-control-sm image-link-input @error('image_links.'.$i) is-invalid @enderror" value="{{ $link }}" placeholder="https://..." required>
+                                                 <button class="btn btn-outline-danger btn-sm remove-link-btn" type="button"><i class="fas fa-trash"></i></button>
+                                                 @error('image_links.'.$i)
+                                                     <div class="invalid-feedback">{{ $message }}</div>
+                                                 @enderror
+                                             </div>
+                                         @endforeach
+                                     @endif
+                                 </div>
+                                 <button type="button" id="add-link-btn" class="btn btn-sm btn-outline-primary mt-2">
+                                     <i class="fas fa-plus me-1"></i> Thêm link ảnh
+                                 </button>
+                            </div>
+                        </div>
+                        
+                        {{-- Input hidden để lưu index của ảnh chính trong MẢNG KẾT HỢP --}}
+                        <input type="hidden" name="primary_image_index" id="primary_image_index" value="{{ old('primary_image_index', 0) }}">
+
+                        @error('images')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                        @error('images.*')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                        @error('image_links')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                        @error('image_links.*')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                        @error('primary_image_index')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <h6 class="fw-bold mb-3">Xem trước và chọn ảnh chính</h6>
+                    <div id="images-preview" class="row g-2 mb-4">
+                        {{-- Ảnh preview sẽ được thêm vào đây bằng JS --}}
+                    </div>
+
+
                     <label class="form-label fw-bold d-block">Loại hình sân</label>
                     <div class="border rounded p-2 @error('venue_types') border-danger @enderror">
                         @foreach ($venue_types as $type)
@@ -312,10 +381,10 @@
 {{-- ✅ JS: Thêm sân + khung giờ + tự động cập nhật loại sân  --}}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        let courtIndex = 0;
+        let courtIndex = {{ old('courts') ? count(old('courts')) : 0 }};
         const courtList = document.getElementById('court-list');
         const addCourtBtn = document.getElementById('add-court-btn');
-
+        // ... (Giữ nguyên các hàm helper cho Court/Time Slot)
 
         function getSelectedVenueTypes() {
             const checkedBoxes = document.querySelectorAll('.venue-type-checkbox:checked');
@@ -402,9 +471,22 @@
             return slots;
         }
 
-        // Hàm cập nhật tên input cho time slots
+        // Hàm cập nhật tên input cho time slots và số sân
         function updateTimeSlotNames() {
             document.querySelectorAll('.court-item').forEach((courtItem, courtIdx) => {
+                // Cập nhật số sân hiển thị
+                const courtNumber = courtItem.querySelector('.court-number');
+                if (courtNumber) {
+                    courtNumber.textContent = courtIdx + 1;
+                }
+
+                // Cập nhật tên input cho các trường cơ bản của sân
+                courtItem.querySelector('[name$="[name]"]').name = `courts[${courtIdx}][name]`;
+                courtItem.querySelector('[name$="[venue_type_id]"]').name = `courts[${courtIdx}][venue_type_id]`;
+                courtItem.querySelector('[name$="[surface]"]').name = `courts[${courtIdx}][surface]`;
+                courtItem.querySelector('[name$="[is_indoor]"]').name = `courts[${courtIdx}][is_indoor]`;
+
+                // Cập nhật tên input cho time slots
                 const tbody = courtItem.querySelector('tbody');
                 const rows = tbody.querySelectorAll('tr');
 
@@ -423,6 +505,7 @@
             });
         }
 
+
         //  Thêm sân mới
         addCourtBtn.addEventListener('click', () => {
             const options = renderVenueTypeOptions(getSelectedVenueTypes());
@@ -430,7 +513,7 @@
             const newCourt = `
             <div class="border rounded p-3 mb-3 court-item">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0 fw-bold">Sân #${courtIndex + 1}</h6>
+                    <h6 class="mb-0 fw-bold">Sân #<span class="court-number">${courtIndex + 1}</span></h6>
                     <button type="button" class="btn btn-sm btn-danger remove-court">
                         <i class="fas fa-times"></i>
                     </button>
@@ -499,8 +582,8 @@
                     select.innerHTML = options;
 
                     // Nếu lựa chọn hiện tại vẫn còn trong danh sách, giữ nguyên
-                    const stillExists = selectedTypes.some(type => type.id ===
-                        currentValue);
+                    const stillExists = selectedTypes.some(type => type.id ==
+                        currentValue); // dùng == thay vì === để so sánh string/number
                     if (stillExists) {
                         select.value = currentValue;
                     } else {
@@ -515,8 +598,6 @@
             if (e.target.closest('.add-time-slot')) {
                 const courtItem = e.target.closest('.court-item');
                 const tbody = courtItem.querySelector('tbody');
-                const courtIdx = Array.from(courtList.children).indexOf(courtItem);
-                const timeSlotIndex = tbody.children.length;
 
                 tbody.insertAdjacentHTML('beforeend', `
                     <tr>
@@ -538,6 +619,7 @@
 
             if (e.target.closest('.remove-court')) {
                 e.target.closest('.court-item').remove();
+                updateTimeSlotNames(); // Cập nhật lại số thứ tự sân
             }
         });
 
@@ -556,17 +638,17 @@
                     if (slots.length > 1) {
                         const courtItem = row.closest('.court-item');
                         const tbody = courtItem.querySelector('tbody');
-                        const courtIdx = Array.from(courtList.children).indexOf(courtItem);
 
+                        // Xóa row hiện tại
                         row.remove();
 
                         // Thêm các slot 1 giờ
-                        slots.forEach((slot, slotIdx) => {
+                        slots.forEach((slot) => {
                             tbody.insertAdjacentHTML('beforeend', `
                                 <tr>
-                                    <td><input type="time" class="form-control form-control-sm time-start" value="${slot.start_time}" required></td>
-                                    <td><input type="time" class="form-control form-control-sm time-end" value="${slot.end_time}" required></td>
-                                    <td><input type="number" class="form-control form-control-sm time-price" value="${slot.price}" required></td>
+                                    <td><input type="time" name="" class="form-control form-control-sm time-start" value="${slot.start_time}" required></td>
+                                    <td><input type="time" name="" class="form-control form-control-sm time-end" value="${slot.end_time}" required></td>
+                                    <td><input type="number" name="" class="form-control form-control-sm time-price" value="${slot.price}" required></td>
                                     <td class="text-center">
                                         <button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button>
                                     </td>
@@ -584,37 +666,204 @@
             updateTimeSlotNames();
         });
 
+
+        const imagesInput = document.getElementById('images_input');
+        const imagesPreviewContainer = document.getElementById('images-preview');
+        const primaryImageIndexInput = document.getElementById('primary_image_index');
+        const addLinkBtn = document.getElementById('add-link-btn');
+        const imageLinksContainer = document.getElementById('image-links-container');
+        const MAX_FILES = 5;
+
+        // Biến toàn cục để lưu trữ các files đã chọn
+        let accumulatedFiles = [];
+        // Biến toàn cục để lưu trữ các link đã nhập
+        let accumulatedLinks = getOldImageLinks();
+        
+        // Helper để lấy link cũ khi validate fail
+        function getOldImageLinks() {
+             const links = [];
+             // Lấy giá trị từ các input link hiện tại nếu có (khi validate fail)
+             document.querySelectorAll('.image-link-input').forEach(input => {
+                if (input.value) {
+                    links.push(input.value);
+                }
+             });
+             return links;
+        }
+
+        // Hàm chính: Cập nhật Preview và primary index
+        function updateCombinedPreview() {
+            imagesPreviewContainer.innerHTML = '';
+            
+            const files = accumulatedFiles;
+            const links = accumulatedLinks;
+            let combinedArray = [...files, ...links];
+            
+            // Xử lý giới hạn 5 ảnh (ưu tiên file)
+            if (combinedArray.length > MAX_FILES) {
+                // Cắt bớt phần tử thừa, ưu tiên file
+                 const numFiles = files.length;
+                 const numLinksToKeep = MAX_FILES - numFiles;
+                 
+                 // Chỉ giữ lại số link cần thiết
+                 accumulatedLinks = links.slice(0, Math.max(0, numLinksToKeep));
+                 
+                 combinedArray = [...files, ...accumulatedLinks];
+            }
+            
+            const finalCount = combinedArray.length;
+
+            if (finalCount === 0) {
+                primaryImageIndexInput.value = '-1';
+                return;
+            }
+
+            // 1. Xác định Primary Index hiện tại
+            let currentPrimaryIndex = parseInt(primaryImageIndexInput.value);
+            
+            // Nếu index không hợp lệ hoặc chưa được set, mặc định chọn ảnh đầu tiên (0)
+            if (currentPrimaryIndex < 0 || currentPrimaryIndex >= finalCount) {
+                currentPrimaryIndex = 0;
+            }
+            
+            // 2. Cập nhật lại input hidden
+            primaryImageIndexInput.value = currentPrimaryIndex;
+
+            // 3. Render Preview
+            combinedArray.forEach((item, index) => {
+                let src = '';
+                let isFile = item instanceof File;
+                const isPrimary = (index === currentPrimaryIndex);
+
+                if (isFile) {
+                    // Đây là file, cần dùng FileReader
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        src = e.target.result;
+                        appendPreviewElement(src, index, isPrimary);
+                    };
+                    reader.readAsDataURL(item);
+                } else {
+                    // Đây là link, dùng thẳng URL
+                    src = item;
+                    appendPreviewElement(src, index, isPrimary);
+                }
+            });
+        }
+        
+        // Helper để tạo và thêm element preview
+        function appendPreviewElement(src, index, isPrimary) {
+            const col = document.createElement('div');
+            col.className = 'col-6 col-md-4 col-lg-6 col-xl-4 image-preview-item';
+            
+            col.innerHTML = `
+                <div class="position-relative border rounded p-2 text-center">
+                    <img src="${src}" alt="Preview Image ${index + 1}" class="img-fluid rounded" style="height: 80px; object-fit: cover; width: 100%;">
+                    
+                    <div class="mt-2 form-check">
+                        <input class="form-check-input primary-image-radio" type="radio" 
+                            name="selected_primary_image" id="primary_image_index_${index}" 
+                            value="${index}" ${isPrimary ? 'checked' : ''}>
+                        <label class="form-check-label small fw-bold" for="primary_image_index_${index}">
+                            ${index + 1}. Ảnh chính
+                        </label>
+                    </div>
+                </div>
+            `;
+
+            // Kiểm tra xem đã tồn tại ảnh có index này chưa để tránh lỗi khi FileReader chạy bất đồng bộ
+            const existingElement = imagesPreviewContainer.querySelector(`#primary_image_index_${index}`);
+            if(!existingElement) {
+                 imagesPreviewContainer.appendChild(col);
+            }
+        }
+        
+        // Xử lý khi người dùng chọn file
+        imagesInput.addEventListener('change', function(event) {
+            accumulatedFiles = Array.from(event.target.files);
+            updateCombinedPreview(); 
+            // Sau khi lấy files, reset value để sự kiện change kích hoạt lại ngay cả khi chọn cùng file
+            event.target.value = null; 
+        });
+
+        // Xử lý khi thêm link
+        addLinkBtn.addEventListener('click', () => {
+             const currentCount = accumulatedFiles.length + accumulatedLinks.length;
+             if (currentCount >= MAX_FILES) {
+                 alert(`Chỉ được phép thêm tối đa ${MAX_FILES} ảnh (bao gồm cả file và link).`);
+                 return;
+             }
+             
+             const linkInputHtml = `
+                <div class="input-group mb-2 image-link-item">
+                    <input type="url" name="image_links[]" class="form-control form-control-sm image-link-input" placeholder="https://..." required>
+                    <button class="btn btn-outline-danger btn-sm remove-link-btn" type="button"><i class="fas fa-trash"></i></button>
+                </div>`;
+             imageLinksContainer.insertAdjacentHTML('beforeend', linkInputHtml);
+             
+             imageLinksContainer.lastElementChild.querySelector('input').focus();
+        });
+        
+        // Xử lý khi xóa link hoặc nhập/thay đổi link
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-link-btn')) {
+                const item = e.target.closest('.image-link-item');
+                item.remove();
+                
+                // Cập nhật lại accumulatedLinks và preview
+                accumulatedLinks = getOldImageLinks();
+                updateCombinedPreview();
+            }
+        });
+        
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('image-link-input')) {
+                // Cập nhật lại accumulatedLinks và preview (debounce nếu cần thiết, nhưng input khá ổn)
+                accumulatedLinks = getOldImageLinks();
+                updateCombinedPreview();
+            }
+        });
+
+
+        // Xử lý sự kiện khi radio button chọn ảnh chính được nhấn
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.classList.contains('primary-image-radio')) {
+                primaryImageIndexInput.value = e.target.value;
+            }
+        });
+        
+        // Chạy lần đầu để hiển thị preview nếu có link cũ (khi validate fail)
+        if (accumulatedLinks.length > 0 || accumulatedFiles.length > 0) {
+            updateCombinedPreview();
+        }
     });
 </script>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     $(document).ready(function() {
-        // Khi người dùng thay đổi lựa chọn trong ô Tỉnh/Thành
-        $('#province_id').on('change', function() {
-            var provinceId = $(this).val(); // Lấy ID của tỉnh/thành đã chọn
-            var districtSelect = $('#district_id'); // Tham chiếu đến ô quận/huyện
-
-            // Xóa các lựa chọn cũ và vô hiệu hóa
+        // Cập nhật logic load Quận/Huyện để xử lý trường hợp load trang lại sau validate fail
+        var oldProvinceId = $('#province_id').val();
+        var oldDistrictId = "{{ old('district_id') }}";
+        
+        // Hàm tải quận/huyện
+        function loadDistricts(provinceId, selectedDistrictId) {
+            var districtSelect = $('#district_id');
             districtSelect.html('<option value="">-- Đang tải... --</option>');
             districtSelect.prop('disabled', true);
 
-            // Nếu đã chọn một tỉnh/thành hợp lệ
             if (provinceId) {
-                // Gửi yêu cầu AJAX đến server
                 $.ajax({
                     url: '/api/districts/' + provinceId,
                     type: 'GET',
                     dataType: 'json',
                     success: function(data) {
-                        // Khi nhận được dữ liệu thành công
-                        districtSelect.prop('disabled', false); // Kích hoạt lại ô
+                        districtSelect.prop('disabled', false);
                         districtSelect.html(
                             '<option value="" disabled selected>-- Chọn Quận/Huyện --</option>'
                         );
-                        // Lặp qua dữ liệu trả về và thêm vào ô select
                         $.each(data, function(key, value) {
-                            districtSelect.append('<option value="' + value.id +
-                                '">' + value.name + '</option>');
+                            var selected = (value.id == selectedDistrictId) ? 'selected' : '';
+                            districtSelect.append('<option value="' + value.id + '" ' + selected + '>' + value.name + '</option>');
                         });
                     },
                     error: function() {
@@ -627,6 +876,18 @@
                 districtSelect.html('<option value="">-- Vui lòng chọn Tỉnh/Thành trước --</option>');
                 districtSelect.prop('disabled', true);
             }
+        }
+        
+        // Load quận/huyện lần đầu nếu có old value
+        if (oldProvinceId) {
+            loadDistricts(oldProvinceId, oldDistrictId);
+        }
+
+        // Sự kiện thay đổi Tỉnh/Thành
+        $('#province_id').on('change', function() {
+            var provinceId = $(this).val();
+            // Khi đổi tỉnh, reset quận/huyện
+            loadDistricts(provinceId, ''); 
         });
     });
 </script>

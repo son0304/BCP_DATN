@@ -3,7 +3,7 @@ import Input from '../Components/Input';
 import logo from "/logo.png";
 import { usePostData } from '../Hooks/useApi';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useNotification } from '../Components/Notification';
 
 type FormData = {
@@ -27,7 +27,7 @@ const Login = () => {
 
     const onSubmit = (data: FormData) => {
         setServerErrors({});
-        setIsLoading(true); // Bắt đầu loading
+        setIsLoading(true);
         mutate(data, {
             onSuccess: (response) => {
                 const { success, data: resData, message } = response;
@@ -47,66 +47,98 @@ const Login = () => {
                     setServerErrors(error.response.data.errors);
                 } else {
                     console.error("Lỗi đăng nhập:", error.message);
+                    showNotification("Tài khoản hoặc mật khẩu không chính xác.", "error");
                 }
             },
-            onSettled: () => setIsLoading(false), 
+            onSettled: () => setIsLoading(false),
         });
     };
 
-
     return (
-        <div className='min-h-screen flex justify-center items-center bg-gray-50 p-4 sm:p-6 lg:p-8'>
-            <div className='container max-w-4xl grid md:grid-cols-2 bg-white rounded-2xl shadow-2xl overflow-hidden'>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 font-sans p-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+            <div className="w-full max-w-[440px] bg-white rounded-3xl shadow-xl border border-gray-100 p-8 md:p-10 animate-fade-in-up">
 
-                {/* === FORM LOGIN === */}
-                <div className='w-full p-8 sm:p-12'>
-                    <div className='mb-10'>
-                        <h1 className='text-3xl font-bold text-gray-900'>Chào mừng trở lại!</h1>
-                        <p className='text-gray-500 mt-2'>Đăng nhập để tiếp tục hành trình của bạn.</p>
-                    </div>
-
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                        <Input label="Email" id="email" type="email" placeholder="ví_dụ@gmail.com" error={errors.email?.message || serverErrors.email}
-                            {...register('email', { required: 'Email không được để trống', pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Email không hợp lệ', }, })}
-                        />
-
-                        <Input label="Mật khẩu" id="password" type="password" placeholder="Nhập mật khẩu" error={errors.password?.message || serverErrors.password}
-                            {...register('password', { required: 'Mật khẩu không được để trống', minLength: { value: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự', }, })}
-                        />
-
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className={`w-full py-3 rounded-lg font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-300 ease-in-out ${isLoading
-                                ? "bg-orange-300 cursor-not-allowed"
-                                : "bg-orange-500 hover:bg-orange-600 text-white"
-                                }`}
-                        >
-                            {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
-                        </button>
-
-
-                        <div className='text-sm text-center'>
-                            <a href="#" className='font-medium text-orange-500 hover:text-orange-600'>
-                                Quên mật khẩu?
-                            </a>
-                        </div>
-
-                    </form>
+                {/* --- HEADER --- */}
+                <div className="text-center mb-8">
+                    <Link to="/" className="inline-block hover:scale-105 transition-transform duration-300">
+                        <img src={logo} alt="Logo" className="h-12 w-auto mx-auto mb-4 object-contain" />
+                    </Link>
+                    <h1 className="text-2xl font-extrabold text-[#11182C] tracking-tight">Chào mừng trở lại!</h1>
+                    <p className="text-sm text-gray-500 mt-2">
+                        Vui lòng đăng nhập để quản lý sân và đặt lịch.
+                    </p>
                 </div>
 
-                {/* === CỘT HÌNH ẢNH === */}
-                <div className='hidden md:flex w-full flex-col justify-center items-center p-12 lg:p-16'
-                    style={{ background: 'linear-gradient(to bottom right, #348738, #2b6e2d)' }}
-                >
-                    <div className='bg-white p-6 rounded-full shadow-lg mb-6'>
-                        <img src={logo} alt="Logo" className='w-full max-w-[160px] h-auto' />
+                {/* --- FORM --- */}
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+
+                    {/* Email */}
+                    <div className="space-y-1">
+                        <Input
+                            label="Email"
+                            id="email"
+                            type="email"
+                            placeholder="name@example.com"
+                            error={errors.email?.message || serverErrors.email}
+                            {...register('email', {
+                                required: 'Vui lòng nhập email',
+                                pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Email không hợp lệ' },
+                            })}
+                        />
                     </div>
 
-                    <div className='text-center'>
-                        <h2 className='text-3xl font-bold text-white leading-tight'> Giải pháp của Tương lai</h2>
-                        <p className='text-lg text-green-100 mt-3 max-w-xs'>Nền tảng quản lý thông minh, trực quan và hiệu quả nhất.</p>
+                    {/* Password */}
+                    <div className="space-y-1 relative"> {/* Thêm relative vào thẻ cha */}
+
+                        <Input
+                            label="Mật khẩu" // 1. Truyền label chuẩn vào component
+                            id="password"
+                            type="password"
+                            placeholder="••••••••"
+                            error={errors.password?.message || serverErrors.password}
+                            {...register('password', {
+                                required: 'Vui lòng nhập mật khẩu',
+                                minLength: { value: 6, message: 'Tối thiểu 6 ký tự' },
+                            })}
+                        />
+
+                        {/* 2. Đặt Link "Quên mật khẩu" nổi lên góc phải trên cùng */}
+                        <div className="absolute top-0 right-0">
+                            <Link
+                                to="/forgot-password"
+                                className="text-xs font-semibold text-[#10B981] hover:text-[#059669] hover:underline"
+                            >
+                                Quên mật khẩu?
+                            </Link>
+                        </div>
                     </div>
+
+                    {/* Submit Button */}
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className={`w-full py-3 rounded-xl font-bold text-white text-sm shadow-lg shadow-emerald-200/50 transition-all duration-300 transform active:scale-95 ${isLoading
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-[#10B981] hover:bg-[#059669] hover:-translate-y-0.5"
+                            }`}
+                    >
+                        {isLoading ? (
+                            <div className="flex items-center justify-center gap-2">
+                                <i className="fa-solid fa-circle-notch fa-spin"></i>
+                                <span>Đang xử lý...</span>
+                            </div>
+                        ) : "Đăng Nhập"}
+                    </button>
+                </form>
+
+                {/* --- FOOTER --- */}
+                <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+                    <p className="text-sm text-gray-600">
+                        Chưa có tài khoản?{' '}
+                        <Link to="/register" className="font-bold text-[#10B981] hover:text-[#059669] hover:underline transition-all">
+                            Đăng ký ngay
+                        </Link>
+                    </p>
                 </div>
             </div>
         </div>

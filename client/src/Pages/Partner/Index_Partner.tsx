@@ -1,174 +1,192 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-// Định nghĩa lại các màu theo quy tắc đã cung cấp
-const PRIMARY_COLOR = "#10B981"; // Emerald Green
-const SECONDARY_COLOR = "#F59E0B"; // Amber
-const BG_COLOR = "#F9FAFB"; // Trắng Xám (Nền)
-const CARD_BG = "#FFFFFF"; // Trắng tinh (Nền Card)
-const TEXT_PRIMARY = "text-[#11182C]"; // Đen Than (Tiêu đề)
-const TEXT_BODY = "text-[#4B5563]"; // Xám Đậm (Nội dung)
-const TEXT_SECONDARY = "text-[#6B7280]"; // Xám Vừa (Text phụ)
-const BORDER_COLOR = "#E5E7EB"; // Xám Nhạt (Đường viền)
-
-
 const Index_Partner = () => {
   return (
-    // Màu nền tổng thể: #F9FAFB
-    <div style={{ backgroundColor: BG_COLOR }} className="min-h-screen">
-      <div className="container mx-auto px-4 py-12 md:py-16 max-w-5xl">
+    <div className="min-h-screen bg-white font-sans selection:bg-emerald-100 selection:text-emerald-700">
+      
+      {/* --- HERO SECTION --- */}
+      <section className="relative pt-20 pb-16 md:pt-28 md:pb-24 overflow-hidden">
+        {/* Background Decor */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full z-0 pointer-events-none">
+           <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+           <div className="absolute top-20 right-10 w-72 h-72 bg-amber-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+        </div>
 
-        {/* --- Phần Hero --- */}
-        <section className="text-center mb-16">
-          {/* Tiêu đề chính (H1 - Hero): text-3xl (Mobile) / text-4xl (Desktop) */}
-          <h1 className={`text-3xl md:text-4xl font-extrabold ${TEXT_PRIMARY} mb-4`}>
-            Trở thành Đối tác của <span style={{ color: PRIMARY_COLOR }}>Court Prime</span>
+        <div className="container mx-auto px-4 max-w-4xl text-center relative z-10">
+          <span className="inline-block py-1 px-3 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs font-bold uppercase tracking-wider mb-6">
+            Dành cho chủ sân
+          </span>
+          <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-6">
+            Trở thành Đối tác của <span className="text-emerald-600">Court Prime</span>
           </h1>
-          {/* Chữ nội dung (Body/Paragraph): text-base (Mobile/Desktop) - Dùng text-lg cho nổi bật */}
-          <p className={`text-base sm:text-lg ${TEXT_BODY} mb-8`}>
-            Tối ưu hóa việc quản lý, gia tăng doanh thu và lấp đầy sân trống của bạn một cách hiệu quả nhất.
+          <p className="text-base md:text-lg text-gray-500 mb-8 max-w-2xl mx-auto leading-relaxed">
+            Nền tảng quản lý sân thể thao toàn diện. Tối ưu hóa vận hành, lấp đầy khung giờ trống và gia tăng doanh thu của bạn ngay hôm nay.
           </p>
-          <Link to={'create_venue'}>
-            {/* Nút bấm chính dùng Primary Color */}
-            {/* Cỡ chữ nút: text-lg (Nổi bật) */}
-            <button
-              style={{ backgroundColor: PRIMARY_COLOR }}
-              className={`text-white font-bold py-3 px-10 rounded-lg text-lg hover:opacity-90 transition-all shadow-xl`}
-            >
-              Đăng Ký Làm Chủ Sân
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link to="create_venue">
+              <button className="px-8 py-3.5 rounded-full bg-emerald-600 text-white font-bold text-sm md:text-base shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 hover:-translate-y-1 transition-all duration-300">
+                Đăng Ký Ngay
+              </button>
+            </Link>
+            <button className="px-8 py-3.5 rounded-full bg-white text-gray-600 border border-gray-200 font-bold text-sm md:text-base hover:bg-gray-50 transition-all duration-300 flex items-center gap-2">
+              <i className="fa-solid fa-play-circle text-emerald-600"></i> Xem Demo
             </button>
-          </Link>
-        </section>
+          </div>
+        </div>
+      </section>
 
-        {/* --- Phần Lợi ích --- */}
-        <section className="mb-16">
-          {/* Tiêu đề mục (Section Title): text-xl (Mobile) / text-2xl (Desktop) */}
-          <h2 className={`text-xl md:text-2xl font-bold ${TEXT_PRIMARY} text-center mb-10`}>Tại sao nên hợp tác với Court Prime?</h2>
+      {/* --- LỢI ÍCH (FEATURES) --- */}
+      <section className="py-16 bg-gray-50/50 border-y border-gray-100">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">Tại sao chọn Court Prime?</h2>
+            <p className="text-sm text-gray-500">Giải pháp công nghệ giúp bạn đi trước đối thủ.</p>
+          </div>
+
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Các Card lợi ích */}
-            {['Tăng Trưởng Doanh Thu', 'Quản Lý Thông Minh', 'Marketing & Hỗ Trợ'].map((title, index) => (
-              <div key={index}
-                className="p-6 rounded-xl shadow-lg border-t-4 transition-transform duration-300 hover:shadow-2xl hover:-translate-y-1"
-                style={{ backgroundColor: CARD_BG, borderColor: PRIMARY_COLOR }} // Màu nền Card, Border Primary
-              >
-                {/* <FaIcon className="text-4xl mb-3" style={{ color: PRIMARY_COLOR }} /> */}
-
-                {/* Tiêu đề thẻ (Card Title): text-lg (Mobile) / text-xl (Desktop) */}
-                <h3 className={`text-lg md:text-xl font-semibold mb-3 ${TEXT_PRIMARY}`}>{title}</h3>
-                {/* Chữ nội dung (Body/Paragraph): text-base (16px) */}
-                <p className={`text-base ${TEXT_BODY}`}>
-                  {index === 0 && "Tiếp cận hàng ngàn người chơi mới mỗi ngày, tối ưu hóa lịch đặt và giảm thiểu thời gian sân trống."}
-                  {index === 1 && "Cung cấp công cụ quản lý lịch đặt sân, theo dõi doanh thu và nhân viên theo thời gian thực, mọi lúc mọi nơi."}
-                  {index === 2 && "Chúng tôi giúp bạn quảng bá hình ảnh sân và hỗ trợ kỹ thuật 24/7, giúp bạn tập trung vào vận hành."}
+            {[
+              {
+                icon: "fa-chart-line",
+                color: "text-blue-600 bg-blue-50",
+                title: "Tăng Trưởng Doanh Thu",
+                desc: "Tiếp cận hàng ngàn người chơi mới mỗi ngày. Tối ưu hóa lịch đặt sân, giảm thiểu tối đa thời gian chết."
+              },
+              {
+                icon: "fa-laptop-code",
+                color: "text-emerald-600 bg-emerald-50",
+                title: "Quản Lý Thông Minh",
+                desc: "Hệ thống quản lý lịch đặt, doanh thu và nhân viên trực quan. Theo dõi số liệu kinh doanh mọi lúc, mọi nơi."
+              },
+              {
+                icon: "fa-headset",
+                color: "text-amber-600 bg-amber-50",
+                title: "Marketing & Hỗ Trợ",
+                desc: "Hỗ trợ quảng bá hình ảnh sân bãi chuyên nghiệp. Đội ngũ kỹ thuật hỗ trợ 24/7 giúp bạn yên tâm vận hành."
+              }
+            ].map((item, index) => (
+              <div key={index} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 group">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl mb-4 ${item.color} group-hover:scale-110 transition-transform`}>
+                  <i className={`fa-solid ${item.icon}`}></i>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{item.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  {item.desc}
                 </p>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* --- Phần Chính sách & Yêu cầu --- */}
-        <section className="mb-16">
-          {/* Tiêu đề mục (Section Title): text-xl (Mobile) / text-2xl (Desktop) */}
-          <h2 className={`text-xl md:text-2xl font-bold ${TEXT_PRIMARY} text-center mb-10`}>Chính sách & Yêu cầu dành cho Đối tác</h2>
-          <div className="p-8 rounded-xl shadow-2xl" style={{ backgroundColor: CARD_BG }}>
-            <div className="grid md:grid-cols-2 gap-10">
-
-              {/* Cột 1: Yêu cầu */}
-              <div>
-                {/* Tiêu đề thẻ (Card Title): text-lg (Mobile) / text-xl (Desktop) - Dùng 2XL cho nổi bật */}
-                <h3 className={`text-xl md:text-2xl font-bold mb-5`} style={{ color: PRIMARY_COLOR }}>Yêu cầu đối với Chủ sân</h3>
-                <ul className={`list-disc list-inside space-y-4 ${TEXT_BODY}`}>
-                  {/* Chữ nội dung (Body/Paragraph): text-base (16px) */}
-                  <li className="text-base">
-                    <strong>Pháp lý:</strong> Có giấy phép kinh doanh (nếu là công ty) hoặc đăng ký hộ kinh doanh cá thể hợp lệ.
+      {/* --- CHÍNH SÁCH & YÊU CẦU --- */}
+      <section className="py-16">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="grid md:grid-cols-2 gap-12 items-start">
+            
+            {/* Cột 1: Yêu cầu */}
+            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50">
+              <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                <span className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm"><i className="fa-solid fa-list-check"></i></span>
+                Yêu cầu đối tác
+              </h3>
+              <ul className="space-y-4">
+                {[
+                  "Giấy phép kinh doanh / Hộ kinh doanh hợp lệ.",
+                  "Sân đạt tiêu chuẩn thi đấu & an toàn.",
+                  "Hình ảnh/Video sân rõ ràng, trung thực.",
+                  "Có tiện ích cơ bản (Wifi, nước, WC, gửi xe).",
+                  "Cam kết cập nhật lịch trống đúng thực tế."
+                ].map((req, i) => (
+                  <li key={i} className="flex items-start gap-3 text-sm text-gray-600">
+                    <i className="fa-solid fa-check text-emerald-500 mt-1"></i>
+                    <span>{req}</span>
                   </li>
-                  <li className="text-base">
-                    <strong>Chất lượng sân:</strong> Sân đạt tiêu chuẩn thi đấu (mặt sân, ánh sáng, lưới, khu vực chờ...) và đảm bảo an toàn.
-                  </li>
-                  <li className="text-base">
-                    <strong>Hình ảnh:</strong> Cung cấp hình ảnh/video rõ ràng, chân thực về tổng quan và chi tiết cơ sở vật chất của sân.
-                  </li>
-                  <li className="text-base">
-                    <strong>Tiện ích:</strong> Đảm bảo các tiện ích cơ bản cho người chơi (nước uống, khu vực nghỉ, bãi đỗ xe, nhà vệ sinh).
-                  </li>
-                  <li className="text-base">
-                    <strong>Cam kết vận hành:</strong> Cam kết cập nhật đúng tình trạng sân (trống/đã đặt, bảo trì) lên hệ thống của Court Prime.
-                  </li>
-                </ul>
-              </div>
-
-              {/* Cột 2: Chính sách */}
-              <div>
-                {/* Tiêu đề thẻ (Card Title): text-lg (Mobile) / text-xl (Desktop) - Dùng 2XL cho nổi bật */}
-                <h3 className={`text-xl md:text-2xl font-bold mb-5`} style={{ color: PRIMARY_COLOR }}>Chính sách Hợp tác</h3>
-                <ul className={`list-disc list-inside space-y-4 ${TEXT_BODY}`}>
-                  {/* Chữ nội dung (Body/Paragraph): text-base (16px) */}
-                  <li className="text-base">
-                    <strong>Phí hoa hồng:</strong> Court Prime áp dụng mức phí hoa hồng cạnh tranh (thường từ 10-20%) trên mỗi lượt đặt sân thành công qua nền tảng.
-                  </li>
-                  <li className="text-base">
-                    <strong>Thanh toán:</strong> Chúng tôi thực hiện đối soát và thanh toán doanh thu tự động qua tài khoản ngân hàng của đối tác định kỳ (ví dụ: vào ngày 5 hàng tháng).
-                  </li>
-                  <li className="text-base">
-                    <strong>Chính sách hủy:</strong> Đối tác và Court Prime tuân thủ quy định chung về hoàn/hủy cho khách hàng để đảm bảo trải nghiệm đồng nhất.
-                  </li>
-                  <li className="text-base">
-                    <strong>Hỗ trợ:</strong> Cung cấp đội ngũ hỗ trợ kỹ thuật và chăm sóc khách hàng 24/7 cho đối tác.
-                  </li>
-                  <li className="text-base">
-                    <strong>Bảo mật:</strong> Cam kết bảo mật mọi thông tin liên quan đến doanh thu và dữ liệu khách hàng của đối tác.
-                  </li>
-                </ul>
-              </div>
+                ))}
+              </ul>
             </div>
-          </div>
-        </section>
 
-        {/* --- Phần Quy trình Đăng ký --- */}
-        <section className="mb-16">
-          {/* Tiêu đề mục (Section Title): text-xl (Mobile) / text-2xl (Desktop) */}
-          <h2 className={`text-xl md:text-2xl font-bold ${TEXT_PRIMARY} text-center mb-10`}>Quy trình Đăng ký Đơn giản</h2>
-          <div className="flex flex-col md:flex-row justify-between items-start text-center">
-            {/* Bước 1, 2, 3 */}
+            {/* Cột 2: Chính sách */}
+            <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-8 rounded-3xl text-white shadow-2xl">
+              <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
+                 <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-sm"><i className="fa-solid fa-handshake"></i></span>
+                 Quyền lợi & Chính sách
+              </h3>
+              <ul className="space-y-5">
+                {[
+                  { title: "Phí hoa hồng thấp", desc: "Chỉ từ 5-10% trên mỗi lượt đặt thành công." },
+                  { title: "Thanh toán tự động", desc: "Đối soát và chuyển khoản định kỳ (Ngày 5 hàng tháng)." },
+                  { title: "Minh bạch tuyệt đối", desc: "Báo cáo doanh thu chi tiết, rõ ràng từng giao dịch." },
+                  { title: "Hỗ trợ 24/7", desc: "Kênh hỗ trợ riêng dành cho đối tác VIP." }
+                ].map((policy, i) => (
+                  <li key={i} className="flex gap-3">
+                    <div className="mt-1 w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></div>
+                    <div>
+                      <strong className="block text-sm font-bold text-white mb-0.5">{policy.title}</strong>
+                      <span className="text-xs text-gray-300 leading-relaxed">{policy.desc}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* --- QUY TRÌNH (STEPS) --- */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Quy trình Hợp tác</h2>
+            <p className="text-sm text-gray-500 mt-2">Đơn giản hóa thủ tục để bạn bắt đầu kinh doanh nhanh nhất.</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 relative">
+            {/* Connector Line (Desktop) */}
+            <div className="hidden md:block absolute top-12 left-0 w-full h-0.5 bg-gray-100 -z-10"></div>
+
             {[
-              { num: 1, title: 'Đăng ký Form', desc: 'Điền thông tin của bạn và thông tin cơ bản về sân vào form đăng ký trực tuyến.' },
-              { num: 2, title: 'Xác minh & Hợp đồng', desc: 'Court Prime sẽ liên hệ, xác minh thông tin, khảo sát sân (nếu cần) và ký hợp đồng hợp tác.' },
-              { num: 3, title: 'Lên Sóng & Nhận Khách', desc: 'Sân của bạn xuất hiện trên Court Prime và bắt đầu nhận những lượt đặt sân đầu tiên.' }
-            ].map((step, index) => (
-              <React.Fragment key={step.num}>
-                <div className="flex-1 p-4">
-                  {/* Số bước dùng màu Primary, font-size lớn */}
-                  <div className="text-5xl md:text-6xl font-extrabold mb-3" style={{ color: PRIMARY_COLOR }}>{step.num}</div>
-                  {/* Tiêu đề thẻ (Card Title): text-lg (Mobile) / text-xl (Desktop) */}
-                  <h4 className={`text-lg md:text-xl font-semibold mb-2 ${TEXT_PRIMARY}`}>{step.title}</h4>
-                  {/* Text phụ: text-sm (14px) - Dùng text-base cho mô tả */}
-                  <p className={`text-base ${TEXT_BODY}`}>{step.desc}</p>
+              { step: "01", title: "Đăng ký thông tin", desc: "Điền form đăng ký trực tuyến với thông tin cơ bản về sân." },
+              { step: "02", title: "Xác thực & Ký HĐ", desc: "Đội ngũ Court Prime liên hệ xác minh và ký kết hợp đồng." },
+              { step: "03", title: "Bắt đầu kinh doanh", desc: "Sân được niêm yết lên hệ thống và sẵn sàng đón khách." }
+            ].map((item, index) => (
+              <div key={index} className="bg-white p-6 rounded-xl border border-gray-100 text-center shadow-sm hover:shadow-md transition-all">
+                <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-lg">
+                  {item.step}
                 </div>
-                {/* Mũi tên chỉ hiển thị trên Desktop */}
-                {index < 2 && <div className="text-3xl hidden md:block mx-4" style={{ color: BORDER_COLOR }}>→</div>}
-              </React.Fragment>
+                <h4 className="text-lg font-bold text-gray-900 mb-2">{item.title}</h4>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  {item.desc}
+                </p>
+              </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* --- Phần CTA Cuối --- */}
-        <section className="text-center mt-16 p-10 rounded-xl shadow-xl" style={{ backgroundColor: CARD_BG }}>
-          {/* Tiêu đề mục (Section Title): text-xl (Mobile) / text-2xl (Desktop) - Dùng 3XL cho CTA nổi bật */}
-          <h2 className={`text-2xl md:text-3xl font-bold ${TEXT_PRIMARY} mb-4`}>Sẵn sàng tăng doanh thu cùng Court Prime?</h2>
-          {/* Chữ nội dung (Body/Paragraph): text-base (16px) - Dùng text-lg cho nổi bật */}
-          <p className={`text-base sm:text-lg ${TEXT_BODY} mb-8`}>Hãy tham gia cộng đồng hàng trăm đối tác chủ sân của chúng tôi ngay hôm nay.</p>
-          <Link to={'create_venue'}>
-            {/* Nút bấm chính dùng Primary Color */}
-            <button
-              style={{ backgroundColor: PRIMARY_COLOR }}
-              className={`text-white font-bold py-3 px-10 rounded-lg text-lg hover:opacity-90 transition-all shadow-xl`}
-            >
-              Đăng Ký Ngay
-            </button>
-          </Link>
-        </section>
+      {/* --- CTA FOOTER --- */}
+      <section className="py-16">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="bg-emerald-600 rounded-3xl p-8 md:p-12 text-center text-white shadow-2xl shadow-emerald-600/40 relative overflow-hidden">
+             {/* Pattern BG */}
+             <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+             
+             <div className="relative z-10">
+                <h2 className="text-2xl md:text-4xl font-bold mb-4">Sẵn sàng bùng nổ doanh số?</h2>
+                <p className="text-emerald-100 mb-8 text-sm md:text-base max-w-xl mx-auto">
+                  Tham gia cộng đồng hơn 500+ chủ sân đang sử dụng Court Prime để quản lý và phát triển kinh doanh.
+                </p>
+                <Link to="create_venue">
+                  <button className="px-8 py-3 bg-white text-emerald-700 font-bold rounded-full shadow-lg hover:bg-emerald-50 transition-all transform hover:-translate-y-1">
+                    Đăng Ký Đối Tác Ngay <i className="fa-solid fa-arrow-right ml-2"></i>
+                  </button>
+                </Link>
+             </div>
+          </div>
+        </div>
+      </section>
 
-      </div>
     </div>
   );
 }

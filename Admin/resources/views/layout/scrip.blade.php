@@ -1,4 +1,6 @@
-<!-- Vendor js -->
+<script src="https://js.pusher.com/8.0/pusher.min.js"></script> 
+
+@vite(['resources/js/app.js']) 
 
 <script src="{{ asset('template/assets/js/vendor.min.js') }}"></script>
 <script src="{{ asset('template/assets/libs/jquery-knob/jquery.knob.min.js') }}"></script>

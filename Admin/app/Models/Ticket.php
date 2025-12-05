@@ -33,8 +33,14 @@ class Ticket extends Model
     // Get venue through items->court->venue (simplified approach)
     public function venue()
     {
-        $item = $this->items()->with('court.venue')->first();
-        return $item ? $item->court->venue : null;
+        // Tìm Venue ID thông qua bảng items và courts
+        $venueId = $this->join('items', 'tickets.id', '=', 'items.ticket_id')
+            ->join('courts', 'items.court_id', '=', 'courts.id')
+            ->where('tickets.id', $this->id)
+            ->value('courts.venue_id');
+
+        // Trả về Object Venue hoặc null
+        return $venueId ? Venue::find($venueId) : null;
     }
 
     // Get all venues for this ticket

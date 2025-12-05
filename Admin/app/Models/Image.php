@@ -12,7 +12,11 @@ class Image extends Model
     protected $fillable = [
         'url',
         'description',
-        'is_primary'
+        'is_primary',
+        'imageable_id',
+        'imageable_type',
+        'venue_id',
+        'court_id',
     ];
 
     public function imageable()

@@ -74,8 +74,9 @@ class AuthController extends Controller
 
         // Gửi email xác nhận
         $verificationUrl = route('verify.email', ['token' => $verificationToken]); // chế biến URL xác nhận :)
+           
         Mail::to($user->email)->send(new EmailVerificationMail($user, $verificationUrl));
-
+        
         // KHÔNG đăng nhập tự động, yêu cầu xác nhận email trước
         return redirect()->route('login')
             ->with('success', 'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.');

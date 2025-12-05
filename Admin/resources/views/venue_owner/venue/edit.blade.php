@@ -50,7 +50,7 @@
             </div>
         @endif
 
-        <form action="{{ route('owner.venues.update', $venue) }}" method="POST">
+        <form action="{{ route('owner.venues.update', $venue) }}" enctype="multipart/form-data" method="POST">
             @csrf
             @method('PUT')
 
@@ -161,6 +161,72 @@
                                         required>
                                 </div>
                             </div>
+                            <div class="card shadow-sm border-0 mb-4">
+                                <div class="card-header bg-white border-0 py-3">
+                                    <h5 class="card-title mb-0 text-primary">Quản lý Hình ảnh</h5>
+                                    <p class="text-muted small mb-0">Quản lý các hình ảnh hiện có và tải lên hình ảnh mới
+                                        cho Venue.</p>
+                                </div>
+                                <div class="card-body">
+
+                                    <h6 class="fw-bold mb-3">Hình ảnh hiện tại ({{ $venue->images->count() }})</h6>
+                                    <div class="row g-3 mb-4" id="current-images-container">
+                                        @forelse ($venue->images as $image)
+                                            @php
+                                                $imageUrl = asset('storage/' . $image->url);
+                                            @endphp
+                                            <div
+                                                class="col-md-4 col-6 position-relative border rounded p-2 image-item-{{ $image->id }}">
+
+                                                <img src="{{ $imageUrl }}" alt="Venue Image"
+                                                    class="img-fluid rounded shadow-sm"
+                                                    style="height: 150px; width: 100%; object-fit: cover; cursor: pointer;"
+                                                    data-bs-toggle="modal" data-bs-target="#imageModal"
+                                                    data-image-url="{{ $imageUrl }}">
+                                                <button type="button"
+                                                    class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 delete-image-btn"
+                                                    title="Xóa ảnh này" data-image-id="{{ $image->id }}">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                                <input type="hidden" name="images_to_delete[{{ $image->id }}]"
+                                                    id="delete_image_input_{{ $image->id }}" value="0">
+                                                <div class="form-check mt-2">
+                                                    <input class="form-check-input set-primary-image" type="radio"
+                                                        name="primary_image_id" value="{{ $image->id }}"
+                                                        id="primary_img_{{ $image->id }}" @checked(old('primary_image_id', $image->is_primary) == 1)>
+                                                    <label class="form-check-label small"
+                                                        for="primary_img_{{ $image->id }}">
+                                                        Ảnh đại diện (Primary)
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="col-12 text-muted" id="no-images-message">Chưa có hình ảnh nào
+                                                được tải lên.</div>
+                                        @endforelse
+                                    </div>
+
+                                    <hr>
+                                    <h6 class="fw-bold mb-3">Tải lên hình ảnh mới</h6>
+                                    <div class="mb-3">
+                                        <label for="new_images" class="form-label">Chọn tệp hình ảnh (Tối đa 5 ảnh, định
+                                            dạng JPG, PNG)</label>
+                                        <input class="form-control @error('new_images.*') is-invalid @enderror"
+                                            type="file" id="new_images" name="new_images[]" multiple
+                                            accept="image/*">
+                                        @error('new_images.*')
+                                            <div class="invalid-feedback">Đã xảy ra lỗi với một hoặc nhiều tệp tải lên. Vui
+                                                lòng kiểm tra kích thước và định dạng tệp.</div>
+                                        @enderror
+                                        @error('new_images')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                        <div id="image-preview-container" class="row g-3 mt-2">
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -222,6 +288,18 @@
             </div>
         </form>
     </div>
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content bg-transparent border-0">
+                <div class="modal-body p-0">
+                    <img id="modalImage" src="" class="img-fluid rounded shadow-lg"
+                        style="max-height: 90vh; width: auto; display: block; margin: 0 auto;">
+                </div>
+                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3"
+                    data-bs-dismiss="modal" aria-label="Close" style="z-index: 1051;"></button>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
@@ -256,16 +334,71 @@
                     });
                 }
             }
-
-            // Cập nhật khi thay đổi tỉnh
             provinceSelect.addEventListener('change', function() {
                 updateDistricts(this.value);
             });
 
-            // Tải danh sách quận/huyện lần đầu khi trang load
+
             if (provinceSelect.value) {
                 updateDistricts(provinceSelect.value);
             }
+            document.querySelectorAll('.delete-image-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const imageId = this.dataset.imageId;
+                    const container = this.closest('.col-md-4');
+                    const deleteInput = document.getElementById(`delete_image_input_${imageId}`);
+                    const primaryRadio = document.getElementById(`primary_img_${imageId}`);
+                    deleteInput.value = 1;
+                    container.style.opacity = '0.3';
+                    container.classList.add('border-danger');
+                    this.disabled = true;
+                    if (primaryRadio) {
+                        primaryRadio.disabled = true;
+                        if (primaryRadio.checked) {
+                            primaryRadio.checked = false;
+                        }
+                    }
+                });
+            });
+            const newImagesInput = document.getElementById('new_images');
+            const previewContainer = document.getElementById('image-preview-container');
+
+            newImagesInput.addEventListener('change', function() {
+                previewContainer.innerHTML = '';
+                if (this.files) {
+                    Array.from(this.files).forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const imageUrl = e.target.result;
+                            const html = `
+                                <div class="col-md-4 col-6">
+                                    <div class="position-relative border rounded p-2">
+                                        <img src="${imageUrl}" 
+                                            class="img-fluid rounded shadow-sm" 
+                                            style="height: 150px; width: 100%; object-fit: cover; cursor: pointer;" 
+                                            alt="Preview"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#imageModal"
+                                            data-image-url="${imageUrl}">
+                                        <span class="badge bg-info position-absolute top-0 start-0 m-1">Mới</span>
+                                    </div>
+                                </div>
+                            `;
+                            previewContainer.insertAdjacentHTML('beforeend', html);
+                        }
+                    });
+                }
+            });
         });
+        //phong to anh 
+        var imageModal = document.getElementById('imageModal');
+        if (imageModal) {
+            imageModal.addEventListener('show.bs.modal', function(event) {
+                var triggerImage = event.relatedTarget;
+                var imageUrl = triggerImage.getAttribute('data-image-url');
+                var modalImage = document.getElementById('modalImage');
+                modalImage.src = imageUrl;
+            });
+        }
     </script>
 @endpush

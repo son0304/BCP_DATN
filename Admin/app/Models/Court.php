@@ -14,7 +14,8 @@ class Court extends Model
         'venue_type_id',
         'name',
         'surface',
-        'is_indoor'
+        'is_indoor',
+        'avatar'
     ];
 
     // Time slots are directly linked to courts

@@ -18,8 +18,10 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\PermissionHelper;
 use App\Mail\BookingConfirmationMail;
+use App\Models\Image;
 use App\Models\Role;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class VenueController extends Controller
@@ -127,8 +129,10 @@ class VenueController extends Controller
         $user = Auth::user();
         $rules = [
             'name' => 'required|string|max:255',
-            'province_id' => 'required|exists:provinces,id',
-            'district_id' => 'required|exists:districts,id',
+            'province_id' => 'required|string|max:10',
+            'province_name' => 'required|string|max:255',
+            'district_id' => 'required|string|max:10',
+            'district_name' => 'required|string|max:255',
             'address_detail' => 'required|string',
             'phone' => ['nullable', 'regex:/^(0|\+84)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/'],
             'start_time' => 'required|date_format:H:i',
@@ -138,11 +142,15 @@ class VenueController extends Controller
             'courts.*.venue_type_id' => 'required_with:courts|exists:venue_types,id',
             'courts.*.surface' => 'nullable|string|max:255',
             'courts.*.is_indoor' => 'nullable|in:0,1',
+            'courts.*.avatar' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:5120',
+            'courts.*.images' => 'nullable|array',
+            'courts.*.images.*' => 'file|mimes:jpeg,png,jpg,gif|max:5120',
             'courts.*.time_slots' => 'nullable|array',
             'courts.*.time_slots.*.start_time' => 'required_with:courts.*.time_slots|date_format:H:i',
-            'courts.*.time_slots.*.end_time' => 'required_with:courts.*.time_slots|date_format:H:i|after:courts.*.time_slots.*.start_time',
+            'courts.*.time_slots.*.end_time' => 'required_with:courts.*.time_slots|date_format:H:i',
             'courts.*.time_slots.*.price' => 'required_with:courts.*.time_slots|numeric|min:0',
         ];
+
         if (PermissionHelper::isAdmin($user)) {
             $rules['owner_id'] = 'required|exists:users,id';
         }
@@ -150,74 +158,68 @@ class VenueController extends Controller
         $messages = [
             'name.required' => 'Tên thương hiệu không được bỏ trống.',
         ];
-
-        // validate khung giờ 
         $validator = Validator::make($request->all(), $rules, $messages);
         $validator->after(function ($validator) use ($request) {
             $venueStartTimeStr = $request->input('start_time');
             $venueEndTimeStr = $request->input('end_time');
             $courts = $request->input('courts', []);
 
-            if (!$venueStartTimeStr || !$venueEndTimeStr || empty($courts) || $validator->errors()->has('start_time') || $validator->errors()->has('end_time')) {
+            if (!$venueStartTimeStr || !$venueEndTimeStr || empty($courts))
                 return;
-            }
 
             $venueStart = Carbon::parse($venueStartTimeStr);
             $venueEnd = Carbon::parse($venueEndTimeStr);
 
             foreach ($courts as $courtIndex => $court) {
-                if (empty($court['time_slots'])) {
+                if (empty($court['time_slots']))
                     continue;
-                }
-
                 foreach ($court['time_slots'] as $slotIndex => $slot) {
-                    // Chỉ kiểm tra nếu các trường thời gian có tồn tại và đúng định dạng
-                    if (empty($slot['start_time']) || empty($slot['end_time']) || $validator->errors()->has("courts.{$courtIndex}.time_slots.{$slotIndex}.*")) {
+                    if (empty($slot['start_time']) || empty($slot['end_time']))
                         continue;
-                    }
-
                     $slotStart = Carbon::parse($slot['start_time']);
                     $slotEnd = Carbon::parse($slot['end_time']);
+                    $errorMessage = 'Khung giờ phải nằm trong giờ hoạt động (' . $venueStart->format('H:i') . ' - ' . $venueEnd->format('H:i') . ').';
 
-                    $errorMessage = 'Khung giờ phải nằm trong giờ hoạt động của thương hiệu (' . $venueStart->format('H:i') . ' - ' . $venueEnd->format('H:i') . ').';
-
-                    // Kiểm tra giờ bắt đầu của slot
                     if ($slotStart->lt($venueStart) || $slotStart->gte($venueEnd)) {
                         $validator->errors()->add("courts.{$courtIndex}.time_slots.{$slotIndex}.start_time", $errorMessage);
                     }
-
-                    // Kiểm tra giờ kết thúc của slot
                     if ($slotEnd->lte($venueStart) || $slotEnd->gt($venueEnd)) {
                         $validator->errors()->add("courts.{$courtIndex}.time_slots.{$slotIndex}.end_time", $errorMessage);
+                    }
+                    if ($slotEnd->lte($slotStart)) {
+                        $validator->errors()->add("courts.{$courtIndex}.time_slots.{$slotIndex}.end_time", "Giờ kết thúc phải sau giờ bắt đầu.");
                     }
                 }
             }
         });
 
         if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
+            return redirect()->back()->withErrors($validator)->withInput();
         }
 
-
         $validatedData = $validator->validated();
-
-
 
         if (PermissionHelper::isVenueOwner($user)) {
             $validatedData['owner_id'] = $user->id;
         }
-
-        if (isset($validatedData['start_time']) && strlen($validatedData['start_time']) === 5) {
-            $validatedData['start_time'] .= ':00';
-        }
-        if (isset($validatedData['end_time']) && strlen($validatedData['end_time']) === 5) {
-            $validatedData['end_time'] .= ':00';
-        }
-
+         $validatedData['start_time'] = Carbon::parse($validatedData['start_time'])->format('H:i:00');
+    $validatedData['end_time'] = Carbon::parse($validatedData['end_time'])->format('H:i:00');
         DB::beginTransaction();
         try {
+            $province = Province::firstOrCreate(
+                ['code' => $validatedData['province_id']], 
+                ['name' => $validatedData['province_name']] 
+            );
+            $district = District::firstOrCreate(
+                ['code' => $validatedData['district_id']], 
+                [
+                    'name' => $validatedData['district_name'],
+                    'province_id' => $province->id 
+                ]
+            );
+            $validatedData['province_id'] = $province->id;
+            $validatedData['district_id'] = $district->id;
+
             $venue = Venue::create([
                 'name' => $validatedData['name'],
                 'owner_id' => $validatedData['owner_id'],
@@ -229,21 +231,52 @@ class VenueController extends Controller
                 'end_time' => $validatedData['end_time'],
                 'is_active' => 0,
             ]);
+            if ($request->hasFile('venue_images')) {
+                foreach ($request->file('venue_images') as $index => $imageFile) {
+                    $path = $imageFile->store('venues/gallery', 'public');
+                    \App\Models\Image::create([
+                        'url' => $path,
+                        'is_primary' => ($index === 0) ? 1 : 0,
+                        'imageable_type' => 'App\Models\Venue',
+                        'imageable_id' => $venue->id
+                    ]);
+                }
+            }
 
-            if (!empty($validatedData['courts']) && is_array($validatedData['courts'])) {
-                foreach ($validatedData['courts'] as $courtData) {
-                    if (empty($courtData['name']) || empty($courtData['venue_type_id'])) {
-                        continue;
+            // 3. TẠO SÂN + ẢNH + KHUNG GIỜ
+            if ($request->has('courts') && is_array($request->courts)) {
+                foreach ($request->courts as $key => $courtData) {
+
+                    // Upload Avatar ---
+                    $avatarPath = null;
+                    if ($request->hasFile("courts.$key.avatar")) {
+                        $avatarPath = $request->file("courts.$key.avatar")->store('courts/avatars', 'public');
                     }
 
+                    // Tạo Sân
                     $court = Court::create([
                         'name' => $courtData['name'],
                         'venue_id' => $venue->id,
                         'venue_type_id' => $courtData['venue_type_id'],
                         'surface' => $courtData['surface'] ?? null,
-                        'is_indoor' => isset($courtData['is_indoor']) ? (bool)$courtData['is_indoor'] : false,
+                        'is_indoor' => isset($courtData['is_indoor']) ? (bool) $courtData['is_indoor'] : false,
+                        'avatar' => $avatarPath,
                     ]);
 
+                    // Upload Album ảnh
+                    if ($request->hasFile("courts.$key.images")) {
+                        foreach ($request->file("courts.$key.images") as $imageFile) {
+                            $path = $imageFile->store('courts/gallery', 'public');
+                            \App\Models\Image::create([
+                                'url' => $path,
+                                'is_primary' => 0,
+                                'imageable_type' => 'App\Models\Court',
+                                'imageable_id' => $court->id
+                            ]);
+                        }
+                    }
+
+                    // Tạo Khung giờ & Availability
                     $availabilitiesToInsert = [];
                     $now = Carbon::now();
 
@@ -253,17 +286,19 @@ class VenueController extends Controller
                                 continue;
                             }
 
-                            $startTime = strlen($timeSlotData['start_time']) === 5 ? $timeSlotData['start_time'] . ':00' : $timeSlotData['start_time'];
-                            $endTime = strlen($timeSlotData['end_time']) === 5 ? $timeSlotData['end_time'] . ':00' : $timeSlotData['end_time'];
-                            $price = (float)$timeSlotData['price'];
+                            $startTime = Carbon::parse($timeSlotData['start_time'])->format('H:i:00');
+                            $endTime = Carbon::parse($timeSlotData['end_time'])->format('H:i:00');
+                            $price = (float) $timeSlotData['price'];
 
+                            // Tạo Slot
                             $timeSlot = TimeSlot::create([
                                 'court_id' => $court->id,
                                 'start_time' => $startTime,
                                 'end_time' => $endTime,
-                                'label' => $timeSlotData['start_time'] . ' - ' . $timeSlotData['end_time'],
+                                'label' => substr($startTime, 0, 5) . ' - ' . substr($endTime, 0, 5),
                             ]);
 
+                            // Tạo Availability
                             for ($i = 0; $i < 30; $i++) {
                                 $date = Carbon::today()->addDays($i)->toDateString();
                                 $availabilitiesToInsert[] = [
@@ -277,25 +312,22 @@ class VenueController extends Controller
                                 ];
                             }
                         }
-                    }
 
-                    if (!empty($availabilitiesToInsert)) {
-                        Availability::insert($availabilitiesToInsert);
+                        if (!empty($availabilitiesToInsert)) {
+                            Availability::insert($availabilitiesToInsert);
+                        }
                     }
                 }
             }
 
             DB::commit();
-
             $redirectRoute = PermissionHelper::isAdmin($user) ? 'admin.venues.index' : 'owner.venues.index';
             return redirect()->route($redirectRoute)->with('success', 'Đăng ký thương hiệu và sân thành công!');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Venue store error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString(),
-                'request' => $request->all(),
-            ]);
-            return back()->withInput()->with('error', 'Có lỗi xảy ra khi lưu: ' . $e->getMessage());
+            Log::error('Venue store error: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
     public function edit(Venue $venue)
@@ -356,8 +388,45 @@ class VenueController extends Controller
         } else {
             $venue->venueTypes()->sync([]);
         }
+        $imagesToDelete = array_keys(array_filter($request->images_to_delete ?? []));
 
-        return redirect()->route('owner.venues.index')->with('success', 'Cập nhật sân thành công!');
+        if (!empty($imagesToDelete)) {
+            $oldImages = $venue->images()->whereIn('id', $imagesToDelete)->get();
+
+            foreach ($oldImages as $image) {
+                if (Storage::disk('public')->exists($image->url)) {
+                    Storage::disk('public')->delete($image->url);
+                }
+                $image->delete();
+            }
+        }
+        $venue->images()->update(['is_primary' => 0]);
+        if ($request->filled('primary_image_id')) {
+            $venue->images()->where('id', $request->primary_image_id)->update(['is_primary' => 1]);
+        }
+        if ($request->hasFile('new_images')) {
+            $isFirstNewImage = true;
+
+            foreach ($request->file('new_images') as $imageFile) {
+                $path = $imageFile->store('venues/gallery', 'public');
+
+                $isPrimary = false;
+                if (!$venue->images()->where('is_primary', 1)->exists() && $isFirstNewImage) {
+                    $isPrimary = true;
+                    $isFirstNewImage = false;
+                }
+
+                Image::create([
+                    'url' => $path,
+                    'is_primary' => $isPrimary,
+                    'imageable_type' => 'App\Models\Venue',
+                    'imageable_id' => $venue->id
+                ]);
+            }
+        }
+
+        DB::commit();
+        return redirect()->route('owner.venues.show', $venue)->with('success', 'Cập nhật thương hiệu sân thành công!');
     }
     public function destroy(Venue $venue)
     {

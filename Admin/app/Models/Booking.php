@@ -28,7 +28,7 @@ class Booking extends Model
 
     public function item()
     {
-        return $this->hasOne(Item::class); // 1 booking = 1 item
+        return $this->hasOne(Item::class);
     }
 
     public function venue()

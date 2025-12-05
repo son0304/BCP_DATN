@@ -17,7 +17,7 @@ import Detail_Blog from '../Pages/Blog/Detail_Blog';
 import Index_Detail_Venue from '../Pages/Venues/Detail_Venue/Index_Detail_Venue'
 import Ticket_Detail from '../Pages/Ticket/Ticket_Detail'
 import Map_Venue from '../Pages/Maps/Map_Venue'
-// import { Edit_Profile } from '../Pages/User/'
+import { Edit_Profile } from '../Pages/User/Edit_Profile'
 const AppRouter = () => {
     return (
         <Routes>
@@ -35,7 +35,7 @@ const AppRouter = () => {
                 <Route path='booking/:id' element={<Ticket_Detail />} />
 
                 <Route path='profile' element={<Detail_User />} />
-                {/* <Route path='profile/edit' element={< Edit_Profile />} /> */}
+                <Route path='profile/edit' element={< Edit_Profile />} />
 
 
                 <Route path="congratulations" element={<Congratulation />} />

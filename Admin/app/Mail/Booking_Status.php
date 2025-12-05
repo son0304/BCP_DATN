@@ -3,31 +3,28 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class EmailVerificationMail extends Mailable
+class Booking_Status extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $user;
-    public $verificationUrl;
+    public $ticket;
 
     /**
      * Create a new message instance.
+     *
+     * @param $ticket
      */
-    public function __construct($user, $verificationUrl)
+    public function __construct($ticket)
     {
-        $this->user = $user;
-        $this->verificationUrl = $verificationUrl;
+        // Nhận dữ liệu ticket đầy đủ (đã eager load user, items, booking...)
+        $this->ticket = $ticket;
     }
 
-    /**
-     * Get the message envelope.
-     */
     public function envelope(): Envelope
     {
         return new Envelope(
@@ -41,7 +38,7 @@ class EmailVerificationMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.email-verification',
+            view: 'emails.booking-status',
         );
     }
 
@@ -54,4 +51,6 @@ class EmailVerificationMail extends Mailable
     {
         return [];
     }
+
+
 }

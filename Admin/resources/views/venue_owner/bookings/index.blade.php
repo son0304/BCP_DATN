@@ -1,288 +1,319 @@
 @extends('app')
 
 @section('content')
+<style>
+    .btn-primary {
+        --bs-btn-hover-bg: #2d6a2d;
+        --bs-btn-hover-border-color: #2d6a2d;
+    }
 
-    <div class="container-fluid py-4">
+    .btn-accent {
+        --bs-btn-bg: #f97316;
+        --bs-btn-border-color: #f97316;
+        --bs-btn-hover-bg: #ea580c;
+        --bs-btn-hover-border-color: #ea580c;
+        --bs-btn-color: #fff;
+    }
 
-        {{-- PHẦN 1: HEADER & BỘ LỌC --}}
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
-            <div>
-                <h1 class="h4 fw-bold text-dark mb-1">Quản lý đặt sân</h1>
-                <p class="text-muted small mb-0">Danh sách vé và doanh thu từ các sân của bạn.</p>
-            </div>
+    .table-primary-green {
+        background-color: var(--bs-primary);
+        color: #fff;
+    }
 
-            {{-- Form Tìm kiếm & Chọn Sân (Nằm bên phải) --}}
-            <div class="mt-3 mt-md-0">
-                <form action="{{ route('owner.bookings.index') }}" method="GET" class="d-flex gap-2">
-                    {{-- Giữ lại trạng thái hiện tại nếu đang search --}}
-                    @if (request('status'))
-                        <input type="hidden" name="status" value="{{ request('status') }}">
-                    @endif
+    .badge.bg-draft {
+        background-color: #f59e0b !important;
+        color: #fff !important;
+    }
 
-                    {{-- Chọn Sân --}}
-                    <select name="venue" class="form-select shadow-sm" style="width: 200px;"
-                        onchange="this.form.submit()">
-                        <option value="">-- Tất cả sân --</option>
-                        @foreach ($venues as $v)
-                            <option value="{{ $v->id }}" {{ request('venue') == $v->id ? 'selected' : '' }}>
-                                {{ $v->name }}
-                            </option>
-                        @endforeach
-                    </select>
+    /* Màu chủ đạo */
+    :root {
+        --bs-primary-green: #348738;
+        --bs-primary-green-dark: #2d6a2d;
+    }
 
-                    {{-- Input tìm kiếm --}}
-                    <div class="input-group shadow-sm" style="width: 250px;">
-                        <input type="text" name="search" class="form-control" placeholder="Tên khách, SĐT..."
-                            value="{{ request('search') }}">
-                        <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i></button>
+    .bg-primary-green {
+        background-color: var(--bs-primary-green) !important;
+    }
+
+    .btn-primary-green {
+        background-color: var(--bs-primary-green);
+        border-color: var(--bs-primary-green);
+        color: #fff;
+    }
+
+    .btn-primary-green:hover {
+        background-color: var(--bs-primary-green-dark);
+        border-color: var(--bs-primary-green-dark);
+    }
+
+    /* Modal chi tiết ticket */
+    .ticket-detail-modal {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .ticket-detail-modal .info-box {
+        background-color: #fff;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .ticket-detail-modal .info-box h6 {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #666;
+    }
+
+    .ticket-detail-modal .booking-item {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .ticket-detail-modal .booking-item:hover {
+        transform: scale(1.01);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+</style>
+
+<div class="mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-0 pb-0">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <h1 class="h3 mb-0 fw-bold">Danh sách đơn đặt sân</h1>
+
+                <form method="GET" class="mb-3" style="min-width: 300px;">
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control" placeholder="Tìm theo tên khách hàng" value="{{ $search ?? '' }}">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i> Tìm
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        {{-- PHẦN 2: TAB TRẠNG THÁI --}}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-body py-2 px-3">
-                <ul class="nav nav-pills nav-fill gap-2 p-1 bg-light rounded">
-                    {{-- Helper: Hàm giữ các tham số query khác khi đổi tab --}}
-                    @php
-                        function currentUrlWithStatus($status)
-                        {
-                            return request()->fullUrlWithQuery(['status' => $status, 'page' => 1]);
-                        }
-                    @endphp
+        <div class="card-body pt-3 pb-0">
+            @php
+            $statusOptions = [
+            '' => ['label' => 'Tất cả', 'class' => 'btn-outline-secondary'],
+            'pending' => ['label' => 'Chờ xác nhận', 'class' => 'btn-warning text-white'],
+            'confirmed' => ['label' => 'Đã xác nhận', 'class' => 'btn-success text-white'],
+            'cancelled' => ['label' => 'Đã hủy', 'class' => 'btn-danger text-white'],
+            'completed' => ['label' => 'Hoàn thành', 'class' => 'btn-primary text-white'],
+            ];
+            $currentStatus = request('status') ?? '';
+            @endphp
 
-                    <li class="nav-item">
-                        <a class="nav-link {{ !request('status') ? 'active bg-white text-primary shadow-sm' : 'text-muted' }}"
-                            href="{{ currentUrlWithStatus(null) }}">
-                            <i class="fas fa-list me-1"></i> Tất cả
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ request('status') == 'pending' ? 'active bg-warning text-dark shadow-sm' : 'text-muted' }}"
-                            href="{{ currentUrlWithStatus('pending') }}">
-                            <i class="fas fa-clock me-1"></i> Chờ thanh toán
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ request('status') == 'completed' ? 'active bg-success text-white shadow-sm' : 'text-muted' }}"
-                            href="{{ currentUrlWithStatus('completed') }}">
-                            <i class="fas fa-check-circle me-1"></i> Hoàn thành
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ request('status') == 'canceled' ? 'active bg-danger text-white shadow-sm' : 'text-muted' }}"
-                            href="{{ currentUrlWithStatus('cancelled') }}">
-                            <i class="fas fa-times-circle me-1"></i> Đã hủy
-                        </a>
-                    </li>
-                </ul>
+            <div class="d-flex flex-wrap gap-2">
+                @foreach($statusOptions as $key => $data)
+                <a href="{{ route('owner.bookings.index', array_merge(request()->except('page'), ['status' => $key ?: null])) }}"
+                    class="btn {{ $currentStatus === $key ? $data['class'] : 'btn-outline-secondary' }}">
+                    {{ $data['label'] }}
+                </a>
+                @endforeach
             </div>
         </div>
 
-        {{-- PHẦN 3: DANH SÁCH BOOKING --}}
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light">
-                            <tr class="text-secondary small fw-bold text-uppercase text-center">
-                                <th style="width: 80px;">ID Vé</th>
-                                <th class="text-start">Khách hàng</th>
-                                <th class="text-start">Sân / Thời gian</th>
-                                <th class="text-end" style="width: 150px;">Tổng tiền</th>
-                                <th style="width: 140px;">Trạng thái</th>
-                                <th style="width: 100px;">Chi tiết</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($tickets as $ticket)
-                                {{-- LOGIC TÍNH TOÁN: Lọc các item thuộc sở hữu của Venue Owner --}}
-                                @php
-                                    $ownerId = Auth::id(); // ID chủ sân đang đăng nhập
 
-                                    // Lọc ra các item trong vé này mà thuộc về sân của Owner
-                                    $ownerItems = $ticket->items->filter(function ($item) use ($ownerId) {
-                                        return optional($item->booking->court->venue)->owner_id == $ownerId;
-                                    });
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover align-middle">
+                    <thead class="table-primary-green text-nowrap">
+                        <tr>
+                            <th>ID</th>
+                            <th>Khách hàng</th>
+                            <th>Subtotal</th>
+                            <th>Discount</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-center">Trạng thái</th>
+                            <th class="text-center">Thanh toán</th>
+                            <th>Ghi chú</th>
+                            <th>Ngày tạo</th>
+                            <th class="text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($tickets as $ticket)
+                        <tr>
+                            <td>{{ $ticket->id }}</td>
+                            <td class="text-nowrap">{{ $ticket->user->name ?? 'N/A' }}</td>
+                            <td class="text-nowrap">{{ number_format($ticket->subtotal, 0, '.', ',') }}₫</td>
+                            <td class="text-nowrap">{{ number_format($ticket->discount_amount, 0, '.', ',') }}₫</td>
+                            <td class="text-nowrap fw-bold text-end">{{ number_format($ticket->total_amount, 0, '.', ',') }}₫</td>
 
-                                    // Tính tổng tiền (Chỉ tính các item của Owner)
-                                    $ownerTotalMoney = $ownerItems->sum('price');
+                            <td class="text-center">
+                                <span class="badge
+                                    @if($ticket->status == 'draft') bg-draft
+                                    @elseif($ticket->status == 'confirmed') bg-success
+                                    @elseif($ticket->status == 'cancelled') bg-danger
+                                    @elseif($ticket->status == 'completed') bg-primary
+                                    @else bg-secondary
+                                    @endif">
+                                    {{ ucfirst($ticket->status) }}
+                                </span>
+                            </td>
 
-                                    // Lấy item đầu tiên để hiển thị thông tin đại diện
-                                    $firstItem = $ownerItems->first();
-                                @endphp
+                            <td class="text-center">
+                                <span class="badge
+                                    @if($ticket->payment_status == 'unpaid') bg-danger
+                                    @elseif($ticket->payment_status == 'paid') bg-success
+                                    @elseif($ticket->payment_status == 'refunded') bg-info text-dark
+                                    @else bg-secondary
+                                    @endif">
+                                    {{ ucfirst($ticket->payment_status) }}
+                                </span>
+                            </td>
 
-                                {{-- Chỉ hiển thị nếu vé này có chứa sân của Owner --}}
-                                @if ($firstItem)
-                                    <tr>
-                                        {{-- Cột ID --}}
-                                        <td class="text-center text-muted fw-bold">{{ $ticket->id }}</td>
+                            <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ $ticket->notes ?? '' }}">
+                                {{ $ticket->notes ?? '-' }}
+                            </td>
 
-                                        {{-- Cột Khách hàng --}}
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex justify-content-center align-items-center me-3"
-                                                    style="width: 40px; height: 40px;">
-                                                    <i class="fas fa-user"></i>
-                                                </div>
-                                                <div>
-                                                    <span
-                                                        class="d-block fw-bold text-dark">{{ $ticket->user->name ?? 'Khách vãng lai' }}</span>
-                                                    <small class="text-muted">{{ $ticket->user->phone ?? '---' }}</small>
-                                                </div>
-                                            </div>
-                                        </td>
+                            <td class="text-nowrap">{{ $ticket->created_at->format('d-m-Y H:i') }}</td>
 
-                                        {{-- Cột Thông tin sân --}}
-                                        <td>
-                                            <div class="fw-bold text-dark mb-1">
-                                                {{ $firstItem->booking->court->venue->name }}
-                                                <span class="fw-normal text-muted">-
-                                                    {{ $firstItem->booking->court->name }}</span>
-                                            </div>
-                                            <div class="small text-muted">
-                                                <i class="far fa-calendar-alt me-1"></i>
-                                                {{ \Carbon\Carbon::parse($firstItem->booking->booking_date)->format('d/m/Y') }}
-                                                <span class="mx-1">|</span>
-                                                <i class="far fa-clock me-1"></i>
-                                                {{ \Carbon\Carbon::parse($firstItem->booking->timeSlot->start_time)->format('H:i') }}
-                                                -
-                                                {{ \Carbon\Carbon::parse($firstItem->booking->timeSlot->end_time)->format('H:i') }}
-                                            </div>
-                                            @if ($ownerItems->count() > 1)
-                                                <span class="badge bg-secondary-subtle text-secondary rounded-pill mt-1">
-                                                    +{{ $ownerItems->count() - 1 }} sân khác
-                                                </span>
-                                            @endif
-                                        </td>
+                            <td class="text-center">
+                                <a href="" class="btn btn-sm btn-outline-primary w-75" data-bs-toggle="modal" data-bs-target="#ticketModal{{ $ticket->id }}">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
 
-                                        {{-- Cột Tổng tiền (Đã sửa lỗi hiển thị) --}}
-                                        <td class="text-end">
-                                            <span class="fw-bold text-success fs-6">
-                                                {{ number_format($ticket->total_amount, 0, ',', '.') }} đ
-                                            </span>
-                                        </td>
-
-                                        {{-- Cột Trạng thái --}}
-                                        <td class="text-center">
-                                            @php
-                                                $statusMap = [
-                                                    'pendding' => [
-                                                        'bg' => 'bg-warning-subtle',
-                                                        'text' => 'text-warning-emphasis',
-                                                        'label' => 'Chờ xử lý',
-                                                    ],
-                                                    'completed' => [
-                                                        'bg' => 'bg-success-subtle',
-                                                        'text' => 'text-success-emphasis',
-                                                        'label' => 'Hoàn thành',
-                                                    ],
-                                                    'cancelled' => [
-                                                        'bg' => 'bg-danger-subtle',
-                                                        'text' => 'text-danger-emphasis',
-                                                        'label' => 'Đã hủy',
-                                                    ],
-                                                ];
-                                                $s = $statusMap[$ticket->status] ?? [
-                                                    'bg' => 'bg-secondary-subtle',
-                                                    'text' => 'text-secondary-emphasis',
-                                                    'label' => $ticket->status,
-                                                ];
-                                            @endphp
-                                            <span
-                                                class="badge {{ $s['bg'] }} {{ $s['text'] }} border border-opacity-10 rounded-pill px-3 py-2">
-                                                {{ $s['label'] }}
-                                            </span>
-                                        </td>
-
-                                        {{-- Cột Hành động --}}
-                                        <td class="text-center">
-                                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
-                                                data-bs-target="#ticketModal{{ $ticket->id }}">
-                                                Xem
-                                            </button>
-                                        </td>
-                                    </tr>
-
-                                    {{-- MODAL CHI TIẾT --}}
-                                    <div class="modal fade" id="ticketModal{{ $ticket->id }}" tabindex="-1"
-                                        aria-hidden="true">
-                                        <div class="modal-dialog modal-dialog-centered">
-                                            <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title fw-bold">Chi tiết vé #{{ $ticket->id }}</h5>
-                                                    <button type="button" class="btn-close"
-                                                        data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
-                                                        <span>Khách hàng:
-                                                            <strong>{{ $ticket->user->name ?? 'N/A' }}</strong></span>
-                                                        <span>{{ $ticket->created_at->format('H:i d/m/Y') }}</span>
-                                                    </div>
-
-                                                    <h6 class="text-uppercase text-muted small fw-bold mb-3">Danh sách sân
-                                                        đặt</h6>
-                                                    <div class="list-group list-group-flush">
-                                                        @foreach ($ownerItems as $item)
-                                                            <div
-                                                                class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                                                                <div>
-                                                                    <div class="fw-bold">
-                                                                        {{ $item->booking->court->venue->name }}</div>
-                                                                    <small class="text-muted">
-                                                                        {{ $item->booking->court->name }} -
-                                                                        {{ \Carbon\Carbon::parse($item->booking->booking_date)->format('d/m') }}
-                                                                        ({{ \Carbon\Carbon::parse($item->booking->timeSlot->start_time)->format('H:i') }}
-                                                                        -
-                                                                        {{ \Carbon\Carbon::parse($item->booking->timeSlot->end_time)->format('H:i') }})
-                                                                    </small>
-                                                                </div>
-                                                                <span class="fw-bold text-primary">
-                                                                    {{ number_format($item->price, 0, ',', '.') }} đ
-                                                                </span>
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-
-                                                    <div
-                                                        class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
-                                                        <span class="h6 mb-0">Tổng thu về:</span>
-                                                        <span
-                                                            class="h5 mb-0 text-success fw-bold">{{ number_format($ownerTotalMoney, 0, ',', '.') }}
-                                                            đ</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                        <!-- Modal chi tiết Ticket -->
+                        <div class="modal fade" id="ticketModal{{ $ticket->id }}" tabindex="-1" aria-labelledby="ticketModalLabel{{ $ticket->id }}" aria-hidden="true">
+                            <div class="modal-dialog modal-xl modal-dialog-centered">
+                                <div class="modal-content ticket-detail-modal border-0 shadow-lg">
+                                    <div class="modal-header border-0">
+                                        <h3 class="modal-title">
+                                            <i class="fas fa-ticket-alt me-2"></i>Chi tiết Đơn #{{ $ticket->id }}
+                                        </h3>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
-                                @endif
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center py-5">
-                                        <div class="text-muted opacity-50">
-                                            <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-                                            <h5>Chưa có dữ liệu đặt sân</h5>
-                                            <p class="small">Thử thay đổi bộ lọc hoặc kiểm tra lại sau.</p>
+
+                                    <!-- ✅ Bắt đầu form -->
+                                    <form method="POST" action="{{ route('owner.bookings.update', $ticket->id) }}">
+                                        @csrf
+                                        @method('PUT')
+
+                                        <div class="modal-body bg-light">
+                                            <!-- Thông tin khách hàng & trạng thái -->
+                                            <div class="row g-3 mb-4">
+                                                <div class="col-md-4">
+                                                    <div class="info-box p-3 h-100">
+                                                        <h6 class="text-muted mb-2"><i class="fas fa-user me-2"></i>Khách hàng</h6>
+                                                        <p class="mb-1 fw-semibold">{{ $ticket->user->name ?? 'N/A' }}</p>
+                                                        <p class="small mb-0 text-muted">{{ $ticket->user->email ?? '' }}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-4">
+                                                    <div class="info-box p-3 h-100">
+                                                        <h6 class="text-muted mb-2"><i class="fas fa-info-circle me-2"></i>Trạng thái đơn</h6>
+                                                        @php
+                                                        // Quy tắc chuyển trạng thái (đúng với Controller)
+                                                        $allowedTransitions = [
+                                                        'pending' => ['pending', 'confirmed', 'cancelled'],
+                                                        'confirmed' => ['confirmed', 'completed', 'cancelled'],
+                                                        'completed' => ['completed'], // khóa
+                                                        'cancelled' => ['cancelled'], // khóa
+                                                        ];
+                                                        @endphp
+
+                                                        <select name="status" class="form-select" {{ in_array($ticket->status, ['completed','cancelled']) ? 'disabled' : '' }}>
+                                                            @foreach(['pending' => 'Chờ xác nhận', 'confirmed' => 'Đã xác nhận', 'cancelled' => 'Đã hủy', 'completed' => 'Hoàn thành'] as $value => $label)
+                                                            @if(in_array($value, $allowedTransitions[$ticket->status]))
+                                                            <option value="{{ $value }}" {{ $ticket->status == $value ? 'selected' : '' }}>{{ $label }}</option>
+                                                            @endif
+                                                            @endforeach
+                                                        </select>
+
+                                                        <h6 class="text-muted mb-2 mt-3"><i class="fas fa-wallet me-2"></i>Thanh toán</h6>
+                                                        <select name="payment_status" class="form-select" {{ in_array($ticket->status, ['completed','cancelled']) ? 'disabled' : '' }}>
+                                                            <option value="unpaid" {{ $ticket->payment_status == 'unpaid' ? 'selected' : '' }}>Chưa thanh toán</option>
+                                                            <option value="paid" {{ $ticket->payment_status == 'paid' ? 'selected' : '' }}>Đã thanh toán</option>
+                                                            <option value="refunded" {{ $ticket->payment_status == 'refunded' ? 'selected' : '' }}>Hoàn tiền</option>
+                                                        </select>
+
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-4">
+                                                    <div class="info-box p-3 h-100">
+                                                        <h6 class="text-muted mb-2"><i class="fas fa-calendar me-2"></i>Ngày tạo</h6>
+                                                        <p class="mb-3">{{ $ticket->created_at->format('d/m/Y H:i') }}</p>
+                                                        <h6 class="text-muted mb-1"><i class="fas fa-money-bill-wave me-2"></i>Tổng tiền</h6>
+                                                        <p class="fs-5 fw-bold text-danger mb-0">{{ number_format($ticket->total_amount, 0, '.', ',') }}₫</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Chi tiết Booking -->
+                                            <h5 class="fw-bold mb-3"><i class="fas fa-calendar-check me-2 text-success"></i>Chi tiết Sân ({{ $ticket->items->count() }})</h5>
+
+                                            <div class="booking-list">
+                                                @forelse($ticket->items as $item)
+                                                <div class="booking-item border rounded-3 p-3 mb-2 bg-white shadow-sm">
+                                                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                                                        <div>
+                                                            <p class="fw-semibold mb-1">{{ $item->booking->court->name ?? 'N/A' }}</p>
+                                                            <small class="text-muted">
+                                                                {{ $item->booking->date ?? '-' }} | {{ $item->booking->timeSlot->label ?? '-' }}
+                                                            </small>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <p class="fw-bold text-dark mb-0">{{ number_format($item->unit_price, 0, '.', ',') }}₫</p>
+                                                            @if($item->discount_amount > 0)
+                                                            <small class="text-danger">(-{{ number_format($item->discount_amount, 0, '.', ',') }}₫)</small>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                @empty
+                                                <div class="alert alert-secondary text-center">Không có chi tiết booking.</div>
+                                                @endforelse
+                                            </div>
+
+                                            <!-- Ghi chú -->
+                                            <div class="mt-4">
+                                                <h6 class="fw-bold mb-2"><i class="fas fa-sticky-note me-2 text-warning"></i>Ghi chú</h6>
+                                                <p name="notes" class="form-control" rows="3">{{ $ticket->notes }}</p>
+                                            </div>
                                         </div>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+
+                                        <div class="modal-footer border-0 bg-white d-flex justify-content-end gap-2">
+                                            <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">
+                                                <i class="fas fa-times me-1"></i> Đóng
+                                            </button>
+                                            <button type="submit" class="btn btn-primary px-4">
+                                                <i class="fas fa-save me-1"></i> Lưu thay đổi
+                                            </button>
+                                        </div>
+                                    </form>
+                                    <!-- ✅ Kết thúc form -->
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        @empty
+                        <tr>
+                            <td colspan="10" class="text-center p-4">
+                                <p class="mb-0">Không tìm thấy ticket nào.</p>
+                                @if($search)
+                                <p class="mb-0 text-muted">Không có kết quả cho tìm kiếm: "{{ $search }}"</p>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
 
-            {{-- Phân trang --}}
             @if ($tickets->hasPages())
-                <div class="card-footer bg-white border-0 py-3">
-                    <div class="d-flex justify-content-center">
-                        {{ $tickets->appends(request()->query())->links() }}
-                    </div>
-                </div>
+            <div class="d-flex justify-content-center mt-3">
+                {{ $tickets->withQueryString()->links('pagination::bootstrap-5') }}
+            </div>
             @endif
         </div>
-
     </div>
+</div>
 @endsection

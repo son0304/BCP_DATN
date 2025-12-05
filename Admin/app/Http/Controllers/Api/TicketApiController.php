@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\Booking_Status;
 use App\Models\Availability;
 use App\Models\Booking;
 use App\Models\Item;
@@ -15,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class TicketApiController extends Controller
@@ -93,6 +95,8 @@ class TicketApiController extends Controller
             'bookings.*.unit_price' => 'required|numeric|min:0',
         ]);
 
+        $user = Auth::user();
+
         try {
             $ticket = DB::transaction(function () use ($validated) {
 
@@ -163,8 +167,7 @@ class TicketApiController extends Controller
 
                 return $ticket;
             });
-
-            // 5. Trả về kết quả
+           
             return response()->json([
                 'success' => true,
                 'message' => 'Tạo ticket thành công, vui lòng thanh toán trong 2 phút.',

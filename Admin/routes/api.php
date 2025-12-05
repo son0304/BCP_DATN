@@ -50,6 +50,8 @@ Route::post('/payment/momo', [PaymentApiController::class, 'paymentMomo']);
 Route::post('/payment/momo/ipn', [PaymentApiController::class, 'ipn']);
 Route::get('/user', [AuthApiController::class, 'index']);
 
+Route::get('/payment/check-status/{id}', [PaymentApiController::class, 'checkTransactionStatus']);
+
 
 
 
@@ -92,5 +94,4 @@ Route::middleware(['jwt.auth'])->group(function () {
     // Payment
 
     Route::post('/payment/wallet', [PaymentApiController::class, 'paymentWallet']);
-    Route::get('/payment/check-status/{id}', [PaymentApiController::class, 'checkTransactionStatus']);
 });

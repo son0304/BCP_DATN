@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useFetchDataById } from '../../../Hooks/useApi';
+import { useFetchData, useFetchDataById } from '../../../Hooks/useApi';
 import { useParams } from 'react-router-dom';
 import type { Venue } from '../../../Types/venue';
 import { fetchData } from '../../../Api/fetchApi';
@@ -7,9 +7,9 @@ import { fetchData } from '../../../Api/fetchApi';
 import Gallery_Detail_Venue from './Gallery_Detail_Venue';
 import Info_Detail_Venue from './Info_Detail_Venue';
 import Booking_Detail_Venue from './Booking_Detail_Venue';
+import { useNotification } from '../../../Components/Notification';
 
 const Index_Detail_Venue: React.FC = () => {
-  // ======= Lấy thông tin user từ localStorage =======
   const rawUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
   const user = useMemo(() => {
     try {
@@ -19,33 +19,33 @@ const Index_Detail_Venue: React.FC = () => {
     }
   }, [rawUser]);
 
-  // ======= State =======
+  const {showNotification} = useNotification();
+
+
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [relatedVenues, setRelatedVenues] = useState<Venue[]>([]);
   const [relatedLoading, setRelatedLoading] = useState<boolean>(false);
 
-  // ======= Lấy params & dữ liệu sân =======
   const { id } = useParams<{ id: string }>();
   const idVenue = Number(id);
   const { data: detail_venue, isLoading, refetch } = useFetchDataById<Venue>('venue', idVenue, { date: selectedDate });
-  
 
-  // ======= Load sân lân cận =======
+
+
+
+
   useEffect(() => {
     const loadRelated = async () => {
       try {
         setRelatedLoading(true);
         const currentId = detail_venue?.data?.id;
         const res = await fetchData<any>('venues');
-        const list = Array.isArray(res?.data)
-          ? res.data
-          : Array.isArray(res?.data?.data)
-          ? res.data.data
-          : [];
+        const list = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
         const items = list.filter((v: any) => v.id !== currentId).slice(0, 4);
         setRelatedVenues(items.length ? items : detail_venue?.data ? [detail_venue.data] : []);
-      } catch (err) {
-        console.error('loadRelated error:', err);
+      } catch (err:any) {
+        const msg = err?.response?.data?.message || "Lỗi tải dữ liệu liên quan";
+        showNotification(msg, "error");
         setRelatedVenues([]);
       } finally {
         setRelatedLoading(false);
@@ -54,54 +54,76 @@ const Index_Detail_Venue: React.FC = () => {
     loadRelated();
   }, [detail_venue?.data?.id]);
 
-  // ======= Loading UI =======
   if (isLoading || !detail_venue) {
     return (
-      <div className="flex items-center justify-center h-full min-h-[560px] bg-[#F9FAFB] rounded-xl shadow-inner">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-[#10B981]" />
-        <p className="ml-4 text-[#10B981] font-semibold">Đang tải lịch sân...</p>
+      <div className="flex flex-col items-center justify-center min-h-[500px] bg-white">
+        <div className="w-10 h-10 border-4 border-[#10B981] border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-3 text-xs text-gray-500 font-medium">Đang tải dữ liệu...</p>
       </div>
     );
   }
 
   const venue: Venue = detail_venue.data;
+  const formatPrice = (price: number) => !price || isNaN(price) ? '0₫' : price.toLocaleString('vi-VN') + '₫';
 
-  const formatPrice = (price: number) =>
-    !price || isNaN(price) ? '0₫' : price.toLocaleString('vi-VN') + '₫';
+  // Logic review
 
-  // ======= Render =======
+
   return (
-    <div className="max-w-7xl mx-auto my-8 bg-[#F9FAFB] rounded-2xl shadow-2xl overflow-hidden border border-[#E5E7EB]">
-      {/* ================= HERO + GALLERY ================= */}
+    <div className="max-w-7xl mx-auto my-6 px-4 md:px-6">
+
+      {/* 1. TOP: GALLERY & BASIC INFO */}
       <Gallery_Detail_Venue venue={venue} formatPrice={formatPrice} />
 
-      {/* ================= MAIN CONTENT ================= */}
-      <div className="p-2 md:p-8 lg:p-10 space-y-10">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* === CỘT TRÁI === */}
-          <Info_Detail_Venue venue={venue} formatPrice={formatPrice} />
+      {/* 2. BODY: BOOKING (LEFT) & DETAIL INFO (RIGHT) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
-          {/* === CỘT PHẢI: ĐẶT LỊCH === */}
-          <Booking_Detail_Venue
+        {/* Booking Section (Main) - Vị trí bên TRÁI */}
+        {/* Lưu ý: Nếu trong file Booking_Detail_Venue.tsx có class 'lg:order-2', 
+            bạn nên sửa nó thành 'lg:order-1' hoặc xóa class order đi để nó tự động nằm bên trái. */}
+        <Booking_Detail_Venue
+          venue={venue}
+          user={user}
+          refetch={refetch}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+        />
+
+        {/* Info Detail Section (Sidebar) - Vị trí bên PHẢI */}
+        {/* Thay đổi: lg:order-1 thành lg:order-2 (hoặc last) */}
+        <div className="lg:col-span-2 order-2 lg:order-2 space-y-6">
+          <Info_Detail_Venue
             venue={venue}
             user={user}
+            formatPrice={formatPrice}
             refetch={refetch}
-            selectedDate={selectedDate}
-            setSelectedDate={setSelectedDate}
           />
-        </div>
-      </div>
 
-      {/* ================= FOOTER ================= */}
-      <div className="p-6 md:p-8 lg:p-10 border-t border-[#E5E7EB] bg-[#F9FAFB]">
-        <h3 className="text-lg font-bold text-[#11182C] mb-4">Các sân thể thao lân cận</h3>
-        {relatedLoading ? (
-          <p className="text-gray-500 italic">Đang tải danh sách sân lân cận...</p>
-        ) : (
-          <div className="text-base text-[#6B7280] italic">
-            [Nơi hiển thị các sân lân cận - cần xây dựng component riêng]
+          {/* Related Venues Placeholder */}
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+            <h4 className="text-sm font-bold text-gray-800 mb-3 border-b border-gray-50 pb-2">
+              Gợi ý sân gần đây
+            </h4>
+            {relatedLoading ? (
+              <div className="text-xs text-gray-400 italic">Đang tải...</div>
+            ) : (
+              <div className="space-y-3">
+                {relatedVenues.length > 0 ? relatedVenues.map(v => (
+                  <div key={v.id} className="flex gap-2 items-center hover:bg-gray-50 p-1 rounded cursor-pointer transition">
+                    <div className="w-12 h-12 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+                      <img src={(v as any).images?.[0]?.url || 'https://via.placeholder.com/50'} className="w-full h-full object-cover" alt="" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-gray-700 line-clamp-1">{v.name}</p>
+                      <p className="text-[10px] text-gray-400 line-clamp-1">{v.address_detail}</p>
+                    </div>
+                  </div>
+                )) : <p className="text-xs text-gray-400">Không có sân nào khác.</p>}
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
       </div>
     </div>
   );

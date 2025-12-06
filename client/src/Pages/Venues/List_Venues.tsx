@@ -12,26 +12,19 @@ const List_Venue = ({ limit }: VenuesProps) => {
   const navigate = useNavigate();
   const { data: venueData, isLoading, isError } = useFetchData<Venue[]>("venues");
 
-
   const [searchName, setSearchName] = useState("");
   const [selectedAddress, setSelectedAddress] = useState("");
   const [filteredVenues, setFilteredVenues] = useState<Venue[] | null>(null);
 
-  if (isError)
-    return (
-      <p className="text-center text-red-500 py-10">
-        Đã xảy ra lỗi khi tải dữ liệu sân!
-      </p>
-    );
-
+  // Xử lý dữ liệu (Giữ nguyên)
   const venues: Venue[] = (venueData?.data as Venue[]) || [];
   const addressOptions = Array.from(new Set(venues.map((v) => v.address_detail)));
 
   const displayedVenues = filteredVenues
     ? filteredVenues
     : limit
-      ? venues.slice(0, limit)
-      : venues;
+    ? venues.slice(0, limit)
+    : venues;
 
   const handleSearch = () => {
     let filtered = venues;
@@ -44,143 +37,187 @@ const List_Venue = ({ limit }: VenuesProps) => {
     setFilteredVenues(filtered);
   };
 
+  if (isError)
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-red-500">
+        <i className="fa-solid fa-triangle-exclamation text-3xl mb-3"></i>
+        <p className="text-sm font-medium">Đã xảy ra lỗi khi tải dữ liệu sân!</p>
+      </div>
+    );
+
   return (
-    <div className="w-full bg-gray-50 py-8 md:py-10">
-      <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#2d6a2d] text-center mb-6">
-        Danh sách sân thể thao
-      </h1>
+    <div className="w-full bg-white min-h-screen py-8 md:py-12 font-sans">
+      {/* --- HEADER SECTION --- */}
+      <div className="text-center mb-8 px-4">
+        {/* Mobile: text-2xl, Desktop: text-3xl */}
+        <h1 className="text-2xl md:text-3xl font-bold text-[#11182C] mb-2 tracking-tight">
+          Khám Phá Sân Thể Thao
+        </h1>
+        <p className="text-gray-500 text-xs md:text-sm max-w-2xl mx-auto">
+          Tìm kiếm và đặt sân nhanh chóng với hệ thống sân bãi chất lượng cao.
+        </p>
+      </div>
 
-      {/* Thanh tìm kiếm */}
-      <div className="max-w-7xl mx-auto px-4 mb-8">
-        <div className="flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-4">
-          <input
-            type="text"
-            placeholder="Nhập tên sân..."
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            className="flex-grow px-3 py-2 md:px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2d6a2d] outline-none text-sm md:text-base"
-          />
+      {/* --- SEARCH BAR (Compact & Clean) --- */}
+      <div className="max-w-4xl mx-auto px-4 mb-10 sticky top-20 md:top-24 z-30">
+        <div className="bg-white p-1.5 md:p-2 rounded-2xl md:rounded-full shadow-xl shadow-gray-200/50 border border-gray-100 flex flex-col md:flex-row items-center gap-2 md:gap-0">
+          
+          {/* Input Tên */}
+          <div className="relative w-full md:w-1/2 group">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <i className="fa-solid fa-magnifying-glass text-gray-400 text-xs md:text-sm group-focus-within:text-[#10B981] transition-colors"></i>
+            </div>
+            <input
+              type="text"
+              placeholder="Tìm tên sân..."
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-transparent rounded-full outline-none text-xs md:text-sm text-gray-700 placeholder-gray-400 font-medium"
+            />
+          </div>
 
-          <select
-            value={selectedAddress}
-            onChange={(e) => {
-              setSelectedAddress(e.target.value);
-              if (window.innerWidth < 768) handleSearch();
-            }}
-            className="w-36 md:w-72 px-3 py-2 border border-gray-300 rounded-lg text-sm md:text-base focus:ring-2 focus:ring-[#2d6a2d] outline-none"
-          >
-            <option value="">Chọn địa chỉ...</option>
-            {addressOptions.map((addr, idx) => (
-              <option key={idx} value={addr}>
-                {addr}
-              </option>
-            ))}
-          </select>
+          {/* Divider Desktop */}
+          <div className="h-6 w-[1px] bg-gray-200 hidden md:block mx-2"></div>
 
+          {/* Select Địa chỉ */}
+          <div className="relative w-full md:w-1/3 group">
+            <div className="absolute inset-y-0 left-0 pl-4 md:pl-2 flex items-center pointer-events-none">
+              <i className="fa-solid fa-map-location-dot text-gray-400 text-xs md:text-sm group-focus-within:text-[#10B981] transition-colors"></i>
+            </div>
+            <select
+              value={selectedAddress}
+              onChange={(e) => {
+                setSelectedAddress(e.target.value);
+                if (window.innerWidth < 768) setTimeout(handleSearch, 100); 
+              }}
+              className="w-full pl-10 pr-8 py-2.5 bg-transparent cursor-pointer outline-none text-xs md:text-sm text-gray-700 font-medium appearance-none truncate hover:bg-gray-50 rounded-full transition-colors"
+            >
+              <option value="">Tất cả khu vực</option>
+              {addressOptions.map((addr, idx) => (
+                <option key={idx} value={addr}>
+                  {addr}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+              <i className="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+            </div>
+          </div>
+
+          {/* Button Tìm kiếm */}
           <button
             onClick={handleSearch}
-            className="px-4 py-2 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition duration-300 flex items-center justify-center text-sm md:text-base"
+            className="w-full md:w-auto px-6 py-2.5 bg-[#10B981] hover:bg-[#059669] text-white text-xs md:text-sm font-bold rounded-xl md:rounded-full shadow-md shadow-green-200 transition-all flex items-center justify-center gap-2 active:scale-95"
           >
-            <i className="fa-solid fa-magnifying-glass mr-1 hidden md:inline"></i>
-            <span className="hidden md:inline">Tìm kiếm</span>
-            <i className="fa-solid fa-filter md:hidden"></i>
+            Tìm kiếm
           </button>
         </div>
       </div>
 
-      {/* Danh sách sân */}
+      {/* --- DANH SÁCH SÂN --- */}
       <div className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {isLoading
-            ? Array.from({ length: limit || 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-xl shadow-md animate-pulse border border-gray-200"
-              >
-                <div className="w-full h-28 sm:h-36 bg-gray-200"></div>
+        {/* Grid Responsive: Mobile 1 cột, Tablet 2 cột, Desktop 4 cột */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-6">
+          {isLoading ? (
+            // Skeleton Loader (Loading State)
+            Array.from({ length: limit || 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+                <div className="h-44 bg-gray-100 animate-pulse"></div>
                 <div className="p-3 space-y-2">
-                  <div className="h-4 bg-gray-300 w-3/4 rounded"></div>
-                  <div className="h-3 bg-gray-200 w-2/3 rounded"></div>
+                  <div className="h-4 bg-gray-100 rounded w-3/4 animate-pulse"></div>
+                  <div className="h-3 bg-gray-100 rounded w-1/2 animate-pulse"></div>
                 </div>
               </div>
             ))
-            : displayedVenues.length > 0
-              ? displayedVenues.map((venue) => {
-                const primaryImage = venue.images?.find(
-                  (img: Image) => img.is_primary === 1
-                );
+          ) : displayedVenues.length > 0 ? (
+            displayedVenues.map((venue) => {
+              const primaryImage = venue.images?.find((img: Image) => img.is_primary === 1);
 
-                return (
-                  <div
-                    key={venue.id}
-                    className="bg-white rounded-xl border border-gray-200 overflow-hidden transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col"
-                  >
-                    {/* Ảnh */}
-                    <div className="relative">
-                      <img
-                        onClick={() => navigate(`/venues/${venue.id}`)}
-                        src={
-                          primaryImage?.url ||
-                          "https://via.placeholder.com/400x300?text=BCP+Sports"
-                        }
-                        alt={venue.name}
-                        className="w-full h-28 sm:h-36 object-cover cursor-pointer"
-                      />
-                      <div className="absolute top-0 right-0 bg-[#10B981] text-white px-2 py-1 rounded-bl-md flex items-center gap-1 shadow-md text-xs">
-                        <i className="fa-solid fa-star text-yellow-400"></i>
-                        <span>{Number(venue.reviews_avg_rating)?.toFixed(1) || "0.0"}</span>
-                      </div>
-                      <div className="absolute bottom-0 left-0 bg-[#10B981] text-white px-2 py-1 rounded-tr-md flex items-center gap-1 shadow-md text-xs">
-                        <i className="fa-regular fa-clock text-white mr-1"></i>
-                        <span>
-                          {venue.start_time?.slice(0, 5)} - {venue.end_time?.slice(0, 5)}
-                        </span>
-                      </div>
+              return (
+                <div
+                  key={venue.id}
+                  onClick={() => navigate(`/venues/${venue.id}`)}
+                  className="group bg-white rounded-xl shadow-sm hover:shadow-lg border border-gray-100 overflow-hidden cursor-pointer transition-all duration-300 flex flex-col h-full transform hover:-translate-y-1"
+                >
+                  {/* Image Container: Mobile h-40, Desktop h-44 */}
+                  <div className="relative overflow-hidden h-40 md:h-44">
+                    <img
+                      src={primaryImage?.url || "https://via.placeholder.com/400x300?text=BCP+Sports"}
+                      alt={venue.name}
+                      className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                    />
+                    
+                    {/* Badge Rating */}
+                    <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1 text-[10px] font-bold text-gray-800">
+                      <i className="fa-solid fa-star text-amber-400 text-[8px]"></i>
+                      <span>{Number(venue.reviews_avg_rating)?.toFixed(1) || "0.0"}</span>
                     </div>
 
-                    {/* Nội dung */}
-                    <div className="p-3 flex-1 flex flex-col">
-                      <div className="flex flex-wrap gap-1 mb-1">
-                        {venue.venue_types?.length ? (
-                          venue.venue_types.map((type, i) => (
-                            <span
-                              key={i}
-                              className="text-[10px] sm:text-[11px] bg-[#D1FAE5] text-[#065F46] px-1.5 py-0.5 rounded-full font-medium line-clamp-1"
-                            >
-                              {type.name}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-[11px] text-gray-500 italic">
-                            Chưa có loại hình
-                          </span>
-                        )}
-                      </div>
-
-                      <h3 className="text-[13px] sm:text-[15px] font-semibold text-[#11182C] mb-1 line-clamp-1">
-                        {venue.name}
-                      </h3>
-
-                      <div className="flex items-start text-[11px] sm:text-[13px] text-gray-600 mb-2">
-                        <i className="fa-solid fa-location-dot text-[#10B981] mt-0.5 mr-1 flex-shrink-0"></i>
-                        <span className="line-clamp-2">{venue.address_detail}</span>
-                      </div>
-
-                      <button
-                        onClick={() => navigate(`/venues/${venue.id}`)}
-                        className="mt-auto bg-[#F59E0B] hover:bg-[#D97706] text-white font-semibold text-[11px] sm:text-[13px] py-1.5 sm:py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
-                      >
-                        Xem chi tiết
-                      </button>
+                    {/* Badge Time */}
+                    <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white px-2 py-0.5 rounded flex items-center gap-1 text-[10px] font-medium">
+                      <i className="fa-regular fa-clock text-[#10B981]"></i>
+                      <span>
+                        {venue.start_time?.slice(0, 5)} - {venue.end_time?.slice(0, 5)}
+                      </span>
                     </div>
                   </div>
-                );
-              })
-              : (
-                <p className="col-span-full text-center text-gray-500 italic py-10">
-                  Không có sân nào được tìm thấy.
-                </p>
-              )}
+
+                  {/* Card Content */}
+                  <div className="p-3 md:p-4 flex-1 flex flex-col">
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {venue.venue_types?.length ? (
+                        venue.venue_types.slice(0, 2).map((type, i) => (
+                          <span
+                            key={i}
+                            className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider bg-green-50 text-green-700 px-1.5 py-0.5 rounded border border-green-100"
+                          >
+                            {type.name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[10px] text-gray-400 italic">Đa năng</span>
+                      )}
+                    </div>
+
+                    {/* Title: Text-sm (Mobile) / Text-base (Desktop) */}
+                    <h3 className="text-sm md:text-base font-bold text-gray-800 mb-1 line-clamp-1 group-hover:text-[#10B981] transition-colors">
+                      {venue.name}
+                    </h3>
+
+                    {/* Address: Text-xs */}
+                    <div className="flex items-start gap-1.5 text-xs text-gray-500 mb-3">
+                      <i className="fa-solid fa-location-dot text-gray-400 mt-0.5 flex-shrink-0"></i>
+                      <span className="line-clamp-2 leading-tight">{venue.address_detail}</span>
+                    </div>
+
+                    {/* Card Footer */}
+                    <div className="mt-auto pt-3 border-t border-gray-50 flex items-center justify-between">
+                       <span className="text-[10px] md:text-xs text-gray-400 font-medium group-hover:text-[#10B981] transition-colors">Xem chi tiết</span>
+                       <div className="w-6 h-6 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-[#10B981] group-hover:text-white transition-all">
+                          <i className="fa-solid fa-arrow-right text-[10px]"></i>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            // Empty State
+            <div className="col-span-full flex flex-col items-center justify-center py-12 text-center">
+              <div className="bg-gray-50 p-4 rounded-full mb-3">
+                <i className="fa-solid fa-magnifying-glass text-2xl text-gray-400"></i>
+              </div>
+              <h3 className="text-sm font-bold text-gray-700 mb-1">Không tìm thấy sân nào</h3>
+              <p className="text-xs text-gray-500 mb-4">Thử thay đổi từ khóa hoặc chọn khu vực khác.</p>
+              <button 
+                onClick={() => {setSearchName(""); setSelectedAddress(""); handleSearch();}}
+                className="text-xs font-bold text-[#10B981] hover:underline"
+              >
+                Xóa bộ lọc
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

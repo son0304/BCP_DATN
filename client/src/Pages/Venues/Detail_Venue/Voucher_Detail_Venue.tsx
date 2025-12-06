@@ -1,23 +1,21 @@
-import { useState, useEffect } from "react"; // Thêm useEffect
-import { useFetchData } from "../../../hooks/useApi";
+import { useState, useEffect } from "react";
+import { useFetchData } from "../../../Hooks/useApi";
 import type { Voucher } from "./Booking_Detail_Venue";
 import type { AxiosError } from "axios";
 
 interface VoucherProps {
   onVoucherApply: (v: Voucher | null) => void;
-  totalPrice: number; // MỚI: Cần tổng giá để tính voucher tốt nhất
+  totalPrice: number;
 }
 
 const Voucher_Detail_Venue: React.FC<VoucherProps> = ({
   onVoucherApply,
-  totalPrice, // Prop mới
+  totalPrice,
 }) => {
   const [voucherCode, setVoucherCode] = useState<string>("");
   const [currentVoucher, setCurrentVoucher] = useState<Voucher | null>(null);
-  // MỚI: Theo dõi xem người dùng đã tương tác (chọn, gõ, xóa) chưa
   const [userInteracted, setUserInteracted] = useState(false);
 
-  // Hook để lấy một voucher duy nhất bằng mã (dành cho nút "Áp dụng")
   const {
     data: singleVoucherData,
     error,
@@ -27,7 +25,6 @@ const Voucher_Detail_Venue: React.FC<VoucherProps> = ({
     (voucherCode && voucherCode !== currentVoucher?.code) ? { code: voucherCode } : undefined
   );
 
-  // Hook để lấy TẤT CẢ voucher
   const { data: allVouchersData, error: allVouchersError } =
     useFetchData<Voucher[]>('promotions');
   const allVouchers = allVouchersData?.data;
@@ -37,26 +34,18 @@ const Voucher_Detail_Venue: React.FC<VoucherProps> = ({
   const formatPrice = (price: number) =>
     price.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
-  // MỚI: Hàm trợ giúp tính toán giá trị giảm giá thực tế
   const calculateDiscount = (voucher: Voucher, total: number): number => {
     if (voucher.type === '%') {
-      // Giả sử không có max_discount, nếu có, bạn cần thêm logic đó ở đây
       const discount = (total * voucher.value) / 100;
+      if (voucher.max_discount_amount && voucher.max_discount_amount > 0 && discount > voucher.max_discount_amount) {
+        return voucher.max_discount_amount;
+      }
       return discount;
     }
-    // Loại 'VND'
-    // Đảm bảo giảm giá không vượt quá tổng tiền
     return Math.min(voucher.value, total);
   };
 
-  // MỚI: useEffect để tự động áp dụng voucher tốt nhất
   useEffect(() => {
-    // Chỉ chạy nếu:
-    // 1. Đã tải xong danh sách voucher
-    // 2. Có ít nhất 1 voucher
-    // 3. Người dùng CHƯA tương tác
-    // 4. Chưa có voucher nào được áp dụng
-    // 5. Có tổng giá > 0
     if (
       allVouchers &&
       allVouchers.length > 0 &&
@@ -64,38 +53,26 @@ const Voucher_Detail_Venue: React.FC<VoucherProps> = ({
       !currentVoucher &&
       totalPrice > 0
     ) {
-      // 1. Tính toán chiết khấu cho mỗi voucher
       const vouchersWithDiscount = allVouchers.map((voucher) => ({
         voucher,
-        discountAmount: calculateDiscount(voucher, totalPrice),
+        discountAmount: calculateDiscount(voucher, totalPrice), 
       }));
 
-      // 2. Sắp xếp để tìm chiết khấu cao nhất
       vouchersWithDiscount.sort((a, b) => b.discountAmount - a.discountAmount);
 
-      // 3. Lấy voucher tốt nhất
       const bestVoucher = vouchersWithDiscount[0].voucher;
       const bestDiscount = vouchersWithDiscount[0].discountAmount;
 
-      // 4. Chỉ áp dụng nếu chiết khấu có ý nghĩa (lớn hơn 0)
       if (bestDiscount > 0) {
         setCurrentVoucher(bestVoucher);
-        setVoucherCode(bestVoucher.code); // Đồng bộ UI (input và select)
+        setVoucherCode(bestVoucher.code);
         onVoucherApply(bestVoucher);
-        // Không set userInteracted = true ở đây, vì đây là hành động tự động
       }
     }
-  }, [
-    allVouchers,
-    totalPrice,
-    userInteracted,
-    currentVoucher,
-    onVoucherApply,
-  ]);
+  }, [allVouchers, totalPrice, userInteracted, currentVoucher, onVoucherApply]);
 
-  // Xử lý khi nhấn nút "Áp dụng"
   const handleApply = async () => {
-    setUserInteracted(true); // Đánh dấu người dùng tương tác
+    setUserInteracted(true);
     if (!voucherCode.trim() || !!currentVoucher) return;
 
     const result = await refetch();
@@ -110,17 +87,15 @@ const Voucher_Detail_Venue: React.FC<VoucherProps> = ({
     }
   };
 
-  // Xử lý khi nhấn nút "Xóa"
   const handleRemoveVoucher = () => {
-    setUserInteracted(true); // Đánh dấu người dùng tương tác
+    setUserInteracted(true);
     onVoucherApply(null);
     setCurrentVoucher(null);
     setVoucherCode("");
   };
 
-  // Xử lý khi chọn từ dropdown
   const handleSelectVoucher = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setUserInteracted(true); // Đánh dấu người dùng tương tác
+    setUserInteracted(true);
     const selectedCode = e.target.value;
     setVoucherCode(selectedCode);
 
@@ -137,9 +112,8 @@ const Voucher_Detail_Venue: React.FC<VoucherProps> = ({
     }
   };
 
-  // Xử lý khi nhập text vào input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUserInteracted(true); // Đánh dấu người dùng tương tác
+    setUserInteracted(true);
     const code = e.target.value;
     setVoucherCode(code);
 
@@ -152,19 +126,25 @@ const Voucher_Detail_Venue: React.FC<VoucherProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      {/* MỚI: Select Dropdown */}
+    <div className="flex flex-col gap-3 p-3 bg-gray-50/50 rounded-xl border border-gray-100">
+      {/* Title nhỏ */}
+      <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wide">
+         <i className="fa-solid fa-ticket text-[#10B981]"></i> Mã giảm giá
+      </div>
+
+      {/* Select Box */}
       <select
-        value={voucherCode} // Liên kết giá trị với state
+        value={voucherCode}
         onChange={handleSelectVoucher}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+        className="w-full px-3 py-2 text-xs md:text-sm border border-gray-200 rounded-lg focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] outline-none bg-white transition-all cursor-pointer"
       >
-        <option value="">Chọn voucher...</option>
+        <option value="">-- Chọn mã ưu đãi --</option>
         {allVouchers && allVouchers.length > 0 ? (
           allVouchers.map((v) => (
             <option key={v.code} value={v.code}>
-              {/* Hiển thị thông tin voucher rõ ràng */}
-              {v.code} - Giảm: {v.type === '%' ? `${v.value}%` : formatPrice(v.value)}
+              {v.code} - Giảm {v.type === '%' 
+                ? `${v.value}% ${v.max_discount_amount ? `(max ${formatPrice(v.max_discount_amount)})` : ''}` 
+                : formatPrice(v.value)}
             </option>
           ))
         ) : (
@@ -174,50 +154,64 @@ const Voucher_Detail_Venue: React.FC<VoucherProps> = ({
         )}
       </select>
 
-      <input
-        type="text"
-        placeholder="Hoặc nhập mã voucher..." // Cập nhật placeholder
-        value={voucherCode}
-        onChange={handleInputChange} // Sử dụng handler mới
-        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 outline-none"
-      />
-
-      {/* Chỉ hiển thị lỗi từ việc áp dụng thủ công */}
-      {axiosError && (
-        <p className="text-red-500">!{axiosError?.response?.data?.message}</p>
-      )}
-
-      {/* Thông báo thành công giờ đây dựa trên state `currentVoucher` */}
-      {currentVoucher && (
-        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm font-semibold text-green-800">
-            <i className="fa-solid fa-check-circle mr-2" />
-            Mã {currentVoucher.code} đã được lấy thành công
-          </p>
-          <p className="text-xs text-green-700 mt-1">
-            Giảm: {currentVoucher.type === '%' ? `${currentVoucher.value}%` : formatPrice(currentVoucher.value)}
-          </p>
-        </div>
-      )}
-
+      {/* Input Code + Button Apply */}
       <div className="flex gap-2">
+        <div className="relative flex-1">
+            <input
+            type="text"
+            placeholder="Nhập mã..."
+            value={voucherCode}
+            onChange={handleInputChange}
+            className="w-full pl-3 pr-8 py-2 text-xs md:text-sm border border-gray-200 rounded-lg focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] outline-none uppercase placeholder:normal-case transition-all"
+            />
+            {voucherCode.length > 0 && (
+            <button
+                type="button"
+                onClick={handleRemoveVoucher}
+                className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-gray-400 hover:text-red-500 transition-colors"
+                title="Xóa voucher"
+            >
+                <i className="fa-solid fa-circle-xmark text-xs"></i>
+            </button>
+            )}
+        </div>
+        
         <button
-          onClick={handleApply}
-          type="button"
-          // Vô hiệu hóa nếu không có mã hoặc nếu mã đó đã được áp dụng
-          disabled={!voucherCode || !!currentVoucher}
-          className="flex-1 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+            onClick={handleApply}
+            type="button"
+            disabled={!voucherCode || !!currentVoucher}
+            className="px-4 py-2 bg-[#10B981] hover:bg-[#059669] text-white text-xs font-bold rounded-lg transition-all disabled:bg-gray-300 disabled:cursor-not-allowed shadow-sm active:scale-95"
         >
-          Áp dụng
-        </button>
-        <button
-          onClick={handleRemoveVoucher}
-          type="button"
-          className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all"
-        >
-          Xóa
+            Áp dụng
         </button>
       </div>
+
+      {/* Error Message */}
+      {axiosError && (
+        <p className="text-[10px] text-red-500 flex items-center gap-1">
+            <i className="fa-solid fa-circle-exclamation"></i>
+            {axiosError?.response?.data?.message}
+        </p>
+      )}
+
+      {/* Success Message Card */}
+      {currentVoucher && (
+        <div className="p-2.5 bg-green-50/80 border border-green-100 rounded-lg flex items-start gap-2 animate-fade-in">
+           <div className="mt-0.5 text-[#10B981]">
+              <i className="fa-solid fa-check-circle text-sm" />
+           </div>
+           <div>
+              <p className="text-xs font-bold text-green-800">
+                Áp dụng thành công: <span className="uppercase">{currentVoucher.code}</span>
+              </p>
+              <p className="text-[10px] text-green-700 mt-0.5">
+                Đã giảm: {currentVoucher.type === '%' 
+                  ? `${currentVoucher.value}% (Tối đa ${currentVoucher.max_discount_amount ? formatPrice(currentVoucher.max_discount_amount) : 'không giới hạn'})` 
+                  : formatPrice(currentVoucher.value)}
+              </p>
+           </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -56,8 +56,9 @@ export async function postData<TOut, TIn = unknown>(
 ): Promise<ApiResponse<TOut>> {
   const isFormData = data instanceof FormData;
   const config = isFormData ? {} : { headers: { "Content-Type": "application/json" } };
-
   const response = await apiClient.post<ApiResponse<TOut>>(`/${resource}`, data, config);
+  console.log(response);
+
   return response.data;
 }
 

@@ -7,51 +7,29 @@ import { useEffect, useState } from "react";
 
 const Content = () => {
   const navigate = useNavigate();
-  const { data: venueData, isLoading, isError } =
-    useFetchData<Venue[]>("venues");
+  const { data: venueData, isLoading, isError } = useFetchData<Venue[]>("venues");
 
   const venues: Venue[] = (venueData?.data as Venue[]) || [];
   const displayedVenues = venues.slice(0, 4);
 
   const banners = [
     {
-      image:
-        "https://cdn.prod.website-files.com/6390c2d9fbb8357ffc404b63/6612f97cff3fd2e80bcb5b1c_What%20is%20Pickleball.png",
-      title: (
-        <>
-          Đặt sân thể thao dễ dàng <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-teal-100">
-            Mọi lúc – Mọi nơi
-          </span>
-        </>
-      ),
-      desc: "Khám phá hàng trăm sân bóng, cầu lông, pickleball… Đặt lịch nhanh chóng và nhận ưu đãi cực hấp dẫn chỉ với vài cú nhấp.",
+      image: "https://images.unsplash.com/photo-1626248921347-74a8166f4536?q=80&w=2070&auto=format&fit=crop",
+      title: "Bùng Nổ Đam Mê",
+      subtitle: "Đặt sân thể thao dễ dàng",
+      desc: "Kết nối đam mê với hàng trăm sân bóng, cầu lông, pickleball chất lượng cao.",
     },
     {
-      image:
-        "https://images.unsplash.com/photo-1551958219-acbc608c6377?q=80&w=1470&auto=format&fit=crop",
-      title: (
-        <>
-          Sân bóng chất lượng <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-teal-100">
-            Gần bạn nhất
-          </span>
-        </>
-      ),
-      desc: "Đặt sân bóng đá nhanh chóng, dễ dàng, với hệ thống tiện ích và ưu đãi hấp dẫn mỗi ngày.",
+      image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1936&auto=format&fit=crop",
+      title: "Sân Cỏ Đẳng Cấp",
+      subtitle: "Trải nghiệm thi đấu đỉnh cao",
+      desc: "Hệ thống sân cỏ nhân tạo tiêu chuẩn, dịch vụ tiện ích đầy đủ cho trận đấu của bạn.",
     },
     {
-      image:
-        "https://lh7-rt.googleusercontent.com/docsz/AD_4nXdilipWIRDONHYvGLHnlQgJ8AlNWegmZQL6JyUH-aZOnk5YrXILOeHEFwgYEOhegCxtPhk_ZOVMKrqwy4IS2v3OpM91ZSD8Z7QlGi5rNvFMbw-XY1I78SydXAGlVkp2uNtKw5bA?key=arrkdHtwmhcmPHr4YSqemok2",
-      title: (
-        <>
-          Trải nghiệm thể thao <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-teal-100">
-            Cùng bạn bè
-          </span>
-        </>
-      ),
-      desc: "Đặt sân cầu lông, pickleball và nhiều môn khác — chỉ trong vài giây.",
+      image: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?q=80&w=2070&auto=format&fit=crop",
+      title: "Kết Nối Đồng Đội",
+      subtitle: "Thể thao là không khoảng cách",
+      desc: "Tìm kiếm đối thủ, đặt sân nhanh chóng và xây dựng cộng đồng thể thao vững mạnh.",
     },
   ];
 
@@ -60,203 +38,201 @@ const Content = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % banners.length);
-    }, 3000);
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
   const banner = banners[index];
 
   return (
-    <>
-      {/* Banner đầu trang */}
-      <section className="relative h-[300px] md:h-[480px] flex items-center justify-center mt-2 pb-32 md:pb-40">
+    <div className="bg-white min-h-screen font-sans">
+      {/* --- HERO SECTION --- */}
+      {/* Mobile: h-400px, Desktop: h-600px (Thoáng hơn trên màn hình lớn) */}
+      <section className="relative h-[400px] md:h-[600px] overflow-hidden group">
         <AnimatePresence mode="wait">
           <motion.div
             key={index}
-            initial={{ opacity: 0, scale: 1.1 }}
+            initial={{ opacity: 0, scale: 1.05 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 1 }}
             className="absolute inset-0 bg-cover bg-center"
             style={{ backgroundImage: `url(${banner.image})` }}
-          />
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/30"></div>
+          </motion.div>
         </AnimatePresence>
 
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/70 via-emerald-800/50 to-teal-600/40"></div>
-
-        <motion.div
-          key={index + "-content"}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="relative z-10 flex flex-col items-center text-center w-full max-w-4xl px-6"
-        >
-          <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-4 md:mb-6 text-white drop-shadow-lg">
-            {banner.title}
-          </h1>
-          <p className="text-base md:text-lg text-emerald-100 mb-6 md:mb-8 leading-relaxed max-w-2xl">
-            {banner.desc}
-          </p>
-        </motion.div>
-      </section>
-
-      {/* 🔍 Form tìm kiếm */}
-      <section className="container mx-auto max-w-5xl bg-white md:h-64 h-full md:-mt-20 md:relative md:z-10 rounded-2xl shadow-2xl border border-gray-200 p-4 md:p-6">
-        <div className="w-full text-center mb-4">
-          <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">
-            Tìm sân nhanh
-          </h1>
-          <p className="text-sm md:text-base text-gray-500">
-            Tìm kiếm sân thể thao phù hợp với bạn
-          </p>
-        </div>
-
-        <form className="grid md:grid-cols-4 grid-cols-1 gap-3 md:gap-4">
-          {[
-            { icon: "fa-futbol", label: "Chọn môn thể thao" },
-            { icon: "fa-map-marker-alt", label: "Chọn khu vực" },
-            { icon: "fa-calendar", label: "Chọn ngày" },
-          ].map((f, i) => (
-            <div
-              key={i}
-              className="relative flex items-center border-2 border-gray-200 hover:border-emerald-500 p-2 md:p-3 rounded-2xl transition-all duration-300"
-            >
-              <i
-                className={`fa-solid ${f.icon} text-emerald-500 text-base md:text-lg mr-3`}
-              ></i>
-              <select className="w-full border-none bg-transparent outline-none text-gray-700 text-sm md:text-base font-medium">
-                <option value="">{f.label}</option>
-              </select>
-            </div>
-          ))}
-
-          <button className="p-2 md:p-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm md:text-base font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2">
-            <i className="fa-solid fa-search"></i>
-            <span>Tìm kiếm</span>
-          </button>
-        </form>
-      </section>
-
-      {/* 🏟️ Gợi ý sân */}
-      <section className="py-10 md:py-16 mt-10 md:mt-16 bg-gradient-to-b from-white to-gray-50">
-        <div className="container max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl md:text-2xl font-bold text-emerald-600">
-                Gợi ý cho bạn
-              </h2>
-              <p className="text-sm md:text-base text-gray-500">
-                Những sân thể thao được yêu thích nhất
-              </p>
-            </div>
+        <div className="relative z-10 h-full flex flex-col justify-center items-center text-center px-4 max-w-5xl mx-auto pt-8">
+          <motion.div
+            key={index + "-text"}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            {/* Title nhỏ ở trên */}
+            <span className="inline-block py-1 px-3 rounded-full bg-white/10 border border-white/20 text-white/90 text-[10px] md:text-sm font-bold tracking-widest uppercase mb-4 backdrop-blur-sm">
+              {banner.title}
+            </span>
+            
+            {/* Main Title: Mobile 3xl, Desktop 5xl hoặc 6xl nhưng nét chữ thanh thoát */}
+            <h1 className="text-3xl md:text-6xl font-extrabold text-white mb-4 leading-tight drop-shadow-lg">
+              {banner.subtitle}
+            </h1>
+            
+            {/* Desc: Mobile text-sm, Desktop text-lg */}
+            <p className="text-gray-200 text-sm md:text-lg max-w-2xl mx-auto leading-relaxed mb-8 font-light opacity-90">
+              {banner.desc}
+            </p>
+            
             <Link to="/venues">
-              <button className="flex items-center gap-2 text-emerald-500 hover:text-emerald-600 text-sm md:text-base transition font-semibold">
-                <span>Xem thêm</span>
-                <i className="fa-solid fa-arrow-right"></i>
+              <button className="px-6 py-3 md:px-8 md:py-3.5 bg-[#10B981] hover:bg-[#059669] text-white text-sm md:text-base font-bold rounded-full shadow-lg shadow-emerald-900/30 transition-all transform hover:-translate-y-1 hover:shadow-xl">
+                Đặt sân ngay
               </button>
             </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* --- SEARCH BOX (Responsive Floating) --- */}
+      <div className="relative z-20 px-4 -mt-10 md:-mt-16 mb-16">
+        <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-5 md:p-8 border border-gray-100">
+          <div className="flex items-center gap-2 mb-5">
+             <div className="p-2 bg-green-50 rounded-lg text-[#10B981]">
+                <i className="fa-solid fa-filter text-sm md:text-base"></i>
+             </div>
+             <h2 className="text-sm md:text-lg font-bold text-gray-800 uppercase tracking-wide">Tìm kiếm nhanh</h2>
           </div>
+          
+          <form className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[
+              { icon: "fa-futbol", placeholder: "Môn thể thao...", type: "text" },
+              { icon: "fa-map-location-dot", placeholder: "Khu vực...", type: "text" },
+              { icon: "fa-calendar-days", placeholder: "Chọn ngày", type: "date" },
+            ].map((field, i) => (
+              <div key={i} className="relative group">
+                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <i className={`fa-solid ${field.icon} text-sm text-gray-400 group-focus-within:text-[#10B981] transition-colors`}></i>
+                 </div>
+                 {/* Input: Mobile text-sm, Desktop text-base để dễ đọc hơn */}
+                 <input 
+                    type={field.type}
+                    placeholder={field.placeholder}
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#10B981]/20 focus:border-[#10B981] outline-none transition-all text-sm md:text-base text-gray-700 font-medium placeholder:text-gray-400"
+                 />
+              </div>
+            ))}
 
-          {isError ? (
-            <p className="text-center text-red-500 py-10">
-              Đã xảy ra lỗi khi tải dữ liệu sân!
-            </p>
-          ) : (
-            <div className="flex gap-4 overflow-x-auto sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-x-hidden scrollbar-hide">
-              {isLoading
-                ? Array.from({ length: 4 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="bg-white rounded-2xl shadow-md animate-pulse border border-gray-200 min-w-[220px] sm:min-w-0"
-                    >
-                      <div className="w-full h-40 bg-gray-200"></div>
+            <button className="h-full w-full bg-[#10B981] hover:bg-[#059669] text-white text-sm md:text-base font-bold py-3 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-wide transform active:scale-95">
+              <i className="fa-solid fa-magnifying-glass"></i> Tìm kiếm
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* --- FEATURED VENUES --- */}
+      <section className="py-10 pb-20 max-w-7xl mx-auto px-4">
+        <div className="flex items-end justify-between mb-8 border-b border-gray-100 pb-4">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Sân Nổi Bật</h2>
+            <p className="text-sm md:text-base text-gray-500">Địa điểm được cộng đồng yêu thích nhất tuần qua</p>
+          </div>
+          <Link to="/venues" className="text-sm md:text-base font-semibold text-[#10B981] hover:text-[#059669] transition-colors flex items-center gap-2 group">
+            Xem tất cả <i className="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+          </Link>
+        </div>
+
+        {isError ? (
+          <div className="text-center py-12 bg-red-50 rounded-2xl text-red-500 border border-red-100 text-sm md:text-base">
+            <i className="fa-solid fa-circle-exclamation text-2xl mb-2 block"></i>
+            Không thể tải dữ liệu sân.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+            {isLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100">
+                    <div className="h-44 md:h-52 bg-gray-100 animate-pulse"></div>
+                    <div className="p-4 space-y-3">
+                      <div className="h-5 bg-gray-100 rounded w-3/4 animate-pulse"></div>
+                      <div className="h-4 bg-gray-100 rounded w-1/2 animate-pulse"></div>
                     </div>
-                  ))
-                : displayedVenues.length > 0
-                ? displayedVenues.map((venue) => {
-                    const primaryImage = venue.images?.find(
-                      (img: Image) => img.is_primary === 1
-                    );
-                    return (
-                      <div
-                        key={venue.id}
-                        className="bg-white rounded-2xl border border-gray-200 overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:shadow-lg flex flex-col min-w-[220px] sm:min-w-0"
-                      >
-                        <div className="relative">
-                          <img
-                            onClick={() => navigate(`/venues/${venue.id}`)}
-                            src={
-                              primaryImage?.url ||
-                              "https://via.placeholder.com/400x300?text=BCP+Sports"
-                            }
-                            alt={venue.name}
-                            className="w-full h-28 sm:h-36 object-cover cursor-pointer"
-                          />
-                          <div className="absolute top-0 right-0 bg-emerald-500 text-white px-2 py-1 rounded-bl-md flex items-center gap-1 shadow-md text-xs">
-                            <i className="fa-solid fa-star text-yellow-400"></i>
-                            <span>
-                              {Number(venue.reviews_avg_rating)?.toFixed(1) ||
-                                "0.0"}
-                            </span>
-                          </div>
-                          <div className="absolute bottom-0 left-0 bg-emerald-500 text-white px-2 py-1 rounded-tr-md flex items-center gap-1 shadow-md text-xs">
-                            <i className="fa-regular fa-clock text-white mr-1"></i>
-                            <span>
-                              {venue.start_time?.slice(0, 5)} -{" "}
-                              {venue.end_time?.slice(0, 5)}
-                            </span>
-                          </div>
+                  </div>
+                ))
+              : displayedVenues.length > 0
+              ? displayedVenues.map((venue) => {
+                  const primaryImage = venue.images?.find((img: Image) => img.is_primary === 1);
+                  
+                  return (
+                    <div
+                      key={venue.id}
+                      onClick={() => navigate(`/venues/${venue.id}`)}
+                      className="group bg-white rounded-2xl hover:shadow-xl border border-gray-100 overflow-hidden cursor-pointer transition-all duration-300 flex flex-col h-full transform hover:-translate-y-1"
+                    >
+                      {/* Image - Mobile: h-44, Desktop: h-52 (Rộng rãi hơn) */}
+                      <div className="relative overflow-hidden h-44 md:h-52">
+                        <img
+                          src={primaryImage?.url || "https://via.placeholder.com/400x300?text=BCP+Sports"}
+                          alt={venue.name}
+                          className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+                        />
+                        
+                        {/* Rating Badge */}
+                        <div className="absolute top-3 right-3 bg-white/95 backdrop-blur px-2 py-1 rounded-lg shadow-sm flex items-center gap-1 text-xs font-bold text-gray-800">
+                          <i className="fa-solid fa-star text-amber-400"></i>
+                          <span>{Number(venue.reviews_avg_rating)?.toFixed(1) || "0.0"}</span>
                         </div>
+                      </div>
 
-                        <div className="p-3 flex-1 flex flex-col">
-                          <div className="flex flex-wrap gap-1 mb-1">
+                      {/* Content */}
+                      <div className="p-4 flex-1 flex flex-col">
+                        {/* Tags */}
+                        <div className="flex flex-wrap gap-2 mb-3">
                             {venue.venue_types?.length ? (
-                              venue.venue_types.map((type, i) => (
-                                <span
-                                  key={i}
-                                  className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium line-clamp-1"
-                                >
+                              venue.venue_types.slice(0, 2).map((type, i) => (
+                                <span key={i} className="text-[10px] md:text-xs font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md">
                                   {type.name}
                                 </span>
                               ))
                             ) : (
-                              <span className="text-xs text-gray-500 italic">
-                                Chưa có loại hình
-                              </span>
+                              <span className="text-[10px] text-gray-400 italic">Đa năng</span>
                             )}
-                          </div>
+                        </div>
 
-                          <h3 className="text-sm md:text-base font-semibold text-gray-900 mb-1 line-clamp-1">
-                            {venue.name}
-                          </h3>
+                        {/* Title - Mobile text-sm, Desktop text-lg */}
+                        <h3 className="text-base md:text-lg font-bold text-gray-800 mb-2 line-clamp-1 group-hover:text-[#10B981] transition-colors">
+                          {venue.name}
+                        </h3>
 
-                          <div className="flex items-start text-xs md:text-sm text-gray-600 mb-2">
-                            <i className="fa-solid fa-location-dot text-emerald-500 mt-0.5 mr-1 flex-shrink-0"></i>
-                            <span className="line-clamp-2">
-                              {venue.address_detail}
-                            </span>
-                          </div>
+                        {/* Address - Mobile text-xs, Desktop text-sm */}
+                        <div className="flex items-start gap-2 text-xs md:text-sm text-gray-500 mb-4">
+                          <i className="fa-solid fa-location-dot text-emerald-500 mt-0.5 flex-shrink-0"></i>
+                          <span className="line-clamp-2 leading-snug">{venue.address_detail}</span>
+                        </div>
 
-                          <button
-                            onClick={() => navigate(`/venues/${venue.id}`)}
-                            className="mt-auto bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
-                          >
-                            Xem chi tiết
-                          </button>
+                        {/* Footer Card */}
+                        <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
+                           <div className="flex items-center gap-1.5 text-xs md:text-sm text-gray-500 font-medium">
+                              <i className="fa-regular fa-clock text-[#10B981]"></i>
+                              {venue.start_time?.slice(0, 5)} - {venue.end_time?.slice(0, 5)}
+                           </div>
+                           <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-[#10B981] group-hover:text-white transition-all">
+                              <i className="fa-solid fa-arrow-right text-xs"></i>
+                           </div>
                         </div>
                       </div>
-                    );
-                  })
-                : (
-                  <p className="col-span-full text-center text-gray-500 italic py-10">
-                    Không có sân nào được tìm thấy.
-                  </p>
-                )}
-            </div>
-          )}
-        </div>
+                    </div>
+                  );
+                })
+              : (
+                <div className="col-span-full text-center text-gray-400 py-12">
+                  Chưa có sân nào được đề xuất.
+                </div>
+              )}
+          </div>
+        )}
       </section>
-    </>
+    </div>
   );
 };
 

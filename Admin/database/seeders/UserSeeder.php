@@ -14,11 +14,11 @@ class UserSeeder extends Seeder
         $provinceIds = Province::pluck('id')->all();
 
         // Admin user
-        $adminRoleId = Role::where('name', 'Admin')->value('id');
+        $adminRoleId = Role::where('name', 'admin')->value('id');
         User::firstOrCreate(
             ['email' => 'admin@example.com'],
             [
-                'name' => 'Admin',
+                'name' => 'admin',
                 'password' => Hash::make('password'),
                 'phone' => '0900000000',
                 'role_id' => $adminRoleId,

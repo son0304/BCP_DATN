@@ -1,20 +1,7 @@
-// src/pages/Detail_User.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { User } from '../../Types/user';
 import Booking_history from './Booking_history';
-
-const InfoItem: React.FC<{ icon: string; label: string; value?: string | number | null }> = ({ icon, label, value }) => (
-    <div>
-        <dt className="text-sm font-medium text-gray-500 flex items-center">
-            <i className={`fa-solid ${icon} text-[#348738] w-5 mr-2`}></i>
-            <span>{label}</span>
-        </dt>
-        <dd className="mt-1 text-base text-gray-900">
-            {value || <span className="text-gray-400 italic">Chưa cập nhật</span>}
-        </dd>
-    </div>
-);
 
 const Detail_User = () => {
     const [user, setUser] = useState<User | null>(null);
@@ -23,104 +10,117 @@ const Detail_User = () => {
     useEffect(() => {
         try {
             const userStr = localStorage.getItem("user");
-            if (userStr) {
-                setUser(JSON.parse(userStr));
-            } else {
-                setError("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.");
-            }
+            if (userStr) setUser(JSON.parse(userStr));
+            else setError("Vui lòng đăng nhập lại.");
         } catch (e) {
-            console.error("Lỗi khi parse user từ localStorage:", e);
-            setError("Dữ liệu người dùng bị lỗi.");
+            setError("Dữ liệu lỗi.");
         }
     }, []);
 
-    if (error || !user) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-6">
-                <h2 className="text-2xl font-bold text-gray-800">Không thể tải thông tin</h2>
-                <p className="text-gray-500 mt-2">
-                    {error || "Không có dữ liệu người dùng."}
-                </p>
-                
-            </div>
-        );
-    }
+    if (error || !user) return (
+        <div className="min-h-[60vh] flex items-center justify-center text-gray-400 text-sm">
+            <i className="fa-solid fa-circle-exclamation mr-2"></i> {error || "Đang tải..."}
+        </div>
+    );
+    console.log(user.avt);
 
-    // Tạo avatar fallback
-    const avatarUrl = user.avt || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name.charAt(0))}&background=random&color=fff`;
+
+    const avatarUrl = user.avt || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=10B981&color=fff`;
+
+    const provinceName = typeof user.province === 'object' && user.province ? (user.province as any).name : user.province;
+    const districtName = typeof user.district === 'object' && user.district ? (user.district as any).name : user.district;
+    const fullAddress = [districtName, provinceName].filter(Boolean).join(", ") || "Chưa cập nhật địa chỉ";
 
     return (
-        <div className="bg-gray-50 min-h-screen p-4 sm:p-8">
-            <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
-                {/* === PHẦN HEADER CỦA CARD === */}
-                <div className="p-6 md:p-8 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-                        {/* Avatar và Tên */}
-                        <div className="flex items-center gap-5">
-                            <img
-                                src={avatarUrl}
-                                alt={user.name}
-                                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md ring-2 ring-[#348738]"
-                            />
-                            <div>
-                                <h1 className="text-3xl font-bold text-gray-900">{user.name}</h1>
-                                <p className="text-lg text-gray-600">{user.email}</p>
-                                <span className={`mt-2 inline-block px-3 py-1 text-xs font-semibold rounded-full ${user.role_id === 1 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+        <div className="bg-[#F9FAFB] min-h-screen py-8 px-4 font-sans">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                {/* --- LEFT SIDEBAR: PROFILE --- */}
+                <div className="lg:col-span-4 space-y-6">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 lg:sticky lg:top-24">
+                        {/* Header Avatar */}
+                        <div className="flex flex-col items-center text-center mb-6">
+                            <div className="relative group cursor-pointer">
+                                {user.avt && user.avt.length > 0 ? (
+                                    user.avt.map((avtItem: any) => (
+                                        <img
+                                            key={avtItem.id}
+                                            src={avtItem.url}
+                                            alt="Avatar"
+                                            className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-sm"
+                                        />
+                                    ))
+                                ) : (
+                                    <img
+                                        src="/default-avatar.png"
+                                        alt={user.name}
+                                        className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-sm"
+                                    />
+                                )}
+
+                                <div className="absolute bottom-0 right-0 w-6 h-6 bg-[#10B981] border-2 border-white rounded-full flex items-center justify-center text-white text-[10px]">
+                                    <i className="fa-solid fa-pen"></i>
+                                </div>
+                            </div>
+
+
+                            <h2 className="text-lg font-bold text-gray-800 mt-3">{user.name}</h2>
+                            <p className="text-xs text-gray-500 font-medium">{user.email}</p>
+
+                            <div className="mt-3">
+                                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${user.role_id === 1
+                                    ? 'bg-red-50 text-red-600 border-red-100'
+                                    : 'bg-green-50 text-green-600 border-green-100'
                                     }`}>
-                                    {user.role_id === 1 ? 'Admin' : 'User'}
+                                    {user.role_id === 1 ? 'Quản trị viên' : 'Thành viên'}
                                 </span>
                             </div>
                         </div>
-                        {/* Nút Hành động */}
-                        <div className="flex-shrink-0">
+
+                        <div className="border-t border-gray-50 my-5"></div>
+
+                        {/* Info List */}
+                        <div className="space-y-4">
+                            <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 flex-shrink-0">
+                                    <i className="fa-solid fa-phone text-xs"></i>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold text-gray-400">Điện thoại</p>
+                                    <p className="text-sm font-semibold text-gray-700">{user.phone || "---"}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 flex-shrink-0">
+                                    <i className="fa-solid fa-map-location-dot text-xs"></i>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold text-gray-400">Địa chỉ</p>
+                                    <p className="text-sm font-semibold text-gray-700 leading-snug">{fullAddress}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="mt-8 pt-4 border-t border-gray-50">
                             <Link
-                                to={`/profile/edit`} // Sửa link thành trang edit profile
-                                state={{ user: user }} // Truyền dữ liệu user qua state
-                                className="px-5 py-2.5 bg-orange-500 rounded-full hover:bg-orange-600 transition text-white font-medium shadow-md"
+                                to="/profile/edit"
+                                state={{ user }}
+                                className="flex items-center justify-center w-full py-2.5 text-xs font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 hover:text-[#10B981] rounded-lg border border-gray-200 hover:border-gray-300 transition-all"
                             >
-                                <i className="fa-solid fa-pen me-2"></i>
-                                Chỉnh sửa
+                                <i className="fa-solid fa-user-pen mr-2"></i>
+                                Cập nhật thông tin
                             </Link>
                         </div>
                     </div>
                 </div>
 
-                {/* === PHẦN THÂN CỦA CARD (CHI TIẾT) === */}
-                <div className="p-6 md:p-8">
-                    <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                        <InfoItem
-                            icon="fa-phone"
-                            label="Số điện thoại"
-                            value={user.phone}
-                        />
-                        <InfoItem
-                            icon="fa-check-circle"
-                            label="Trạng thái"
-                            value={user.is_active ? 'Đang hoạt động' : 'Đã khóa'}
-                        />
-                        <InfoItem
-                            icon="fa-map-pin"
-                            label="Tỉnh/Thành phố"
-                            value={user.province?.toString()} // Nên thay bằng user.province.name
-                        />
-                        <InfoItem
-                            icon="fa-map-marker-alt"
-                            label="Quận/Huyện"
-                            value={user.district?.toString()} // Nên thay bằng user.district.name
-                        />
-                        {/* <div className="md:col-span-2">
-                             <InfoItem 
-                                icon="fa-compass" 
-                                label="Tọa độ (Lat/Lng)" 
-                                value={user.lat && user.lng ? `${user.lat}, ${user.lng}` : null} 
-                            />
-                        </div> */}
-                    </dl>
+                {/* --- RIGHT CONTENT: HISTORY --- */}
+                <div className="lg:col-span-8">
+                    <Booking_history user={user} />
                 </div>
-            </div>
 
-            <div className="max-w-4xl mx-auto my-2 bg-white rounded-2xl shadow-xl overflow-hidden">
-                <Booking_history user={user} />
             </div>
         </div>
     );

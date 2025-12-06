@@ -1,22 +1,25 @@
 <head>
-    <!-- Required meta tags -->
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>BCP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta content="A fully featured admin theme which can be used to build CRM, CMS, etc." name="description">
+    <meta content="Coderthemes" name="author">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Admin - Booking Court Prime</title>
-    <!-- plugins:css -->
-    <link rel="stylesheet" href="{{ asset('dist/assets/vendors/mdi/css/materialdesignicons.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('dist/assets/vendors/ti-icons/css/themify-icons.css') }}">
-    <link rel="stylesheet" href="{{ asset('dist/assets/vendors/css/vendor.bundle.base.css') }}">
-    <link rel="stylesheet" href="{{ asset('dist/assets/vendors/font-awesome/css/font-awesome.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('dist/assets/vendors/bootstrap-datepicker/bootstrap-datepicker.min.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" />
-    <!-- Layout styles -->
-    <link rel="stylesheet" href="{{ asset('dist/assets/css/style.css') }}">
-    <!-- User Management Styles -->
-    <link rel="stylesheet" href="{{ asset('css/user-management.css') }}">
-    <!-- Favicon -->
-    <link rel="shortcut icon" href="{{ asset('dist/assets/images/logo.png') }}" />
-    <link rel="stylesheet" href="{{ asset('css/customCss.css') }}">
 
-  </head>
+    <link rel="shortcut icon" href="{{ asset('template/assets/images/logo.png') }}">
+
+
+    <link href="{{ asset('template/assets/css/app.min.css') }}" rel="stylesheet" type="text/css">
+
+
+</head>
+
+    <!-- App css -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href=" {{ asset('template\assets\css\bootstrap.min.css') }}" rel="stylesheet" type="text/css">
+    <link href=" {{ asset('template\assets\css\icons.min.css') }}" rel="stylesheet" type="text/css">
+    <link href=" {{ asset('template\assets\css\app.min.css') }}" rel="stylesheet" type="text/css">
+    
+</head>

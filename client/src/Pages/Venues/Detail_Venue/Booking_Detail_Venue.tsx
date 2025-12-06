@@ -1,16 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import { useNotification } from '../../../Components/Notification';
-import type { Venue } from '../../../Types/venue';
-import type { User } from '../../../Types/user';
-import { usePostData } from '../../../Hooks/useApi';
-import type { ApiResponse } from '../../../Types/api';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { QueryObserverResult, RefetchOptions } from '@tanstack/react-query';
+import { useNotification } from '../../../Components/Notification';
+import { usePostData } from '../../../Hooks/useApi';
+import type { Venue } from '../../../Types/venue';
+import type { User } from '../../../Types/user';
+import type { ApiResponse } from '../../../Types/api';
 import Voucher_Detail_Venue from './Voucher_Detail_Venue';
+
+// --- TYPES ---
+type VenueSlot = {
+  id: number;
+  time_slot_id?: number;
+  start_time: string;
+  end_time: string;
+  price: number | string;
+  status?: 'open' | 'booked' | 'closed' | 'maintenance';
+};
 
 type SelectedItem = {
   court_id: number;
-  name: string;
+  court_name: string;
   time_slot_id: number;
   start_time: string;
   end_time: string;
@@ -18,12 +28,15 @@ type SelectedItem = {
   price: number;
 };
 
+// Type cho Voucher (giữ nguyên nếu chưa có file riêng)
 export type Voucher = {
   id: number;
   code: string;
   value: number;
   type: '%' | 'VND';
+  start_at: string;
   expires_at: string | null;
+  max_discount_amount: number | null;
 };
 
 type BookingDetailVenueProps = {
@@ -43,8 +56,6 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
 }) => {
   const [activeCourtId, setActiveCourtId] = useState<number | null>(null);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
-  const [selectedPrice, setSelectedPrice] = useState<number>(0);
-  const [rawTotalPrice, setRawTotalPrice] = useState<number>(0); // Lưu tổng tiền gốc
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,222 +63,302 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
   const { mutate } = usePostData<ApiResponse<number>, any>('tickets');
   const navigate = useNavigate();
 
+  // Lấy danh sách courts từ venue, mặc định là mảng rỗng nếu null
   const courts = venue.courts ?? [];
 
-  // ===== Format tiền
-  const formatPrice = (price: number | string) => {
-    const value = Number(price) || 0;
-    return value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
-  };
-
-  // ===== Tính tổng tiền
   useEffect(() => {
-    const total = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
-    setRawTotalPrice(total); // Đặt tổng tiền gốc
-
-    let finalPrice = total;
-    if (selectedVoucher) {
-      // Tính toán chiết khấu chính xác
-      let discount = 0;
-      if (selectedVoucher.type === '%') {
-        discount = (total * selectedVoucher.value) / 100;
-        // NOTE: Chỗ này có thể thêm logic max_discount nếu có
-      } else { // type === 'VND'
-        discount = selectedVoucher.value;
-      }
-      // Đảm bảo chiết khấu không vượt quá tổng tiền
-      finalPrice -= Math.min(discount, total);
+    if (courts.length > 0 && activeCourtId === null) {
+      setActiveCourtId(courts[0].id);
     }
-    // Đảm bảo giá cuối cùng không âm
-    setSelectedPrice(Math.max(0, finalPrice));
-  }, [selectedItems, selectedVoucher]);
-
-  // ===== Khi đổi ngày => reset selectedItems
-  useEffect(() => {
-    refetch();
-    setSelectedItems([]);
-  }, [selectedDate, refetch]);
-
-  // ===== Chọn sân con mặc định
-  useEffect(() => {
-    if (courts.length && activeCourtId === null) setActiveCourtId(courts[0].id);
   }, [courts, activeCourtId]);
 
-  // ===== Chọn slot
-  const handleSelectItem = (clickedItem: SelectedItem, status?: string | null) => {
-    if (status !== 'open') {
-      const msg =
-        status === 'booked'
-          ? 'Khung giờ này đã được người khác đặt trước.'
-          : status === 'maintenance'
-          ? 'Khung giờ này đang bảo trì.'
-          : 'Khung giờ này không khả dụng.';
-      return showNotification(msg, 'error');
+  useEffect(() => {
+    refetch(); 
+    setSelectedItems([]);
+    setSelectedVoucher(null);
+  }, [selectedDate, refetch]);
+
+  const activeCourtSlots = useMemo(() => {
+    if (!activeCourtId) return [];
+    const court = courts.find((c) => c.id === activeCourtId);
+    // @ts-ignore
+    const rawSlots: VenueSlot[] = court?.time_slots || court?.availabilities || [];
+    return rawSlots.sort((a, b) => a.start_time.localeCompare(b.start_time));
+  }, [courts, activeCourtId]);
+
+  const { rawTotalPrice, finalPrice, discountAmount } = useMemo(() => {
+    const total = selectedItems.reduce((sum, item) => sum + item.price, 0);
+    let discount = 0;
+    if (selectedVoucher) {
+      const now = new Date();
+      if (!selectedVoucher.expires_at || new Date(selectedVoucher.expires_at) >= now) {
+        if (selectedVoucher.type === '%') {
+          discount = (total * selectedVoucher.value) / 100;
+          if (selectedVoucher.max_discount_amount && discount > selectedVoucher.max_discount_amount) {
+            discount = selectedVoucher.max_discount_amount;
+          }
+        } else {
+          discount = selectedVoucher.value;
+        }
+      }
+    }
+    const validDiscount = Math.min(discount, total);
+    return {
+      rawTotalPrice: total,
+      discountAmount: validDiscount,
+      finalPrice: Math.max(0, total - validDiscount)
+    };
+  }, [selectedItems, selectedVoucher]);
+
+  const formatPrice = (price: number | string) =>
+    Number(price).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+
+  const isSlotPast = (dateStr: string, timeStr: string) => {
+    const slotDate = new Date(`${dateStr}T${timeStr}`);
+    const now = new Date();
+    return slotDate < now;
+  };
+
+  const handleToggleSlot = (court: any, slot: VenueSlot) => {
+    const slotUniqueId = slot.time_slot_id || slot.id;
+
+    if (slot.status && slot.status !== 'open') {
+        const msgMap: Record<string, string> = {
+            booked: 'Sân đã có người đặt.',
+            maintenance: 'Sân đang bảo trì.',
+            closed: 'Sân đóng cửa.',
+        };
+        return showNotification(msgMap[slot.status] || 'Khung giờ này không khả dụng.', 'error');
+    }
+
+    if (isSlotPast(selectedDate, slot.start_time)) {
+      return showNotification('Khung giờ này đã trôi qua.', 'error');
     }
 
     const isSelected = selectedItems.some(
-      (item) => item.court_id === clickedItem.court_id && item.time_slot_id === clickedItem.time_slot_id
+      (item) => item.court_id === court.id && item.time_slot_id === slotUniqueId
     );
 
-    setSelectedItems((prev) =>
-      isSelected ? prev.filter((i) => !(i.court_id === clickedItem.court_id && i.time_slot_id === clickedItem.time_slot_id)) : [...prev, clickedItem]
-    );
+    if (isSelected) {
+      setSelectedItems((prev) => 
+        prev.filter((i) => !(i.court_id === court.id && i.time_slot_id === slotUniqueId))
+      );
+    } else {
+      setSelectedItems((prev) => [
+        ...prev,
+        {
+          court_id: court.id,
+          court_name: court.name,
+          time_slot_id: slotUniqueId,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          date: selectedDate,
+          price: Number(slot.price),
+        },
+      ]);
+    }
   };
 
-  // ===== Submit booking
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return showNotification('Vui lòng đăng nhập để đặt sân.', 'error');
-    if (selectedItems.length === 0) return showNotification('Chọn ít nhất 1 khung giờ.', 'error');
-
-    const bookings = selectedItems.map((item) => ({
-      court_id: item.court_id,
-      time_slot_id: item.time_slot_id,
-      date: item.date,
-      unit_price: item.price,
-    }));
-
-    // Tính toán giảm giá dựa trên rawTotalPrice
-    const total = rawTotalPrice; // Sử dụng tổng tiền gốc
-    const discount = selectedVoucher
-      ? selectedVoucher.type === '%'
-        ? Math.min((total * selectedVoucher.value) / 100, total) // Đảm bảo giảm giá % không vượt quá tổng
-        : Math.min(selectedVoucher.value, total) // Đảm bảo giảm giá VND không vượt quá tổng
-      : 0;
+    if (selectedItems.length === 0) return showNotification('Vui lòng chọn ít nhất 1 khung giờ.', 'error');
+    
+    const hasPastItem = selectedItems.some(item => isSlotPast(item.date, item.start_time));
+    if (hasPastItem) return showNotification('Có khung giờ đã quá hạn, vui lòng tải lại trang.', 'error');
 
     setIsSubmitting(true);
 
-    mutate(
-      { user_id: user.id, promotion_id: selectedVoucher?.id || null, discount_amount: discount, bookings },
-      {
-        onSuccess: (res) => {
-          if (res.success) {
-            showNotification('Đặt sân thành công!', 'success');
-            navigate(`/booking/${res.data}`);
-          } else {
-            showNotification(res.message || 'Đặt sân thất bại.', 'error');
-            refetch();
-          }
-        },
-        onError: () => showNotification('Lỗi khi đặt sân.', 'error'),
-        onSettled: () => setIsSubmitting(false),
-      }
-    );
+    const payload = {
+      user_id: user.id,
+      venue_id: venue.id,
+      promotion_id: selectedVoucher?.id || null,
+      discount_amount: discountAmount,
+      total_amount: finalPrice,
+      bookings: selectedItems.map((item) => ({
+        court_id: item.court_id,
+        time_slot_id: item.time_slot_id,
+        date: item.date,
+        unit_price: item.price,
+      })),
+    };
+
+    mutate(payload, {
+      onSuccess: (res) => {
+        if (res.success) {
+          showNotification('Đặt sân thành công!', 'success');
+          navigate(`/booking/${res.data}`);
+          refetch();
+        } else {
+          showNotification(res.message || 'Đặt sân thất bại.', 'error');
+          refetch();
+        }
+      },
+      onError: () => {
+        showNotification('Lỗi kết nối server.', 'error');
+      },
+      onSettled: () => setIsSubmitting(false),
+    });
   };
 
   return (
-    <div className="space-y-6 lg:col-span-2 order-1 lg:order-2">
-      <div className="bg-white rounded-xl p-6 border border-[#E5E7EB] shadow-2xl lg:sticky lg:top-8">
-        <h4 className="text-lg font-bold text-[#11182C] mb-4 border-b border-[#E5E7EB] pb-2">
-          Đặt lịch thuê sân
-        </h4>
-
-        {/* Chọn ngày */}
-        <div className="mb-4">
-          <label className="text-base font-semibold text-[#4B5563]">Chọn ngày</label>
-          <input
-            type="date"
-            className="w-full mt-2 px-3 py-2 border border-[#E5E7EB] rounded-lg focus:ring-2 focus:ring-[#10B981] outline-none text-[#4B5563]"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            min={new Date().toISOString().slice(0, 10)}
-          />
+    <div className="lg:col-span-3 order-1 lg:order-2 h-full">
+      <div className="bg-white rounded-xl shadow-lg shadow-gray-200/50 border border-gray-100 overflow-hidden lg:sticky lg:top-24 flex flex-col h-full">
+        
+        {/* COMPACT HEADER */}
+        <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 px-4 py-3 text-white flex justify-between items-center">
+          <h4 className="text-sm font-bold flex items-center gap-2 uppercase tracking-wide">
+            <i className="fa-solid fa-calendar-check text-[#10B981]"></i> Đặt Lịch Online
+          </h4>
+          <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-gray-300">
+             {selectedItems.length} slot đang chọn
+          </span>
         </div>
 
-        {/* Chọn sân con */}
-        <div className="mb-4">
-          <label className="text-base font-semibold text-[#4B5563]">Chọn sân con</label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {courts.map((court) => (
-              <button
-                key={court.id}
-                onClick={() => setActiveCourtId(court.id)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all duration-200 ${
-                  activeCourtId === court.id ? 'bg-[#10B981] text-white shadow-md' : 'bg-[#F9FAFB] text-[#4B5563] hover:bg-gray-100 border-[#E5E7EB]'
-                }`}
-              >
-                {court.name}
-              </button>
-            ))}
+        <div className="p-4 space-y-5 flex-1 overflow-y-auto custom-scrollbar">
+          
+          {/* 1. DATE PICKER & LEGEND */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+             <div className="relative w-full sm:w-auto">
+                <input 
+                  type="date" 
+                  value={selectedDate} 
+                  onChange={(e) => setSelectedDate(e.target.value)} 
+                  min={new Date().toISOString().slice(0, 10)}
+                  className="w-full sm:w-48 pl-3 pr-2 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#10B981] outline-none font-medium text-gray-700 cursor-pointer"
+                />
+             </div>
+             <div className="flex gap-3 text-[10px] text-gray-500">
+                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-white border border-gray-300"></span> Trống</div>
+                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#10B981]"></span> Chọn</div>
+                <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-200"></span> Kín</div>
+             </div>
           </div>
-        </div>
 
-        {/* Khung giờ */}
-        <div>
-          <p className="text-base font-semibold text-[#4B5563] mb-3">
-            Khung giờ có sẵn ({selectedItems.length} đã chọn)
-          </p>
-          <div className="grid grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-1">
-            {courts
-              .filter((c) => c.id === activeCourtId)
-              .flatMap((court: any) => court.time_slots?.map((time: any) => ({ court, time })) ?? [])
-              .map(({ court, time }: any) => {
-                const isSelected = selectedItems.some(
-                  (it) => it.court_id === court.id && it.time_slot_id === time.id
-                );
-
-                let cls =
-                  time.status === 'open'
-                    ? 'bg-green-50 text-green-800 border border-green-200'
-                    : time.status === 'booked'
-                    ? 'bg-red-100 text-red-600 cursor-not-allowed opacity-60'
-                    : 'bg-gray-100 text-gray-500 cursor-not-allowed';
-
-                if (isSelected) cls = 'bg-[#10B981] text-white ring-2 ring-green-300 shadow-md';
-
-                return (
-                  <button
-                    key={`${court.id}-${time.id}`}
-                    onClick={() =>
-                      handleSelectItem(
-                        {
-                          court_id: court.id,
-                          name: court.name,
-                          time_slot_id: time.id,
-                          start_time: time.start_time,
-                          end_time: time.end_time,
-                          date: selectedDate,
-                          price: Number(time.price) || 0,
-                        },
-                        time.status
-                      )
-                    }
-                    disabled={time.status !== 'open'}
-                    className={`p-3 rounded-lg flex flex-col items-center font-semibold text-sm ${cls}`}
-                  >
-                    <div>{time.label ?? `${time.start_time.slice(0, 5)} - ${time.end_time.slice(0, 5)}`}</div>
-                    <div className="text-xs mt-1">{formatPrice(time.price)}</div>
-                  </button>
-                );
-              })}
-          </div>
-        </div>
-
-        {/* Form tổng tiền */}
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          {/* Truyền prop totalPrice={rawTotalPrice} */}
-          <Voucher_Detail_Venue 
-            onVoucherApply={setSelectedVoucher} 
-            totalPrice={rawTotalPrice} 
-          />
-
-          <div className="pt-4 border-t border-gray-200">
-            <div className="flex justify-between">
-              <span>Tổng thanh toán:</span>
-              <span className="font-bold text-amber-600">{formatPrice(selectedPrice)}</span>
+          {/* 2. COURT TABS (SCROLLABLE) */}
+          <div className="border-b border-gray-100">
+             <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                {courts.map((court) => (
+                    <button 
+                    key={court.id} 
+                    onClick={() => setActiveCourtId(court.id)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold whitespace-nowrap transition-all ${
+                        activeCourtId === court.id
+                        ? 'bg-[#10B981] text-white shadow-sm'
+                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                    }`}
+                    >
+                    {court.name}
+                    </button>
+                ))}
             </div>
-            <button
+          </div>
+
+          {/* 3. SLOTS GRID (Compact Buttons) */}
+          <div className="min-h-[200px]">
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+              {activeCourtSlots.length === 0 ? (
+                <div className="col-span-full text-center py-10 text-gray-400 text-xs flex flex-col items-center">
+                  <i className="fa-regular fa-calendar-xmark text-2xl mb-2 opacity-30"></i>
+                  <span>Không có lịch trống cho sân này</span>
+                </div>
+              ) : (
+                activeCourtSlots.map((slot) => {
+                  const slotUniqueId = slot.time_slot_id || slot.id;
+                  const isSelected = selectedItems.some(
+                    (item) => item.court_id === activeCourtId && item.time_slot_id === slotUniqueId
+                  );
+                  const isPast = isSlotPast(selectedDate, slot.start_time);
+                  const isOpen = !slot.status || slot.status === 'open';
+                  const isDisabled = !isOpen || isPast;
+
+                  let btnClass = "relative flex flex-col items-center justify-center py-1.5 px-1 rounded border text-center transition-all duration-200 ";
+                  
+                  if (isDisabled) {
+                    btnClass += "bg-gray-100 border-gray-100 text-gray-300 cursor-not-allowed";
+                  } else if (isSelected) {
+                    btnClass += "bg-[#10B981] border-[#10B981] text-white shadow-md ring-2 ring-green-100 cursor-pointer transform -translate-y-0.5";
+                  } else {
+                    btnClass += "bg-white border-gray-200 text-gray-600 hover:border-[#10B981] hover:text-[#10B981] cursor-pointer";
+                  }
+
+                  return (
+                    <button
+                      key={`${activeCourtId}-${slotUniqueId}`}
+                      onClick={() => !isDisabled && handleToggleSlot(courts.find(c => c.id === activeCourtId), slot)}
+                      disabled={isDisabled}
+                      className={btnClass}
+                    >
+                      <span className="text-[11px] font-bold leading-tight">{slot.start_time.slice(0, 5)}</span>
+                      <span className={`text-[9px] ${isSelected ? 'text-green-50' : 'text-gray-400'}`}>
+                        {Number(slot.price) / 1000}k
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* 4. CHECKOUT SECTION */}
+          <div className="bg-gray-50 rounded-xl p-3 border border-gray-200">
+             {/* Selected List */}
+             {selectedItems.length > 0 ? (
+                 <div className="max-h-24 overflow-y-auto custom-scrollbar mb-3 pr-1 space-y-1">
+                    {selectedItems.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center bg-white p-1.5 rounded border border-gray-100 text-xs">
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-1 h-3 bg-[#10B981] rounded-full"></span>
+                                <span className="font-semibold text-gray-700">{item.court_name}</span> 
+                                <span className="text-gray-500">({item.start_time.slice(0,5)} - {item.end_time.slice(0,5)})</span>
+                            </div>
+                            <span className="font-bold text-gray-800">{formatPrice(item.price)}</span>
+                        </div>
+                    ))}
+                 </div>
+             ) : (
+                 <p className="text-center text-xs text-gray-400 py-2 italic">Chưa chọn khung giờ nào</p>
+             )}
+
+             <div className="border-t border-gray-200 my-2"></div>
+
+             {/* Voucher */}
+             <Voucher_Detail_Venue onVoucherApply={setSelectedVoucher} totalPrice={rawTotalPrice} />
+             
+             <div className="border-t border-gray-200 my-3"></div>
+
+             {/* Total */}
+             <div className="flex justify-between items-center mb-3">
+                 <div className="text-xs text-gray-500">
+                    <p>Tạm tính: {formatPrice(rawTotalPrice)}</p>
+                    {selectedVoucher && <p className="text-[#10B981]">Giảm giá: -{formatPrice(discountAmount)}</p>}
+                 </div>
+                 <div className="text-right">
+                     <span className="block text-[10px] text-gray-400">Tổng thanh toán</span>
+                     <span className="text-lg font-extrabold text-[#F59E0B]">{formatPrice(finalPrice)}</span>
+                 </div>
+             </div>
+
+             {/* Submit Button */}
+             <button
               type="submit"
+              onClick={handleSubmit}
               disabled={selectedItems.length === 0 || isSubmitting}
-              className={`w-full mt-4 py-3 rounded-lg text-white font-semibold flex items-center justify-center gap-2 ${
-                selectedItems.length === 0 || isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600'
+              className={`w-full py-2.5 rounded-lg text-sm font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 ${
+                selectedItems.length === 0 || isSubmitting
+                  ? 'bg-gray-300 cursor-not-allowed shadow-none'
+                  : 'bg-[#10B981] hover:bg-[#059669] hover:-translate-y-0.5'
               }`}
             >
-              {isSubmitting && <span className="loader-border animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full" />}
-              {isSubmitting ? 'Đang đặt...' : `Đặt ngay (${selectedItems.length})`}
+              {isSubmitting ? (
+                <> <i className="fa-solid fa-circle-notch fa-spin"></i> Xử lý... </>
+              ) : (
+                <> Xác nhận đặt sân <i className="fa-solid fa-arrow-right text-xs"></i> </>
+              )}
             </button>
           </div>
-        </form>
+
+        </div>
       </div>
     </div>
   );

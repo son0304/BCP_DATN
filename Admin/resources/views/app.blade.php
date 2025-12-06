@@ -1,29 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 @include('layout.head')
 
-
 <body>
-    <div class="container-scroller">
+    <div id="wrapper">
         @include('layout.nav')
-
-        <div class="container-fluid page-body-wrapper">
-            @include('layout.sidebar')
-
-            <div class="main-panel">
-                {{-- Content --}}
-                <div class="content-wrapper my-4">
+        @include('layout.sidebar')
+        <div class="content-page">
+            <div class="py-4">
+                <div class="container-fluid">
                     @yield('content')
                 </div>
-                {{-- EndContent --}}
 
-                @include('layout.footer')
             </div>
+            @include('layout.footer')
         </div>
     </div>
-    @include('layout.alert')
+    @include('layout.right-bar')
+    <div class="rightbar-overlay"></div>
+    
+    <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
+
+    @vite(['resources/js/app.js'])
 
     @include('layout.scrip')
+
     @stack('scripts')
 </body>
 

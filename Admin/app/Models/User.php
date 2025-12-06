@@ -56,6 +56,11 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(Booking::class);
     }
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class, 'user_id');
+    }
+
     public function venues()
     {
         return $this->hasMany(Venue::class, 'owner_id');
@@ -64,6 +69,15 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(Review::class);
     }
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class, 'user_id');
+    }
+    public function images()
+    {
+        return $this->morphMany(Image::class, 'imageable');
+    }
+
 
 
 

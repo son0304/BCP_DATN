@@ -156,7 +156,7 @@
                                     </div>
                                 </td>
                                 <td style="text-align: right;">
-                                    {{ number_format($item->unit_price, 0, ',', '.') }} đ
+                                    {{ number_format($item->unit_price - $item->discount_amount, 0, ',', '.') }} đ
                                 </td>
                             </tr>
                         @endforeach

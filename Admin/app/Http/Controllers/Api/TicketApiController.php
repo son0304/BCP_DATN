@@ -84,6 +84,7 @@ class TicketApiController extends Controller
      */
     public function store(Request $request)
     {
+        Log::info('Yêu cầu tạo ticket', ['request' => $request->all()]);
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'promotion_id' => 'nullable|exists:promotions,id',
@@ -93,6 +94,8 @@ class TicketApiController extends Controller
             'bookings.*.time_slot_id' => 'required|exists:time_slots,id',
             'bookings.*.date' => 'required|date|after_or_equal:today',
             'bookings.*.unit_price' => 'required|numeric|min:0',
+            'bookings.*.sale_price' => 'required|numeric|min:0',
+
         ]);
 
         $user = Auth::user();
@@ -116,7 +119,11 @@ class TicketApiController extends Controller
                 }
 
                 // 2. Tính toán tiền
-                $subtotal = array_sum(array_column($validated['bookings'], 'unit_price'));
+                $subtotal = array_sum(
+                    array_map(function ($b) {
+                        return ($b['sale_price'] ?? 0) > 0 ? $b['sale_price'] : $b['unit_price'];
+                    }, $validated['bookings'])
+                );
                 $discount = $validated['discount_amount'] ?? 0;
                 $total = $subtotal - $discount;
 
@@ -147,11 +154,21 @@ class TicketApiController extends Controller
                         'status' => 'pending', // Sẽ cập nhật khi thanh toán
                     ]);
 
+                    $unitPrice = $bookingData['unit_price'];
+                    $salePrice = $bookingData['sale_price'] ?? null;
+
+                    // Nếu sale_price = 0 hoặc null thì coi như không sale
+                    if (!$salePrice || $salePrice == $unitPrice) {
+                        $discountAmount = 0;
+                    } else {
+                        $discountAmount = $unitPrice - $salePrice;
+                    }
+
                     Item::create([
-                        'ticket_id' => $ticket->id,
-                        'booking_id' => $createdBooking->id,
-                        'unit_price' => $bookingData['unit_price'],
-                        'discount_amount' => 0, // Giảm giá được áp dụng ở Ticket, không phải Item
+                        'ticket_id'       => $ticket->id,
+                        'booking_id'      => $createdBooking->id,
+                        'unit_price'      => $unitPrice,
+                        'discount_amount' => $discountAmount,
                     ]);
 
                     Availability::where('court_id', $bookingData['court_id'])
@@ -167,7 +184,7 @@ class TicketApiController extends Controller
 
                 return $ticket;
             });
-           
+
             return response()->json([
                 'success' => true,
                 'message' => 'Tạo ticket thành công, vui lòng thanh toán trong 2 phút.',

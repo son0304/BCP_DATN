@@ -175,6 +175,11 @@
                                                     'text' => 'text-danger-emphasis',
                                                     'label' => 'Đã hủy',
                                                 ],
+                                                'confirmed' => [
+                                                    'bg' => 'bg-primary-subtle',
+                                                    'text' => 'text-primary-emphasis',
+                                                    'label' => 'Đã xác nhận',
+                                                ],
                                             ];
                                             // Fallback nếu status không khớp
                                             $s = $statusMap[$ticket->status] ?? [

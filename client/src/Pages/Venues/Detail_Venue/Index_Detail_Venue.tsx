@@ -19,7 +19,7 @@ const Index_Detail_Venue: React.FC = () => {
     }
   }, [rawUser]);
 
-  const {showNotification} = useNotification();
+  const { showNotification } = useNotification();
 
 
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -43,7 +43,7 @@ const Index_Detail_Venue: React.FC = () => {
         const list = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
         const items = list.filter((v: any) => v.id !== currentId).slice(0, 4);
         setRelatedVenues(items.length ? items : detail_venue?.data ? [detail_venue.data] : []);
-      } catch (err:any) {
+      } catch (err: any) {
         const msg = err?.response?.data?.message || "Lỗi tải dữ liệu liên quan";
         showNotification(msg, "error");
         setRelatedVenues([]);
@@ -66,6 +66,7 @@ const Index_Detail_Venue: React.FC = () => {
   const venue: Venue = detail_venue.data;
   const formatPrice = (price: number) => !price || isNaN(price) ? '0₫' : price.toLocaleString('vi-VN') + '₫';
 
+
   // Logic review
 
 
@@ -77,10 +78,6 @@ const Index_Detail_Venue: React.FC = () => {
 
       {/* 2. BODY: BOOKING (LEFT) & DETAIL INFO (RIGHT) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-
-        {/* Booking Section (Main) - Vị trí bên TRÁI */}
-        {/* Lưu ý: Nếu trong file Booking_Detail_Venue.tsx có class 'lg:order-2', 
-            bạn nên sửa nó thành 'lg:order-1' hoặc xóa class order đi để nó tự động nằm bên trái. */}
         <Booking_Detail_Venue
           venue={venue}
           user={user}
@@ -88,9 +85,6 @@ const Index_Detail_Venue: React.FC = () => {
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
         />
-
-        {/* Info Detail Section (Sidebar) - Vị trí bên PHẢI */}
-        {/* Thay đổi: lg:order-1 thành lg:order-2 (hoặc last) */}
         <div className="lg:col-span-2 order-2 lg:order-2 space-y-6">
           <Info_Detail_Venue
             venue={venue}

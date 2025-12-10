@@ -46,6 +46,13 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('admin.flash_sale_campaigns.index') }}" class="waves-effect">
+                                <i class="bi bi-lightning-fill"></i>
+                                <span> Flash Sale </span>
+                            </a>
+                        </li>
+
+                        <li>
                             <a href="{{ route('admin.promotions.index') }}" class="waves-effect">
                                 <i class="ri-coupon-line"></i>
                                 <span> Voucher </span>
@@ -74,6 +81,13 @@
                             <a href="{{ route('owner.venues.index') }}" class="waves-effect">
                                 <i class="remixicon-store-2-line"></i>
                                 <span> Thương Hiệu </span>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="{{ route('owner.flash_sale_campaigns.index') }}" class="waves-effect">
+                                <i class="bi bi-lightning-fill"></i>
+                                <span> Flash Sale </span>
                             </a>
                         </li>
                         <li>

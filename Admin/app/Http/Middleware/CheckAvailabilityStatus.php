@@ -5,12 +5,13 @@ namespace App\Http\Middleware;
 use Closure;
 use App\Models\Availability;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class CheckAvailabilityStatus
 {
     public function handle($request, Closure $next)
     {
-        \Log::info('Middleware CheckAvailabilityStatus started');
+        Log::info('Middleware CheckAvailabilityStatus started');
         $now = Carbon::now('Asia/Ho_Chi_Minh');
 
         $updated = Availability::where('status', 'open')
@@ -19,7 +20,7 @@ class CheckAvailabilityStatus
             })
             ->update(['status' => 'maintenance']);
 
-        \Log::info('CheckAvailabilityStatus ran at ' . $now . '. Updated ' . $updated . ' records.');
+        Log::info('CheckAvailabilityStatus ran at ' . $now . '. Updated ' . $updated . ' records.');
 
         return $next($request);
     }

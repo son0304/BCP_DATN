@@ -235,12 +235,36 @@ const Ticket_Detail = () => {
                       </div>
                     </div>
 
+                   
                     {/* Right: Price & Action */}
                     <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center pl-11 sm:pl-0">
-                      <p className={`font-bold text-sm ${isRefunded ? 'text-gray-400 italic' : 'text-gray-800'}`}>
-                        {isRefunded ? formatCurrency(0) : formatCurrency(item.unit_price)}
-                      </p>
 
+                      <div className={`text-right ${isRefunded ? 'opacity-60' : ''}`}>
+                        {isRefunded ? (
+                          <p className="font-bold text-sm text-gray-400 italic">
+                            {formatCurrency(0)}
+                          </p>
+                        ) : (
+                          Number(item.discount_amount) > 0 ? (
+                            <div className="flex flex-col items-end leading-tight">
+                              <span className="text-xs text-gray-400 line-through decoration-1">
+                                {formatCurrency(item.unit_price)}
+                              </span>
+                              {/* Giá sau khi trừ khuyến mãi (Màu đỏ hoặc cam để nổi bật) */}
+                              <span className="font-bold text-sm text-red-500">
+                                {formatCurrency(Number(item.unit_price) - Number(item.discount_amount))}
+                              </span>
+                            </div>
+                          ) : (
+                            // Không có giảm giá: Hiển thị giá gốc bình thường
+                            <p className="font-bold text-sm text-gray-800">
+                              {formatCurrency(item.unit_price)}
+                            </p>
+                          )
+                        )}
+                      </div>
+
+                      {/* NÚT HỦY (GIỮ NGUYÊN LOGIC CŨ) */}
                       {!isTicketCancelled && !isRefunded && (
                         <button
                           type="button"

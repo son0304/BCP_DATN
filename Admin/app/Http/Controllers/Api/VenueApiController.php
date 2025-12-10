@@ -73,6 +73,8 @@ class VenueApiController extends Controller
     {
         $validated = $request->validate(['date' => 'nullable|date_format:Y-m-d']);
         $date = $validated['date'] ?? now()->toDateString();
+
+        // 1. Lấy Venue và các quan hệ cơ bản
         $venue = Venue::with([
             'images:id,imageable_id,imageable_type,url,is_primary,description',
             'venueTypes:id,name',
@@ -84,11 +86,10 @@ class VenueApiController extends Controller
             'reviews.images:id,imageable_id,imageable_type,url',
             'reviews.user:id,name,avt',
             'reviews.user.images:id,imageable_id,imageable_type,url',
-
         ])
             ->withAvg('reviews', 'rating')
             ->where('id', $id)
-            ->first(); // thay vì find($id)
+            ->first();
 
         if (!$venue) {
             return response()->json([
@@ -99,18 +100,44 @@ class VenueApiController extends Controller
 
         $courtIds = $venue->courts->pluck('id');
 
+        // 2. Lấy Availability và LỌC FLASH SALE THEO TRẠNG THÁI ACTIVE
         $availabilities = Availability::whereIn('court_id', $courtIds)
             ->where('date', $date)
+            ->with(['flashSaleItem' => function ($query) {
+                $query->whereHas('campaign', function ($q) {
+                    $q->where('status', 'active');
+                });
+            }])
             ->get()
             ->groupBy('court_id')
+            // Lưu ý: Kiểm tra kỹ tên cột trong DB là 'time_slot_id' hay 'slot_id'
+            // Thường Laravel convention là 'time_slot_id'
             ->map(fn($items) => $items->keyBy('slot_id'));
 
+        // 3. Map dữ liệu vào TimeSlots để trả về Frontend
         foreach ($venue->courts as $court) {
             $courtAvailabilities = $availabilities->get($court->id, collect());
+
             foreach ($court->timeSlots as $slot) {
+                // Tìm availability tương ứng với slot này
                 $availability = $courtAvailabilities->get($slot->id);
-                $slot->status = $availability->status ?? 'unavailable';
-                $slot->price = $availability->price ?? null;
+
+                // Gán dữ liệu cơ bản
+                // Quan trọng: Phải trả về availability_id để frontend biết đường book
+                $slot->availability_id = $availability ? $availability->id : null;
+                $slot->status          = $availability ? $availability->status : 'unavailable'; // Hoặc logic mặc định của bạn
+                $slot->price           = $availability ? $availability->price : null;
+
+                // Xử lý Flash Sale (Chỉ hiện nếu availability load được flashSaleItem active)
+                if ($availability && $availability->flashSaleItem) {
+                    $slot->sale_price   = $availability->flashSaleItem->sale_price;
+                    $slot->is_flash_sale = true;
+                } else {
+                    $slot->sale_price    = null;
+                    $slot->is_flash_sale = false;
+                }
+
+                if ($availability) unset($availability->flashSaleItem);
             }
         }
 

@@ -10,11 +10,14 @@ use App\Http\Controllers\Web\{
     UserController,
     BookingController,
     AuthController,
+    FlashSaleCampaignController,
+    FlashSaleItemController,
     OwnerStatisticController,
     VenueController,
     PromotionController,
     TransactionController
 };
+use App\Models\FlashSaleCampaign;
 
 // ==============================
 // ====== AUTH & PUBLIC ROUTES ======
@@ -95,6 +98,13 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::prefix('transactions')->name('transactions.')->group(function () {
         Route::get('/', [TransactionController::class, 'index'])->name('index');
     });
+
+    Route::prefix('flash-sale')->name('flash_sale_campaigns.')->group(function () {
+        Route::get('/', [FlashSaleCampaignController::class, 'index'])->name('index');
+
+        Route::get('create', [FlashSaleCampaignController::class, 'create'])->name('create');
+        Route::post('store', [FlashSaleCampaignController::class, 'store'])->name('store');
+    });
 });
 
 
@@ -143,5 +153,11 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
         Route::post('/', [BookingController::class, 'store'])->name('store');
         Route::put('{booking}', [BookingController::class, 'update'])->name('update');
         Route::delete('{booking}', [BookingController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('flash-sale')->name('flash_sale_campaigns.')->group(function () {
+        Route::get('/', [FlashSaleCampaignController::class, 'index'])->name('index');
+        Route::get('show/{id}', [FlashSaleCampaignController::class, 'show'])->name('show');
+        Route::post('store', [FlashSaleItemController::class, 'create_flash_sale_items'])->name('store');
     });
 });

@@ -20,4 +20,6 @@
     <link href=" {{ asset('template\assets\css\bootstrap.min.css') }}" rel="stylesheet" type="text/css">
     <link href=" {{ asset('template\assets\css\icons.min.css') }}" rel="stylesheet" type="text/css">
     <link href=" {{ asset('template\assets\css\app.min.css') }}" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+
 </head>

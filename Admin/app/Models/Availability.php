@@ -27,4 +27,8 @@ class Availability extends Model
     {
         return $this->belongsTo(TimeSlot::class, 'slot_id');
     }
+    public function flashSaleItem()
+    {
+        return $this->hasOne(FlashSaleItem::class, 'availability_id');
+    }
 }

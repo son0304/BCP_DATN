@@ -1,7 +1,9 @@
 <?php
 
+// use App\Http\Controllers\ChatController as ControllersChatController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\{
+    AdminStatisticController,
     AvailabilityController,
     HomeController,
     CourtController,
@@ -9,10 +11,13 @@ use App\Http\Controllers\Web\{
     UserController,
     BookingController,
     AuthController,
+    ChatController,
+    OwnerStatisticController,
     VenueController,
     PromotionController,
     ProductController,
-    ProductCategoryController
+    ProductCategoryController,
+    TransactionController,
 };
 
 // ==============================
@@ -41,8 +46,19 @@ Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index'
 // ==============================
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
 
-    // Dashboard
-    Route::get('/', [HomeController::class, 'dashboard'])->name('dashboard');
+    Route::get('/', [AdminStatisticController::class, 'index'])->name('statistics.index');
+
+    Route::prefix('chats')->name('chats.')->group(function () {
+        // Danh sách các cuộc hội thoại
+        Route::get('/', [ChatController::class, 'index'])->name('index');
+
+        // Chi tiết cuộc hội thoại với một Venue Owner cụ thể
+        Route::get('{otherUserId}', [ChatController::class, 'show'])->name('show');
+
+        // Gửi tin nhắn và TẠO Conversation nếu là tin nhắn đầu tiên
+        // Đã đổi {conversationId} thành {otherUserId} và sendMessage thành sendOrStartChat
+        Route::post('{otherUserId}/send', [ChatController::class, 'sendOrStartChat'])->name('send');
+    });
 
     // --- USERS MANAGEMENT ---
     Route::prefix('users')->name('users.')->group(function () {
@@ -89,8 +105,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     });
 
     Route::prefix('bookings')->name('bookings.')->group(function () {
-        Route::get('/', [BookingController::class, 'index'])->name('index');
+        Route::get('/', [BookingController::class, 'booking_admin'])->name('index');
+    });
 
+    Route::prefix('transactions')->name('transactions.')->group(function () {
+        Route::get('/', [TransactionController::class, 'index'])->name('index');
     });
 });
 
@@ -101,7 +120,19 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')->group(function () {
 
     // Dashboard
-    Route::get('/', [HomeController::class, 'dashboard'])->name('dashboard');
+    Route::get('/', [OwnerStatisticController::class, 'index'])->name('statistics.index');
+
+    Route::prefix('chats')->name('chats.')->group(function () {
+        // Danh sách các cuộc hội thoại
+        Route::get('/', [ChatController::class, 'index'])->name('index');
+
+        // Chi tiết cuộc hội thoại với một người dùng cụ thể
+        Route::get('{otherUserId}', [ChatController::class, 'show'])->name('show');
+
+        // Gửi tin nhắn và TẠO Conversation nếu là tin nhắn đầu tiên
+        // Đã đổi {conversationId} thành {otherUserId} và sendMessage thành sendOrStartChat
+        Route::post('{otherUserId}/send', [ChatController::class, 'sendOrStartChat'])->name('send');
+    });
 
     // --- VENUES CRUD (Owner chỉ thao tác với sân của mình) ---
     Route::prefix('venues')->name('venues.')->group(function () {
@@ -135,7 +166,7 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
 
     // --- BOOKINGS MANAGE BY OWNER ---
     Route::prefix('bookings')->name('bookings.')->group(function () {
-        Route::get('/', [BookingController::class, 'index'])->name('index');
+        Route::get('/', [BookingController::class, 'booking_venue'])->name('index');
         Route::get('{booking}', [BookingController::class, 'show'])->name('show');
         Route::post('/', [BookingController::class, 'store'])->name('store');
         Route::put('{booking}', [BookingController::class, 'update'])->name('update');

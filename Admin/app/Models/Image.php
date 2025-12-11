@@ -19,4 +19,16 @@ class Image extends Model
     {
         return $this->morphTo();
     }
+
+    public function getUrlAttribute($value)
+    {
+        // 1. Nếu ảnh đã là link online (Cloudinary, Firebase...) thì giữ nguyên
+        if (str_starts_with($value, 'http')) {
+            return $value;
+        }
+
+        // 2. Nếu là ảnh trong storage, tự động thêm domain vào trước
+        // Hàm asset() sẽ lấy APP_URL trong file .env (ví dụ http://127.0.0.1:8000)
+        return asset($value);
+    }
 }

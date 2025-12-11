@@ -102,7 +102,6 @@
                                             class="btn btn-sm btn-outline-primary">
                                             Xem lịch
                                         </a>
-
                                     </td>
                                 </tr>
                                 @endforeach
@@ -130,7 +129,6 @@
                 </div>
             </div>
 
-            {{-- Hình ảnh --}}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header card-header-green py-3">
                     <h5 class="mb-0 text-primary">Hình ảnh</h5>
@@ -138,19 +136,33 @@
                 <div class="card-body">
                     @if ($venue->images->count())
                     @php
-                    $primaryImage = $venue->images->firstWhere('is_primary', 1);
+                    $primaryImage = $venue->images->firstWhere('is_primary', 1) ?? $venue->images->first();
+
+                    function getImageUrl($image) {
+                    if (str_starts_with($image->url, 'http://') || str_starts_with($image->url, 'https://')) {
+                    return $image->url;
+                    }
+                    return asset('storage/' . $image->url);
+                    }
                     @endphp
+
                     @if ($primaryImage)
                     <div class="mb-3 position-relative">
-                        <img src="{{ $primaryImage->url }}" class="img-fluid rounded shadow-sm"
+                        <img src="{{ getImageUrl($primaryImage) }}"
+                            class="img-fluid rounded shadow-sm"
                             alt="Ảnh chính">
-                        <span class="badge bg-primary position-absolute top-0 start-0 m-2">Ảnh chính</span>
+                        <span class="badge bg-primary position-absolute top-0 start-0 m-2">
+                            @if ($primaryImage->is_primary) Ảnh chính @else Ảnh đầu tiên @endif
+                        </span>
                     </div>
                     @endif
+
                     <div class="row g-2">
-                        @foreach ($venue->images->where('is_primary', 0) as $image)
+                        @foreach ($venue->images->reject(fn($img) => $img->id === ($primaryImage->id ?? null)) as $image)
                         <div class="col-4">
-                            <img src="{{ $image->url }}" class="img-fluid rounded" alt="Image">
+                            <img src="{{ getImageUrl($image) }}"
+                                class="img-fluid rounded"
+                                alt="Image">
                         </div>
                         @endforeach
                     </div>

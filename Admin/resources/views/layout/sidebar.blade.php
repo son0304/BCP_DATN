@@ -1,101 +1,103 @@
-<div class="left-side-menu">
+@if (auth()->check())
 
-    <div class="slimscroll-menu">
+    {{-- Admin menu --}}
+    @if (auth()->user()->role->name === 'admin')
+        <li>
+            <a href="{{ route('admin.statistics.index') }}" class="waves-effect">
+                <i class="remixicon-dashboard-line"></i>
+                <span> Thống kê Sàn </span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('admin.users.index') }}" class="waves-effect">
+                <i class="remixicon-user-line"></i>
+                <span> Người dùng </span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('admin.venues.index') }}" class="waves-effect">
+                <i class="remixicon-store-2-line"></i>
+                <span> Quản lý Thương hiệu </span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('admin.reviews.index') }}" class="waves-effect">
+                <i class="remixicon-star-line"></i>
+                <span> Đánh giá </span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('admin.promotions.index') }}" class="waves-effect">
+                <i class="ri-coupon-line"></i>
+                <span> Voucher </span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('admin.chats.index') }}" class="waves-effect">
+                <i class="remixicon-chat-3-line"></i>
+                <span> Message </span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('admin.transactions.index') }}" class="waves-effect">
+                <i class="ri-file-list-3-line"></i>
+                <span> Quản lý giao dịch </span>
+            </a>
+        </li>
+    @endif
 
-        <!--- Sidemenu -->
-        <div id="sidebar-menu">
+    {{-- Venue Owner menu --}}
+    @if (auth()->user()->role->name === 'venue_owner')
 
-            <ul class="metismenu" id="side-menu">
+        <li>
+            <a href="{{ route('owner.statistics.index') }}" class="waves-effect">
+                <i class="remixicon-dashboard-line"></i>
+                <span> Thống kê Sàn </span>
+            </a>
+        </li>
 
-                <li class="menu-title">Menu điều khiển</li>
+        <li>
+            <a href="{{ route('owner.venues.index') }}" class="waves-effect">
+                <i class="remixicon-store-2-line"></i>
+                <span> Thương Hiệu </span>
+            </a>
+        </li>
 
-                {{-- Menu chung --}}
-                @if (auth()->check())
-                    <li>
-                        @if (auth()->user()->role->name === 'admin')
-                            <a href="{{ route('admin.dashboard') }}" class="waves-effect">
-                                <i class="remixicon-dashboard-line"></i>
-                                <span> Thống kê </span>
-                            </a>
-                        @elseif(auth()->user()->role->name === 'venue_owner')
-                            <a href="{{ route('owner.dashboard') }}" class="waves-effect">
-                                <i class="remixicon-dashboard-line"></i>
-                                <span> Thống kê </span>
-                            </a>
-                        @endif
-                    </li>
+        <li>
+            <a href="{{ route('owner.products.index') }}" class="waves-effect">
+                <i class="remixicon-store-2-line"></i>
+                <span> Sản phẩm </span>
+            </a>
+        </li>
 
-                    {{-- Admin menu --}}
-                    @if (auth()->user()->role->name === 'admin')
-                        <li>
-                            <a href="{{ route('admin.users.index') }}" class="waves-effect">
-                                <i class="remixicon-user-line"></i>
-                                <span> Người dùng </span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('admin.venues.index') }}" class="waves-effect">
-                                <i class="remixicon-store-2-line"></i>
-                                <span> Quản lý Thương hiệu </span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('admin.reviews.index') }}" class="waves-effect">
-                                <i class="remixicon-star-line"></i>
-                                <span> Đánh giá </span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('admin.promotions.index') }}" class="waves-effect">
-                                <i class="ri-coupon-line"></i>
-                                <span> Voucher </span>
-                            </a>
-                        </li>
-                    @endif
+        <li>
+            <a href="{{ route('owner.product_categories.index') }}" class="waves-effect">
+                <i class="ri-folder-line"></i>
+                <span> Danh mục Sản phẩm </span>
+            </a>
+        </li>
 
-                    {{-- Venue Owner menu --}}
-                    @if (auth()->user()->role->name === 'venue_owner')
-                        <li>
-                            <a href="{{ route('owner.venues.index') }}" class="waves-effect">
-                                <i class="remixicon-store-2-line"></i>
-                                <span> Thương Hiệu </span>
-                            </a>
-                        </li>
-                         <li>
-                            <a href="{{ route('owner.products.index') }}" class="waves-effect">
-                                <i class="remixicon-store-2-line"></i>
-                                <span> Sản phẩm </span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('owner.product_categories.index') }}" class="waves-effect">
-                                <i class="ri-folder-line"></i>
-                                <span> Danh mục Sản phẩm </span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('owner.reviews.index') }}" class="waves-effect">
-                                <i class="remixicon-star-line"></i>
-                                <span> Đánh giá </span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="{{ route('owner.bookings.index') }}" class="waves-effect">
-                                <i class="ri-ticket-line"></i>
-                                <span> Đơn đặt sân </span>
-                            </a>
-                        </li>
-                    @endif
-                @endif
+        <li>
+            <a href="{{ route('owner.reviews.index') }}" class="waves-effect">
+                <i class="remixicon-star-line"></i>
+                <span> Đánh giá </span>
+            </a>
+        </li>
 
-            </ul>
+        <li>
+            <a href="{{ route('owner.bookings.index') }}" class="waves-effect">
+                <i class="ri-ticket-line"></i>
+                <span> Đơn đặt sân </span>
+            </a>
+        </li>
 
-        </div>
-        <!-- End Sidebar -->
+        <li>
+            <a href="{{ route('owner.chats.index') }}" class="waves-effect">
+                <i class="remixicon-chat-3-line"></i>
+                <span> Message </span>
+            </a>
+        </li>
 
-        <div class="clearfix"></div>
+    @endif
 
-    </div>
-    <!-- Sidebar -left -->
-
-</div>
+@endif

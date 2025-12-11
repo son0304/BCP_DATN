@@ -1,7 +1,8 @@
 export interface Image {
   id: number;
-  venue_id: number;
+  imageable_id: number;
+  imageable_type: string;
   url: string;
-  is_primary: number; // true nếu ảnh chính
+  is_primary: number; 
   description?: string | null;
 }

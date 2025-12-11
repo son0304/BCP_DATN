@@ -139,39 +139,40 @@
                     @if ($venue->images->count())
                     @php
                     $primaryImage = $venue->images->firstWhere('is_primary', 1) ?? $venue->images->first();
-                    $otherImages = $venue->images->where('id', '!=', $primaryImage->id);
+
+                    function getImageUrl($image) {
+                    if (str_starts_with($image->url, 'http://') || str_starts_with($image->url, 'https://')) {
+                    return $image->url;
+                    }
+                    return asset('storage/' . $image->url);
+                    }
                     @endphp
 
-                    {{-- Ảnh chính --}}
+                    @if ($primaryImage)
                     <div class="mb-3 position-relative">
-                        <img src="{{ $primaryImage->url }}" class="img-fluid rounded shadow-sm w-100"
-                            style="max-height:300px; object-fit:contain; background-color:#f0f0f0;" alt="Ảnh chính">
-                        <span class="badge bg-primary position-absolute top-0 start-0 m-2">Ảnh chính</span>
+                        <img src="{{ getImageUrl($primaryImage) }}"
+                            class="img-fluid rounded shadow-sm"
+                            alt="Ảnh chính">
+                        <span class="badge bg-primary position-absolute top-0 start-0 m-2">
+                            @if ($primaryImage->is_primary) Ảnh chính @else Ảnh đầu tiên @endif
+                        </span>
                     </div>
+                    @endif
 
-                    {{-- Ảnh phụ - 2 cột --}}
-                    @if ($otherImages->count())
                     <div class="row g-2">
-                        @foreach ($otherImages as $image)
-                        <div class="col-6">
-                            <div class="position-relative overflow-hidden rounded shadow-sm"
-                                style="height:150px;">
-                                <img src="{{ $image->url }}" class="img-fluid w-100 h-100"
-                                    style="object-fit:cover; transition: transform 0.3s;" alt="Image">
-                                <div class="position-absolute top-0 start-0 w-100 h-100 overlay"
-                                    style="background-color: rgba(0,0,0,0.1); opacity:0; transition:0.3s;">
-                                </div>
-                            </div>
+                        @foreach ($venue->images->reject(fn($img) => $img->id === ($primaryImage->id ?? null)) as $image)
+                        <div class="col-4">
+                            <img src="{{ getImageUrl($image) }}"
+                                class="img-fluid rounded"
+                                alt="Image">
                         </div>
                         @endforeach
                     </div>
-                    @endif
                     @else
                     <p class="text-muted">Chưa có hình ảnh.</p>
                     @endif
                 </div>
             </div>
-
 
             {{-- Dịch vụ --}}
             <div class="card shadow-sm border-0 mb-4">

@@ -88,13 +88,13 @@ class Item extends Model
         return $this->hasOneThrough(
             Court::class,
             Booking::class,
-            'id', // Foreign key on bookings table
-            'id', // Foreign key on courts table
-            'booking_id', // Local key on items table
-            'court_id' // Local key on bookings table
+            'id',
+            'id',
+            'booking_id',
+            'court_id'
         );
     }
-    
+
     public function slot()
     {
         return $this->hasOneThrough(

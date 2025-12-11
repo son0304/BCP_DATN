@@ -28,10 +28,33 @@ class ProductController extends Controller
             abort(403, 'Bạn không có quyền truy cập trang này.');
         }
 
-        $query = Product::with(['venue', 'category'])
-            ->whereHas('venue', function ($q) use ($user) {
-                $q->where('owner_id', $user->id);
+        // Lấy danh sách venue_ids của owner (chỉ lấy venue không bị soft delete)
+        $venueIds = Venue::where('owner_id', $user->id)->pluck('id');
+        
+        // Debug: Log để kiểm tra
+        Log::info('ProductController::index - User ID: ' . $user->id);
+        Log::info('ProductController::index - Venue IDs: ' . $venueIds->toJson());
+        Log::info('ProductController::index - Venue IDs count: ' . $venueIds->count());
+        
+        // Build query - lấy products thuộc các venue của owner HOẶC sản phẩm chung (venue_id = null)
+        $query = Product::with(['venue', 'category']);
+        
+        if ($venueIds->isEmpty()) {
+            // Nếu owner chưa có venue nào, chỉ lấy sản phẩm chung (venue_id = null)
+            // và sản phẩm có category thuộc về owner
+            $query->where(function ($q) use ($user) {
+                $q->whereNull('venue_id')
+                  ->orWhereHas('category', function ($catQuery) use ($user) {
+                      $catQuery->where('owner_id', $user->id);
+                  });
             });
+        } else {
+            // Lấy products thuộc các venue của owner HOẶC sản phẩm chung (venue_id = null)
+            $query->where(function ($q) use ($venueIds, $user) {
+                $q->whereIn('venue_id', $venueIds->toArray())
+                  ->orWhereNull('venue_id');
+            });
+        }
 
         // Search functionality
         if ($request->filled('search')) {
@@ -45,6 +68,8 @@ class ProductController extends Controller
 
         // Filter by venue
         if ($request->filled('venue_id')) {
+            // Khi filter theo venue cụ thể, chỉ hiển thị sản phẩm của venue đó
+            // (không hiển thị sản phẩm chung)
             $query->where('venue_id', $request->venue_id);
         }
 
@@ -69,11 +94,21 @@ class ProductController extends Controller
             }
         }
 
+        // Debug: Log SQL trước khi paginate
+        $sql = $query->toSql();
+        $bindings = $query->getBindings();
+        Log::info('ProductController::index - SQL: ' . $sql);
+        Log::info('ProductController::index - Bindings: ' . json_encode($bindings));
+        
         $products = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
+        
+        // Debug: Log số lượng products
+        Log::info('ProductController::index - Products count: ' . $products->total());
+        Log::info('ProductController::index - Products items count: ' . $products->count());
         
         // Get venues và categories để filter
         $venues = Venue::where('owner_id', $user->id)->orderBy('name')->get();
-        $categories = ProductCategory::active()->orderBy('name')->get();
+        $categories = ProductCategory::where('owner_id', $user->id)->active()->orderBy('name')->get();
 
         return view('venue_owner.products.index', compact('products', 'venues', 'categories'));
     }
@@ -89,8 +124,9 @@ class ProductController extends Controller
             abort(403, 'Bạn không có quyền thực hiện hành động này.');
         }
 
+        // Lấy tất cả venues của owner (kể cả không active) để có thể chọn
         $venues = Venue::where('owner_id', $user->id)
-            ->where('is_active', true)
+            ->orderBy('is_active', 'desc') // Active venues trước
             ->orderBy('name')
             ->get();
         $categories = ProductCategory::where('owner_id', $user->id)->active()->orderBy('name')->get();

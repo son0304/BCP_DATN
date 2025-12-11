@@ -71,6 +71,16 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="venue_id" class="form-label fw-bold">Thương hiệu</label>
+                                    @if(count($venues) == 0)
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        Bạn chưa có thương hiệu nào. 
+                                        <a href="{{ route('owner.venues.create') }}" class="alert-link">Tạo thương hiệu mới</a> trước khi thêm sản phẩm.
+                                    </div>
+                                    <select class="form-select" id="venue_id" name="venue_id" disabled>
+                                        <option value="">Không có thương hiệu</option>
+                                    </select>
+                                    @else
                                     <select class="form-select @error('venue_id') is-invalid @enderror"
                                         id="venue_id"
                                         name="venue_id">
@@ -78,9 +88,13 @@
                                         @foreach($venues as $venue)
                                         <option value="{{ $venue->id }}" {{ old('venue_id') == $venue->id ? 'selected' : '' }}>
                                             {{ $venue->name }}
+                                            @if(!$venue->is_active)
+                                            <span class="text-muted">(Không hoạt động)</span>
+                                            @endif
                                         </option>
                                         @endforeach
                                     </select>
+                                    @endif
                                     @error('venue_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror

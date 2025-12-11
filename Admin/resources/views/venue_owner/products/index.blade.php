@@ -213,7 +213,14 @@
                                     <td colspan="10" class="text-center py-5">
                                         <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
                                         <h5 class="mb-1">Không tìm thấy sản phẩm nào</h5>
+                                        @if(count($venues) == 0)
+                                        <p class="text-muted mb-3">Bạn chưa có thương hiệu (venue) nào. Vui lòng tạo thương hiệu trước khi thêm sản phẩm.</p>
+                                        <a href="{{ route('owner.venues.create') }}" class="btn btn-primary">
+                                            <i class="fas fa-plus me-1"></i> Tạo thương hiệu mới
+                                        </a>
+                                        @else
                                         <p class="text-muted">Hãy bắt đầu bằng cách thêm một sản phẩm mới.</p>
+                                        @endif
                                     </td>
                                 </tr>
                                 @endforelse

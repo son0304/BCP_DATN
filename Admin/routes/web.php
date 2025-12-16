@@ -1,6 +1,5 @@
 <?php
 
-// use App\Http\Controllers\ChatController as ControllersChatController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Web\{
     AdminStatisticController,
@@ -37,6 +36,10 @@ Route::post('/resend-verification', [AuthController::class, 'resendVerification'
 Route::get('/', [HomeController::class, 'index'])->name('home.index');
 Route::get('/courts', [CourtController::class, 'index'])->name('courts.index');
 Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+
+Route::post('/momo/ipn', [BookingController::class, 'ipn'])->name('momo.ipn');
+Route::post('/payment-momo', [BookingController::class, 'paymentMomo'])->name('payment-momo');
+Route::get('/momo/payment-success', [BookingController::class, 'paymentResult'])->name('momo.payment.result');
 
 
 // ==============================
@@ -157,6 +160,9 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
     Route::post('courts/{court}/availabilities/update', [AvailabilityController::class, 'updateAll'])
         ->name('courts.updateAvailabilities');
 
+    Route::get('availabilities/get-slots', [AvailabilityController::class, 'getAvailableSlots'])
+        ->name('availabilities.get-slots');
+
     // --- REVIEWS MANAGE BY OWNER ---
     Route::prefix('reviews')->name('reviews.')->group(function () {
         Route::get('/', [ReviewController::class, 'indexByOwner'])->name('index');
@@ -165,9 +171,11 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
     // --- BOOKINGS MANAGE BY OWNER ---
     Route::prefix('bookings')->name('bookings.')->group(function () {
         Route::get('/', [BookingController::class, 'booking_venue'])->name('index');
-        Route::get('{booking}', [BookingController::class, 'show'])->name('show');
+        Route::get('create', [BookingController::class, 'create'])->name('create');
         Route::post('/', [BookingController::class, 'store'])->name('store');
         Route::put('{booking}', [BookingController::class, 'update'])->name('update');
         Route::delete('{booking}', [BookingController::class, 'destroy'])->name('destroy');
+        Route::post('/generate-temp-qr', [BookingController::class, 'generateTempQR'])->name('generate-temp-qr');
+        Route::get('/check-temp-payment', [BookingController::class, 'checkTempPayment'])->name('check-temp-payment');
     });
 });

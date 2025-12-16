@@ -100,7 +100,7 @@ const Gallery_Detail_Venue = ({ venue, formatPrice }: {venue: Venue, formatPrice
 
                 <div className="flex items-center gap-3">
                     <i className="fa-regular fa-user text-[#10B981] w-4 text-center"></i>
-                    <span>Chủ sân: {owner?.data.name ?? 'Admin'}</span>
+                    <span>Chủ sân: {venue.owner?.name ?? 'Admin'}</span>
                 </div>
             </div>
 

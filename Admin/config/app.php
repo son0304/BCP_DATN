@@ -15,6 +15,11 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'url_web_admin' => env('BACKEND_URL', 'http://127.0.0.1:8000'),
+    'url_web_client' => env('FRONTEND_URL', 'http://localhost:5173'),
+
+
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

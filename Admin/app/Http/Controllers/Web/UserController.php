@@ -12,6 +12,7 @@ use App\Models\District;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -23,13 +24,16 @@ class UserController extends Controller
     {
         $query = User::with(['role', 'province', 'district']);
 
+        Log::info('message:' . $query->toSql());
+
+
         // Search functionality
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -99,8 +103,11 @@ class UserController extends Controller
         $user->load([
             'role',
             'province',
-            'district'
+            'district',
+            'merchantProfile.images'
         ]);
+        Log::info('message:' . $user->toJson());
+
 
         // Paginate bookings
         $bookings = $user->bookings()

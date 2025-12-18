@@ -8,7 +8,7 @@ type User = {
   name: string;
   email: string;
   // avt có thể là chuỗi (URL), mảng ảnh, hoặc null
-  avt?: string | { url?: string; avt?: string }[] | null; 
+  avt?: string | { url?: string; avt?: string }[] | null;
 };
 
 // Hook detect click outside
@@ -51,14 +51,14 @@ const Header = () => {
 
     // Trường hợp 1: API trả về chuỗi URL trực tiếp (Ví dụ: "http://...")
     if (typeof user.avt === 'string') {
-        return user.avt;
+      return user.avt;
     }
 
     // Trường hợp 2: API trả về mảng quan hệ (Ví dụ: [{url: "..."}])
     if (Array.isArray(user.avt) && user.avt.length > 0) {
-        // Lấy phần tử đầu tiên, ưu tiên key 'url' hoặc 'avt'
-        const firstImg = user.avt[0];
-        return firstImg.url || firstImg.avt || null;
+      // Lấy phần tử đầu tiên, ưu tiên key 'url' hoặc 'avt'
+      const firstImg = user.avt[0];
+      return firstImg.url || firstImg.avt || null;
     }
 
     return null;
@@ -129,7 +129,7 @@ const Header = () => {
           <NavLink to="/" className={getNavLinkClass}>Trang chủ</NavLink>
           <NavLink to="/partner" className={getNavLinkClass}>Đối tác</NavLink>
           <NavLink to="/map" className={getNavLinkClass}>Bản Đồ</NavLink>
-          <NavLink to="/blog" className={getNavLinkClass}>Tin tức</NavLink>
+          <NavLink to="/blog" className={getNavLinkClass}>Bảng tin</NavLink>
           <NavLink to="/contacts" className={getNavLinkClass}>Liên hệ</NavLink>
           <NavLink to="/tournaments" className={getNavLinkClass}>Giải đấu</NavLink>
         </nav>
@@ -223,8 +223,8 @@ const Header = () => {
           </div>
 
           <nav className="flex-grow p-4 space-y-1 overflow-y-auto">
-             {/* ... Các Link giữ nguyên ... */}
-             <NavLink to="/" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
+            {/* ... Các Link giữ nguyên ... */}
+            <NavLink to="/" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
               <i className="fa-solid fa-home w-6 text-center text-[#10B981]"></i> Trang chủ
             </NavLink>
             <NavLink to="/partner" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
@@ -241,9 +241,9 @@ const Header = () => {
             </NavLink>
             {user && (
               <div className="border-t border-gray-100 my-3 pt-3">
-                 <NavLink to="/profile" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
-                    <i className="fa-solid fa-user-gear w-6 text-center text-gray-400"></i> Quản lý tài khoản
-                  </NavLink>
+                <NavLink to="/profile" className={getMobileNavLinkClass} onClick={() => setIsOpen(false)}>
+                  <i className="fa-solid fa-user-gear w-6 text-center text-gray-400"></i> Quản lý tài khoản
+                </NavLink>
               </div>
             )}
           </nav>

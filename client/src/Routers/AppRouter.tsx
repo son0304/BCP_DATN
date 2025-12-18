@@ -3,7 +3,6 @@ import Content from '../Pages/HomePage'
 import App from '../App'
 import Index_Partner from '../Pages/Partner/Index_Partner'
 import Create_Venue from '../Pages/Venues/Create_Venue'
-import Congratulation from '../Pages/Venues/Congratulation'
 import Home_Partner from '../Pages/Partner/Home_Partner'
 import Detail_User from '../Pages/User/Detail_User'
 import Login from '../Auth/Login'
@@ -18,6 +17,8 @@ import Index_Detail_Venue from '../Pages/Venues/Detail_Venue/Index_Detail_Venue'
 import Ticket_Detail from '../Pages/Ticket/Ticket_Detail'
 import Map_Venue from '../Pages/Maps/Map_Venue'
 import { Edit_Profile } from '../Pages/User/Edit_Profile'
+import Check_Rgister_MerchantProfile from '../Pages/Venues/Check_Rgister_MerchantProfile'
+import Check_Rgister_VenueProfile from '../Pages/Venues/Check_Rgister_VenueProfile'
 const AppRouter = () => {
     return (
         <Routes>
@@ -38,10 +39,13 @@ const AppRouter = () => {
                 <Route path='profile/edit' element={< Edit_Profile />} />
 
 
-                <Route path="congratulations" element={<Congratulation />} />
                 <Route path='partner' element={<Home_Partner />}>
                     <Route index element={<Index_Partner />} />
                     <Route path="create_venue" element={<Create_Venue />} />
+                    <Route path="merchant-profile" element={<Check_Rgister_MerchantProfile />} />
+                    <Route path="venue-profile" element={<Check_Rgister_VenueProfile />} />
+
+
                 </Route>
 
                 <Route path='map' element={<Map_Venue />} />

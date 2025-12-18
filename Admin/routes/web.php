@@ -64,6 +64,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('/', [VenueController::class, 'index'])->name('index');
         Route::get('{venue}', [VenueController::class, 'showVenueDetail'])->name('show');
         Route::patch('{venue}/update-status', [VenueController::class, 'updateStatus'])->name('update-status');
+        Route::patch('/{id}/update-merchant', [VenueController::class, 'updateMerchant'])->name('update-merchant');
+
+
 
         // --- COURTS NESTED UNDER VENUE ---
         Route::prefix('{venue}/courts')->name('courts.')->group(function () {

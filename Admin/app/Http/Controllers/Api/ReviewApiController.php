@@ -8,6 +8,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -53,7 +54,9 @@ class ReviewApiController extends Controller
 
     public function store(Request $request)
     {
-        // 1. Validate dữ liệu
+
+        Log::info($request->all());
+
         $validator = Validator::make($request->all(), [
             'user_id' => 'required|exists:users,id',
             'venue_id' => 'required|exists:venues,id',
@@ -152,7 +155,7 @@ class ReviewApiController extends Controller
 
     public function update(Request $request, $id)
     {
-        // Tìm review thủ công vì Route binding đôi khi lỗi nếu tên tham số route không khớp
+        Log::info($request->all());
         $review = Review::find($id);
 
         if (!$review) {

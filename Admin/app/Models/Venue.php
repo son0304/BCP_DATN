@@ -24,6 +24,7 @@ class Venue extends Model
         'lng',
         'phone',
         'is_active',
+        'admin_note',
     ];
 
     public function moneyFlows()

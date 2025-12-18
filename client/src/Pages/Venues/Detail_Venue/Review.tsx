@@ -32,13 +32,8 @@ const Review_Venue = ({ venue, reviews = [], tickets = [], user, refetch }: Revi
     // --- API HOOKS ---
     // 1. Hook Tạo mới và Cập nhật
     const createApi = usePostData('reviews');
-    // Cập nhật hook postData để nhận id động khi existingReview thay đổi
     const updateApi = usePostData(existingReview ? `reviews/${existingReview.id}` : '');
-
-    // 2. Hook Xóa (Đặt tên deleteApi để lấy state isPending riêng cho việc xóa)
     const deleteApi = useDeleteData('reviews');
-
-    // Gom trạng thái loading của Form (Tạo/Sửa)
     const isSubmitting = createApi.isPending || updateApi.isPending;
 
     const hasBooking = tickets.filter((ticket) => {

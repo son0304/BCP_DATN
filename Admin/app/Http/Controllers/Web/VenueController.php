@@ -18,6 +18,11 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Helpers\PermissionHelper;
 use App\Mail\BookingConfirmationMail;
+use App\Mail\Confirm_Merchant;
+use App\Mail\Reject_Merchant;
+use App\Mail\Reject_Venue;
+use App\Mail\VenueApprovedMail;
+use App\Models\MerchantProfile;
 use App\Models\Role;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
@@ -58,7 +63,11 @@ class VenueController extends Controller
             'images',
         ]);
 
+        $merchant_profile = $venue->owner->merchantProfile;
+        Log::info('merchant_profile:', ['merchant_profile' => $merchant_profile ? $merchant_profile->toArray() : null]);
+
         $user = Auth::user();
+        Log::info('venue:', ['venue' => $venue->toArray()]);
 
         // Kiểm tra quyền truy cập
         if ($user->role->name !== 'admin' && $user->id !== $venue->owner_id) {
@@ -67,7 +76,7 @@ class VenueController extends Controller
 
         // Điều hướng view theo role
         if ($user->role->name === 'admin') {
-            return view('admin.venue.show', compact('venue'));
+            return view('admin.venue.show', compact('venue', 'merchant_profile'));
         } else {
             return view('venue_owner.venue.show', compact('venue'));
         }
@@ -75,31 +84,95 @@ class VenueController extends Controller
 
 
 
+
     public function updateStatus(Request $request, Venue $venue)
     {
-        // Kiểm tra quyền admin
+        Log::info("Update Venue Status ID: " . $venue->id, $request->all());
+
         if (!PermissionHelper::isAdmin(Auth::user())) {
             abort(403, 'Bạn không có quyền thực hiện hành động này.');
         }
 
-        // Validate dữ liệu
         $validatedData = $request->validate([
-            'is_active' => 'required|in:0,1',
+            'is_active'  => 'required|in:0,1',
+            'admin_note' => 'nullable|string',
         ]);
 
-        // Cập nhật trạng thái
-        $venue->update(['is_active' => $validatedData['is_active']]);
         $user = $venue->owner;
-        $urlWebAdmin = env('BACKEND_URL', 'http://127.0.0.1:8000');
-        if ($user->role->name != 'admin' && $user->role->name != 'venue_owner') {
-            $user->update(['role_id' => 2]);
-        }
+
+        // Lấy link Frontend để đối tác truy cập quản lý
+        $urlWebAdmin = config('app.url_web_admin');
+
         if ($validatedData['is_active'] == 1) {
-            Mail::to($user->email)->send(new BookingConfirmationMail($user, $urlWebAdmin));
+            // --- KÍCH HOẠT ---
+            $venue->update([
+                'is_active'  => 1,
+                'admin_note' => null
+            ]);
+
+            if ($user) {
+                // Gửi link Client để họ vào quản lý sân
+                Mail::to($user->email)->send(new VenueApprovedMail($user, $urlWebAdmin));
+            }
+        } else {
+            // --- TỪ CHỐI / TẠM DỪNG ---
+            $venue->update([
+                'is_active'  => 0,
+                'admin_note' => $validatedData['admin_note'] ?? null
+            ]);
+
+            if ($user) {
+                Mail::to($user->email)->send(new Reject_Venue($user, $venue, $urlWebAdmin));
+            }
         }
 
-        return redirect()->route('admin.venues.index')->with('success', 'Cập nhật trạng thái thành công!');
+        return redirect()->back()->with('success', $validatedData['is_active'] == 1 ? 'Đã kích hoạt!' : 'Đã cập nhật trạng thái.');
     }
+
+    public function updateMerchant(Request $request, $id)
+    {
+        if (!PermissionHelper::isAdmin(Auth::user())) {
+            abort(403, 'Bạn không có quyền thực hiện hành động này.');
+        }
+        $venue = Venue::findOrFail($id);
+        $merchant = $venue->owner->merchantProfile;
+        $user = $venue->owner;
+
+        // Lấy link Frontend
+        $urlWebClient = config('app.url_web_client');
+
+        $validatedData = $request->validate([
+            'status' => 'required|in:approved,rejected',
+            'admin_note' => 'nullable|string',
+        ]);
+
+        if ($validatedData['status'] == 'approved') {
+            $merchant->update(['status' => 'approved', 'admin_note' => null]);
+
+            if ($user && $user->role_id != 1 && $user->role_id != 2) {
+                $user->role_id = 2;
+                $user->save();
+            }
+            if ($user) {
+                $user->update(['role_id' => 2]);
+
+                Mail::to($user->email)->send(new Confirm_Merchant($user, $merchant, $urlWebClient));
+            }
+        } elseif ($validatedData['status'] == 'rejected') {
+            $merchant->update([
+                'status' => 'rejected',
+                'admin_note' => $validatedData['admin_note'] ?? null,
+            ]);
+
+            if ($user) {
+                // Gửi mail Reject
+                Mail::to($user->email)->send(new Reject_Merchant($user, $merchant, $urlWebClient));
+            }
+        }
+
+        return back()->with('success', 'Đã cập nhật trạng thái hồ sơ.');
+    }
+
 
     //==============Venue_Owner=================//
 

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthApiController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DistrictApiController;
 use App\Http\Controllers\Api\ImageApiController;
+use App\Http\Controllers\Api\MerchantApiController;
 use App\Http\Controllers\Api\PromotionApiController;
 use App\Http\Controllers\Api\ProvinceApiController;
 use App\Http\Controllers\Api\ReviewApiController;
@@ -33,6 +34,7 @@ Route::get('/transaction', [TransactionApiController::class, 'index']);
 
 
 Route::get('/venues', [VenueApiController::class, 'index']);
+Route::post('/venues', [VenueApiController::class, 'store']);
 Route::get('/venue/{id}', [VenueApiController::class, 'show']);
 
 Route::get('/time_slots', [TimeSlotApiController::class, 'index']);
@@ -51,6 +53,7 @@ Route::post('/payment/momo/ipn', [PaymentApiController::class, 'ipn']);
 Route::get('/user', [AuthApiController::class, 'index']);
 
 Route::get('/payment/check-status/{id}', [PaymentApiController::class, 'checkTransactionStatus']);
+// Route::get('/merchant', [MerchantApiController::class, 'index']);
 
 
 
@@ -70,6 +73,10 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::post('/logout', [AuthApiController::class, 'logout']);
 
     Route::get('/wallet', [WalletApiController::class, 'myWallet']);
+    Route::get('/merchant', [MerchantApiController::class, 'index']);
+    Route::post('/merchant/{id}', [MerchantApiController::class, 'updateMerchant']);
+
+
     // Tickets
     Route::get('/tickets', [TicketApiController::class, 'index']);
     // Route::get('/ticket/{id}', [TicketApiController::class, 'show']);

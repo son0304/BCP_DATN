@@ -54,28 +54,45 @@ class VenueController extends Controller
 
     public function showVenueDetail(Venue $venue)
     {
-        // Load tất cả quan hệ cần thiết
+        // 1. Load các quan hệ cần thiết
         $venue->load([
-            'owner',
+            'owner.merchantProfile',
             'province',
+            'district',
             'courts',
-            'services',
             'images',
+            'services' => function ($query) {
+                $query->with(['category', 'images']);
+            }
         ]);
 
-        $merchant_profile = $venue->owner->merchantProfile;
-        Log::info('merchant_profile:', ['merchant_profile' => $merchant_profile ? $merchant_profile->toArray() : null]);
-
+        Log::info('Loaded Venue', [
+            'venue' => $venue
+        ]);
         $user = Auth::user();
-        Log::info('venue:', ['venue' => $venue->toArray()]);
 
-        // Kiểm tra quyền truy cập
-        if ($user->role->name !== 'admin' && $user->id !== $venue->owner_id) {
+        Log::info('Venue Detail loaded:', [
+            'venue_id' => $venue->id,
+            'owner_id' => $venue->owner_id,
+            'services_count' => $venue->services->count(),
+            // Kiểm tra thử giá của service đầu tiên (nếu có)
+            'first_service_pivot' => $venue->services->first()
+        ]);
+
+        // 3. Kiểm tra quyền truy cập
+        // (Logic cũ của bạn đã ổn, nhưng nên check null cho $user->role)
+        $isAdmin = $user->role && $user->role->name === 'admin';
+        $isOwner = $user->id === $venue->owner_id;
+
+        if (!$isAdmin && !$isOwner) {
             abort(403, 'Bạn không có quyền truy cập trang này.');
         }
 
-        // Điều hướng view theo role
-        if ($user->role->name === 'admin') {
+        // 4. Lấy Merchant Profile (đã load ở trên)
+        $merchant_profile = $venue->owner->merchantProfile ?? null;
+
+        // 5. Điều hướng view
+        if ($isAdmin) {
             return view('admin.venue.show', compact('venue', 'merchant_profile'));
         } else {
             return view('venue_owner.venue.show', compact('venue'));

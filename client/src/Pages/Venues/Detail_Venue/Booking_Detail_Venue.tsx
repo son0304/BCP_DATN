@@ -69,6 +69,8 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
   const navigate = useNavigate();
 
   const courts = venue.courts ?? [];
+  console.log(courts);
+
 
   useEffect(() => {
     if (courts.length > 0 && activeCourtId === null) {
@@ -350,12 +352,12 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
                         <span className="text-gray-500">({item.start_time.slice(0, 5)} - {item.end_time.slice(0, 5)})</span>
                       </div>
                       <div className="flex items-center gap-2">
-                         {item.sale_price > 0 && (
-                            <span className="text-[10px] text-gray-400 line-through decoration-1">{formatPrice(item.price)}</span>
-                         )}
-                         <span className={`font-bold ${item.sale_price > 0 ? 'text-red-500' : 'text-gray-800'}`}>
-                           {formatPrice(effectivePrice)}
-                         </span>
+                        {item.sale_price > 0 && (
+                          <span className="text-[10px] text-gray-400 line-through decoration-1">{formatPrice(item.price)}</span>
+                        )}
+                        <span className={`font-bold ${item.sale_price > 0 ? 'text-red-500' : 'text-gray-800'}`}>
+                          {formatPrice(effectivePrice)}
+                        </span>
                       </div>
                     </div>
                   );

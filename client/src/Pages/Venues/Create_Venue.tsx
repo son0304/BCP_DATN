@@ -58,8 +58,8 @@ type DataApi = {
 }
 
 // --- MOCK DATA ---
-const PROVINCES = [{ id: 6, name: "Hà Nội" }, { id: 2, name: "TP. HCM" }];
-const DISTRICTS = [{ id: 26, name: "Quận Ba Đình" }, { id: 102, name: "Quận Cầu Giấy" }];
+const PROVINCES = [{ id: 1, name: "Hà Nội" }, { id: 2, name: "TP. HCM" }];
+const DISTRICTS = [{ id: 1, name: "Quận Ba Đình" }, { id: 2, name: "Quận Cầu Giấy" }];
 const VENUE_TYPES = [{ id: 1, name: "Sân 5 người" }, { id: 2, name: "Sân 7 người" }];
 const SURFACES = [
     { id: "artificial_grass", name: "Cỏ nhân tạo" },

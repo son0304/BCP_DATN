@@ -44,11 +44,14 @@ class Venue extends Model
     {
         return $this->hasMany(Court::class);
     }
-
     public function services()
     {
-        return $this->hasMany(Service::class);
+        return $this->belongsToMany(Service::class, 'venue_services')
+            ->using(VenueService::class)
+            ->withPivot(['id', 'price', 'stock', 'status'])
+            ->withTimestamps();
     }
+
 
     public function reviews()
     {

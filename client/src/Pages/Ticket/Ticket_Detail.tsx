@@ -16,20 +16,19 @@ const Ticket_Detail = () => {
 
 
   const { data, isLoading, isError, refetch } = useFetchDataById<Ticket>("ticket", id || "");
+  console.log(data);
+
 
   const destroyItem = useDeleteData<Ticket>("item");
-
   const destroyTicket = useDeleteData<Ticket>("ticket");
 
   const handleApiError = (error: any, defaultMsg: string) => {
     const serverMessage = error?.response?.data?.message;
-
     if (serverMessage) {
       showNotification(serverMessage, "error");
     } else {
       showNotification(defaultMsg, "error");
     }
-    console.error("Chi tiết lỗi API:", error);
   };
 
   const formatCurrency = (value: string | number) => {
@@ -51,33 +50,32 @@ const Ticket_Detail = () => {
     }
   };
 
-  // --- HANDLER 1: HỦY ITEM LẺ ---
+  // --- HANDLER: HỦY ITEM LẺ ---
   const handleCancelItem = (itemId: number) => {
-    if (window.confirm("Bạn có chắc chắn muốn hủy sân này không?\nTiền sẽ hoàn về ví theo chính sách hoàn hủy.")) {
+    if (window.confirm("Bạn có chắc chắn muốn hủy mục này không?\nTiền sẽ hoàn về ví theo chính sách hoàn hủy.")) {
       destroyItem.mutate(itemId, {
         onSuccess: () => {
-          showNotification("Hủy sân thành công.", "success");
+          showNotification("Hủy thành công.", "success");
           refetch();
         },
         onError: (error: any) => {
-          handleApiError(error, "Không thể hủy sân lúc này. Vui lòng thử lại.");
+          handleApiError(error, "Không thể hủy lúc này. Vui lòng thử lại.");
         }
       });
     }
   };
 
-  // --- HANDLER 2: HỦY TOÀN BỘ VÉ ---
+  // --- HANDLER: HỦY TOÀN BỘ VÉ ---
   const handleCancelTicket = () => {
     if (!data?.data?.id) return;
-
-    if (window.confirm("CẢNH BÁO: Bạn đang yêu cầu hủy TOÀN BỘ đơn hàng.\n\nSố tiền hoàn lại sẽ phụ thuộc vào thời gian hủy so với giờ chơi.\nBạn có chắc chắn muốn tiếp tục?")) {
+    if (window.confirm("CẢNH BÁO: Bạn đang yêu cầu hủy TOÀN BỘ đơn hàng.\nBạn có chắc chắn muốn tiếp tục?")) {
       destroyTicket.mutate(data.data.id, {
         onSuccess: () => {
           showNotification("Đã hủy toàn bộ đơn hàng thành công.", "success");
-          refetch(); // Load lại để cập nhật trạng thái
+          refetch();
         },
         onError: (error: any) => {
-          handleApiError(error, "Lỗi khi hủy đơn hàng. Vui lòng thử lại sau.");
+          handleApiError(error, "Lỗi khi hủy đơn hàng.");
         }
       });
     }
@@ -119,19 +117,26 @@ const Ticket_Detail = () => {
   const isTicketCompleted = ticket.status === 'completed';
   const isTicketPending = ticket.status === 'pending';
 
-  // Lấy thông tin Venue từ item đầu tiên (vì 1 vé thường đặt tại 1 venue)
-  const venueInfo = items.length > 0 ? items[0].booking?.court?.venue : null;
+  // Logic lấy thông tin Venue (ưu tiên lấy từ booking, nếu không có thì lấy từ service)
+  let venueInfo = null;
+  const firstBooking = items.find(i => i.booking);
+  const firstService = items.find(i => i.venue_service);
 
-
-  let headerGradient = 'from-[#10B981] via-teal-500 to-[#059669]'; // Mặc định: Xanh lá (Confirmed)
-
-  if (isTicketCancelled) {
-    headerGradient = 'from-red-400 to-red-600'; // Đã hủy: Đỏ
-  } else if (isTicketPending) {
-    headerGradient = 'from-yellow-400 to-orange-500'; // Chờ thanh toán: Vàng cam
-  } else if (isTicketCompleted) {
-    headerGradient = 'from-blue-400 to-blue-600'; // Hoàn thành: Xanh dương
+  if (firstBooking?.booking?.court?.venue) {
+    venueInfo = firstBooking.booking.court.venue;
+  } else if (firstService?.venue_service) {
+    // Giả sử API trả về venue_id, bạn cần load thêm tên venue hoặc FE tự xử lý
+    // Ở đây tạm thời lấy venue từ booking là chính xác nhất
+    // Nếu BE trả về booking.court.venue thì ok.
   }
+
+  // Nếu venueInfo null (trường hợp chỉ mua nước nhưng BE chưa populate venue cho service), 
+  // ta có thể hiển thị mặc định hoặc ẩn đi.
+
+  let headerGradient = 'from-[#10B981] via-teal-500 to-[#059669]';
+  if (isTicketCancelled) headerGradient = 'from-red-400 to-red-600';
+  else if (isTicketPending) headerGradient = 'from-yellow-400 to-orange-500';
+  else if (isTicketCompleted) headerGradient = 'from-blue-400 to-blue-600';
 
   return (
     <div className="bg-[#F3F4F6] min-h-screen py-8 px-4 font-sans flex justify-center">
@@ -147,9 +152,8 @@ const Ticket_Detail = () => {
             <i className="fa-solid fa-file-invoice text-2xl"></i>
           </div>
 
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 uppercase tracking-tight">Hóa đơn đặt sân</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 uppercase tracking-tight">Hóa đơn</h1>
 
-          {/* --- HIỂN THỊ TÊN VENUE (THƯƠNG HIỆU) TẠI ĐÂY --- */}
           {venueInfo && (
             <h2 className="text-base font-bold text-[#10B981] mt-1 flex items-center justify-center gap-1">
               <i className="fa-solid fa-location-dot text-xs"></i> {venueInfo.name}
@@ -172,9 +176,8 @@ const Ticket_Detail = () => {
         {/* === CONTENT BODY === */}
         <div className="p-6 md:p-8 space-y-8">
 
-          {/* 1. Customer Info & Venue Info */}
+          {/* 1. Customer Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Cột trái: Thông tin khách hàng */}
             <div className="space-y-1">
               <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Khách hàng</p>
               <p className="font-bold text-gray-800 text-sm md:text-base">{ticket.user.name}</p>
@@ -182,17 +185,7 @@ const Ticket_Detail = () => {
               <p className="text-xs text-gray-500 flex items-center gap-2"><i className="fa-solid fa-envelope w-3 text-center"></i> {ticket.user.email}</p>
             </div>
 
-            {/* Cột phải: Thông tin Venue & Thời gian */}
             <div className="space-y-4 md:text-right">
-
-              {/* Thêm mục Venue ở cột phải để cân đối */}
-              {venueInfo && (
-                <div className="space-y-1">
-                  <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Địa điểm sân</p>
-                  <p className="font-bold text-[#10B981] text-sm md:text-base">{venueInfo.name}</p>
-                </div>
-              )}
-
               <div className="space-y-1">
                 <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Thời gian tạo</p>
                 <p className="font-bold text-gray-800 text-sm md:text-base">
@@ -205,39 +198,77 @@ const Ticket_Detail = () => {
             </div>
           </div>
 
-          {/* 2. Items List */}
+          {/* 2. Items List (Updated Logic for Services) */}
           <div>
             <div className="flex justify-between items-end mb-3 border-b border-gray-100 pb-2">
-              <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Chi tiết dịch vụ</p>
-              <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">{items.length} items</span>
+              <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Chi tiết hóa đơn</p>
+              <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">{items.length} mục</span>
             </div>
 
             <div className="space-y-3">
               {items.map((item, idx) => {
                 const isRefunded = item.status === 'refund';
+                const isBooking = !!item.booking;
+                const isService = !!item.venue_service;
+
+                // Lấy thông tin hiển thị dựa trên loại item
+                let itemName = "Sản phẩm không xác định";
+                let itemSubInfo = null;
+                let itemImage = null;
+
+                if (isBooking) {
+                  itemName = item.booking?.court?.name || "Sân bóng";
+                  itemSubInfo = (
+                    <>
+                      <span className="flex items-center gap-1"><i className="fa-regular fa-calendar"></i> {item.booking?.date}</span>
+                      <span className="flex items-center gap-1"><i className="fa-regular fa-clock"></i> {item.booking?.time_slot?.start_time?.slice(0, 5)} - {item.booking?.time_slot?.end_time?.slice(0, 5)}</span>
+                    </>
+                  );
+                } else if (isService) {
+                  const serviceInfo = item.venue_service?.service;
+                  itemName = serviceInfo?.name || "Dịch vụ";
+
+                  // Nếu có ảnh dịch vụ thì hiển thị, ko thì dùng icon
+                  if (serviceInfo?.images && serviceInfo.images.length > 0) {
+                    itemImage = serviceInfo.images[0].url;
+                  }
+
+                  itemSubInfo = (
+                    <span className="flex items-center gap-1 text-blue-500 font-medium">
+                      <i className="fa-solid fa-cubes"></i> Số lượng: {item.quantity}  {serviceInfo?.unit}
+                    </span>
+                  );
+                }
+
                 return (
                   <div key={item.id} className={`group relative flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border transition-all ${isRefunded ? 'bg-gray-50 border-gray-100 opacity-60' : 'bg-white border-gray-100 hover:border-green-200 hover:shadow-sm'}`}>
 
                     {/* Left: Info */}
                     <div className="flex items-start gap-3 mb-2 sm:mb-0">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${isRefunded ? 'bg-gray-200 text-gray-400' : 'bg-green-50 text-[#10B981]'}`}>
-                        {idx + 1}
-                      </div>
+
+                      {/* Icon / Image Box */}
+                      {itemImage ? (
+                        <img src={itemImage} alt={itemName} className="w-10 h-10 rounded-lg object-cover border border-gray-200" />
+                      ) : (
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 
+                              ${isRefunded ? 'bg-gray-200 text-gray-400' : (isBooking ? 'bg-green-50 text-[#10B981]' : 'bg-blue-50 text-blue-500')}`}>
+                          {isBooking ? <i className="fa-regular fa-futbol"></i> : <i className="fa-solid fa-bottle-water"></i>}
+                        </div>
+                      )}
+
                       <div>
                         <p className={`text-sm font-bold ${isRefunded ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
-                          {item.booking?.court?.name}
+                          {itemName}
                           {isRefunded && <span className="ml-2 text-[9px] font-bold bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded">ĐÃ HỦY</span>}
                         </p>
                         <div className={`text-xs mt-0.5 flex flex-wrap gap-x-3 gap-y-1 ${isRefunded ? 'text-gray-400' : 'text-gray-500'}`}>
-                          <span className="flex items-center gap-1"><i className="fa-regular fa-calendar"></i> {item.booking?.date}</span>
-                          <span className="flex items-center gap-1"><i className="fa-regular fa-clock"></i> {item.booking?.time_slot?.start_time?.slice(0, 5)} - {item.booking?.time_slot?.end_time?.slice(0, 5)}</span>
+                          {itemSubInfo}
                         </div>
                       </div>
                     </div>
 
-                   
                     {/* Right: Price & Action */}
-                    <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center pl-11 sm:pl-0">
+                    <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center pl-14 sm:pl-0">
 
                       <div className={`text-right ${isRefunded ? 'opacity-60' : ''}`}>
                         {isRefunded ? (
@@ -245,27 +276,35 @@ const Ticket_Detail = () => {
                             {formatCurrency(0)}
                           </p>
                         ) : (
-                          Number(item.discount_amount) > 0 ? (
-                            <div className="flex flex-col items-end leading-tight">
-                              <span className="text-xs text-gray-400 line-through decoration-1">
-                                {formatCurrency(item.unit_price)}
+                          <div className="flex flex-col items-end leading-tight">
+                            {/* Nếu quantity > 1 thì hiện đơn giá x số lượng */}
+                            {!isBooking && item.quantity > 1 && (
+                              <span className="text-[10px] text-gray-400 mb-0.5">
+                                {formatCurrency(item.unit_price)} x {item.quantity}
                               </span>
-                              {/* Giá sau khi trừ khuyến mãi (Màu đỏ hoặc cam để nổi bật) */}
-                              <span className="font-bold text-sm text-red-500">
-                                {formatCurrency(Number(item.unit_price) - Number(item.discount_amount))}
-                              </span>
-                            </div>
-                          ) : (
-                            // Không có giảm giá: Hiển thị giá gốc bình thường
-                            <p className="font-bold text-sm text-gray-800">
-                              {formatCurrency(item.unit_price)}
-                            </p>
-                          )
+                            )}
+
+                            {Number(item.discount_amount) > 0 ? (
+                              <>
+                                <span className="text-xs text-gray-400 line-through decoration-1">
+                                  {formatCurrency(Number(item.unit_price) * (isBooking ? 1 : item.quantity))}
+                                </span>
+                                <span className="font-bold text-sm text-red-500">
+                                  {formatCurrency((Number(item.unit_price) * (isBooking ? 1 : item.quantity)) - Number(item.discount_amount))}
+                                </span>
+                              </>
+                            ) : (
+                              <p className="font-bold text-sm text-gray-800">
+                                {/* Tính tổng tiền item: Giá * Số lượng */}
+                                {formatCurrency(Number(item.unit_price) * (isBooking ? 1 : item.quantity))}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
 
-                      {/* NÚT HỦY (GIỮ NGUYÊN LOGIC CŨ) */}
-                      {!isTicketCancelled && !isRefunded && (
+                      {/* NÚT HỦY (Chỉ hiển thị nếu chưa hủy và chưa hoàn thành) */}
+                      {!isTicketCancelled && !isTicketCompleted && !isRefunded && (
                         <button
                           type="button"
                           onClick={() => handleCancelItem(item.id)}
@@ -285,12 +324,12 @@ const Ticket_Detail = () => {
           <div className="bg-gray-50/50 rounded-xl p-4 border border-gray-100 border-dashed">
             <div className="space-y-2">
               <div className="flex justify-between text-xs md:text-sm text-gray-500">
-                <span>Tổng tiền sân</span>
+                <span>Tổng tạm tính</span>
                 <span className="font-medium text-gray-700">{formatCurrency(ticket.subtotal ?? 0)}</span>
               </div>
               {Number(ticket.discount_amount) > 0 && (
                 <div className="flex justify-between text-xs md:text-sm text-[#10B981]">
-                  <span><i className="fa-solid fa-tag mr-1"></i> Voucher giảm giá</span>
+                  <span><i className="fa-solid fa-tag mr-1"></i> Giảm giá</span>
                   <span className="font-bold">- {formatCurrency(ticket.discount_amount)}</span>
                 </div>
               )}
@@ -299,12 +338,12 @@ const Ticket_Detail = () => {
             <div className="border-t border-gray-200 border-dashed my-3"></div>
 
             <div className="flex justify-between items-center">
-              <span className="text-sm font-bold text-gray-800">Thành tiền</span>
+              <span className="text-sm font-bold text-gray-800">Tổng thanh toán</span>
               <span className="text-xl md:text-2xl font-extrabold text-[#F59E0B]">{formatCurrency(ticket.total_amount ?? 0)}</span>
             </div>
           </div>
 
-          {/* 4. Notes */}
+          {/* 4. Notes & Actions */}
           {ticket.notes && (
             <div className="bg-amber-50 p-3 rounded-lg border border-amber-100 text-xs text-amber-800 flex gap-2 items-start">
               <i className="fa-regular fa-note-sticky mt-0.5 text-amber-500"></i>
@@ -312,22 +351,21 @@ const Ticket_Detail = () => {
             </div>
           )}
 
-          {/* 5. Cancel All Button */}
-          {!isTicketCancelled && (
+          {!isTicketCancelled && !isTicketCompleted && (
             <div className="flex justify-end">
               <button
                 type="button"
                 onClick={handleCancelTicket}
                 className="text-xs font-bold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-all flex items-center gap-2 border border-transparent hover:border-red-100"
               >
-                <i className="fa-solid fa-ban"></i> Hủy toàn bộ đơn hàng
+                <i className="fa-solid fa-ban"></i> Hủy đơn hàng
               </button>
             </div>
           )}
         </div>
 
-        {/* === FOOTER PAYMENT SECTION === */}
-        {/* ... (Phần Payment và Footer giữ nguyên như cũ) ... */}
+        {/* === PAYMENT & FOOTER === */}
+        {/* Phần thanh toán giữ nguyên logic cũ */}
         {!isTicketCancelled && ticket.status == "pending" && (
           <div className="bg-gray-50 p-6 md:p-8 border-t border-gray-200">
             <h3 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide flex items-center gap-2">
@@ -336,39 +374,21 @@ const Ticket_Detail = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
               {/* MoMo */}
-              <div
-                onClick={() => setPaymentMethod('momo')}
-                className={`relative p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center sm:flex-col sm:justify-center gap-3 ${paymentMethod === 'momo'
-                  ? "border-[#D82D8B] bg-[#FFF0F6] shadow-md"
-                  : "border-gray-200 bg-white hover:border-gray-300"
-                  }`}
-              >
+              <div onClick={() => setPaymentMethod('momo')} className={`relative p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center sm:flex-col sm:justify-center gap-3 ${paymentMethod === 'momo' ? "border-[#D82D8B] bg-[#FFF0F6] shadow-md" : "border-gray-200 bg-white hover:border-gray-300"}`}>
                 <img src="/momo.png" alt="MoMo" className="h-8 w-8 object-contain rounded" />
                 <span className={`text-xs font-bold ${paymentMethod === 'momo' ? 'text-[#D82D8B]' : 'text-gray-600'}`}>Ví MoMo</span>
                 {paymentMethod === 'momo' && <div className="absolute top-2 right-2 text-[#D82D8B] text-xs"><i className="fa-solid fa-check-circle"></i></div>}
               </div>
 
               {/* VNPay */}
-              <div
-                onClick={() => setPaymentMethod('vnpay')}
-                className={`relative p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center sm:flex-col sm:justify-center gap-3 ${paymentMethod === 'vnpay'
-                  ? "border-[#005BAA] bg-[#F0F9FF] shadow-md"
-                  : "border-gray-200 bg-white hover:border-gray-300"
-                  }`}
-              >
+              <div onClick={() => setPaymentMethod('vnpay')} className={`relative p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center sm:flex-col sm:justify-center gap-3 ${paymentMethod === 'vnpay' ? "border-[#005BAA] bg-[#F0F9FF] shadow-md" : "border-gray-200 bg-white hover:border-gray-300"}`}>
                 <img src="/vnpay.png" alt="VNPay" className="h-12 w-12 object-contain rounded" />
                 <span className={`text-xs font-bold ${paymentMethod === 'vnpay' ? 'text-[#005BAA]' : 'text-gray-600'}`}>VNPay</span>
                 {paymentMethod === 'vnpay' && <div className="absolute top-2 right-2 text-[#005BAA] text-xs"><i className="fa-solid fa-check-circle"></i></div>}
               </div>
 
               {/* Wallet */}
-              <div
-                onClick={() => setPaymentMethod('wallet')}
-                className={`relative p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center sm:flex-col sm:justify-center gap-3 ${paymentMethod === 'wallet'
-                  ? "border-[#10B981] bg-[#ECFDF5] shadow-md"
-                  : "border-gray-200 bg-white hover:border-gray-300"
-                  }`}
-              >
+              <div onClick={() => setPaymentMethod('wallet')} className={`relative p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center sm:flex-col sm:justify-center gap-3 ${paymentMethod === 'wallet' ? "border-[#10B981] bg-[#ECFDF5] shadow-md" : "border-gray-200 bg-white hover:border-gray-300"}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${paymentMethod === 'wallet' ? 'bg-[#10B981] text-white' : 'bg-gray-100 text-gray-400'}`}>
                   <i className="fa-solid fa-wallet"></i>
                 </div>
@@ -398,7 +418,7 @@ const Ticket_Detail = () => {
           <div className="bg-red-50 p-6 text-center border-t border-red-100">
             <i className="fa-solid fa-circle-xmark text-3xl text-red-400 mb-2"></i>
             <h3 className="text-red-700 font-bold">Đơn hàng đã hủy</h3>
-            <p className="text-red-500 text-xs mt-1">Số tiền đã thanh toán (nếu có) sẽ được hoàn về ví theo chính sách.</p>
+            <p className="text-red-500 text-xs mt-1">Tiền sẽ được hoàn về ví (nếu đủ điều kiện).</p>
             <Link to="/" className="inline-block mt-4 text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition">
               Đặt sân khác
             </Link>
@@ -409,7 +429,7 @@ const Ticket_Detail = () => {
           <div className="bg-green-50 p-6 text-center border-t border-green-100">
             <i className="fa-solid fa-circle-check text-3xl text-green-500 mb-2"></i>
             <h3 className="text-green-800 font-bold">Thanh toán hoàn tất</h3>
-            <p className="text-green-600 text-xs mt-1">Cảm ơn bạn đã đặt sân. Chúc bạn có những phút giây thể thao tuyệt vời!</p>
+            <p className="text-green-600 text-xs mt-1">Cảm ơn bạn đã đặt sân. Chúc bạn vui vẻ!</p>
             <Link to="/" className="inline-block mt-4 text-xs font-bold text-white bg-[#10B981] hover:bg-[#059669] px-4 py-2 rounded-lg transition">
               Về trang chủ
             </Link>
@@ -420,22 +440,17 @@ const Ticket_Detail = () => {
           <div className="bg-blue-50 p-6 text-center border-t border-blue-100">
             <i className="fa-solid fa-medal text-3xl text-blue-500 mb-2"></i>
             <h3 className="text-blue-800 font-bold text-lg">Đơn hàng đã hoàn thành</h3>
-            <p className="text-blue-600 text-sm mt-1 mb-4">
-              Cảm ơn bạn đã sử dụng dịch vụ. Hãy cho chúng tôi biết cảm nhận của bạn nhé!
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
               <Link to="/" className="inline-block text-sm font-bold text-blue-600 bg-white border border-blue-200 hover:bg-blue-50 px-6 py-3 rounded-lg transition">
                 Về trang chủ
               </Link>
-
-              <Link to={`/venues/${venueInfo?.id}`}>
-                <button
-                  className="inline-block text-sm font-bold text-white bg-yellow-500 hover:bg-yellow-600 px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                >
-                  <i className="fa-regular fa-star"></i> Viết đánh giá
-                </button>
-              </Link>
+              {venueInfo && (
+                <Link to={`/venues/${venueInfo?.id}`}>
+                  <button className="inline-block text-sm font-bold text-white bg-yellow-500 hover:bg-yellow-600 px-6 py-3 rounded-lg transition shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+                    <i className="fa-regular fa-star"></i> Viết đánh giá
+                  </button>
+                </Link>
+              )}
             </div>
           </div>
         )}

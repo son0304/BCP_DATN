@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { Venue } from '../../../Types/venue';
 import { useFetchData } from '../../../Hooks/useApi';
 import type { Ticket } from '../../../Types/tiket';
@@ -16,7 +15,6 @@ type InfoDetailVenueProps = {
 
 const Info_Detail_Venue: React.FC<InfoDetailVenueProps> = ({ venue, user, refetch, formatPrice }) => {
 
-  const services = (venue as any).services ?? ['Bãi gửi xe', 'Cho thuê dụng cụ', 'WC & phòng thay đồ', 'Nước uống'];
   const courts = venue.courts ?? [];
   const reviews = venue.reviews ?? [];
   const { data } = useFetchData('tickets')
@@ -36,21 +34,7 @@ const Info_Detail_Venue: React.FC<InfoDetailVenueProps> = ({ venue, user, refetc
         </p>
       </section>
 
-      {/* --- 2. TIỆN ÍCH --- */}
-      <section className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm">
-        <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-2">
-          <i className="fa-solid fa-bell-concierge text-emerald-600"></i>
-          <h3 className="text-base font-bold text-gray-800 uppercase tracking-wide">Tiện ích</h3>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {services.map((s: string, idx: number) => (
-            <div key={idx} className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 p-2 rounded-md border border-gray-100">
-              <i className="fa-solid fa-check text-emerald-500 text-xs" />
-              <span className="font-medium">{s}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+      
 
       {/* --- 3. DANH SÁCH SÂN CON --- */}
       <section className="bg-white rounded-lg p-5 border border-gray-100 shadow-sm">

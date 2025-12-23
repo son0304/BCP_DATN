@@ -4,22 +4,29 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+use function Laravel\Prompts\table;
+
 return new class extends Migration
 {
-    public function up(): void
+    // database/migrations/xxxx_xx_xx_create_services_table.php
+
+    public function up()
     {
         Schema::create('services', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('venue_id')->constrained('venues')->cascadeOnDelete();
-            $table->string('name');
-            $table->string('unit')->nullable(); // VD: "chai", "giờ"
-            $table->decimal('price', 10, 2)->default(0);
+            // Giả sử bạn có bảng categories, nếu chưa có thì bỏ constrained() đi
+            $table->foreignId('category_id')->nullable()->constrained('categories')->nullOnDelete();
+
+            $table->string('name'); // Tên dịch vụ: Coca, Mì tôm
+            $table->string('unit'); // Đơn vị: Lon, Gói
+            $table->text('description')->nullable();
+            $table->enum('type', ['service', 'consumable', 'amenities']);
             $table->timestamps();
-            $table->softDeletes();
+            $table->softDeletes(); // Cột deleted_at
         });
     }
 
-    public function down(): void
+    public function down()
     {
         Schema::dropIfExists('services');
     }

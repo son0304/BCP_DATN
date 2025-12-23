@@ -97,6 +97,12 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('owner.services.index') }}" class="waves-effect">
+                                <i class="ri-ticket-line"></i>
+                                <span> Quản lý dịch vụ </span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ route('owner.bookings.index') }}" class="waves-effect">
                                 <i class="ri-ticket-line"></i>
                                 <span> Đơn đặt sân </span>

@@ -15,6 +15,9 @@ use App\Http\Controllers\Web\{
     OwnerStatisticController,
     VenueController,
     PromotionController,
+    ServiceCategoryController,
+    ServicesCategorieController,
+    ServicesController,
     TransactionController
 };
 use App\Models\FlashSaleCampaign;
@@ -162,5 +165,14 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
         Route::get('/', [FlashSaleCampaignController::class, 'index'])->name('index');
         Route::get('show/{id}', [FlashSaleCampaignController::class, 'show'])->name('show');
         Route::post('store', [FlashSaleItemController::class, 'create_flash_sale_items'])->name('store');
+    });
+
+    Route::prefix('services')->name('services.')->group(function () {
+        Route::get('/', [ServicesController::class, 'index'])->name('index');
+        Route::post('/', [ServicesController::class, 'store'])->name('store');
+        Route::post('/categories', [ServiceCategoryController::class, 'store'])->name('categories.store');
+        Route::post('update_stock', [ServicesController::class, 'update_stock'])->name('update_stock');
+        Route::put('{id}', [ServicesController::class, 'update'])->name('update');
+        Route::delete('{id}', [ServicesController::class, 'destroy'])->name('destroy');
     });
 });

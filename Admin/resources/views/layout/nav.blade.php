@@ -28,29 +28,43 @@
                 <div class="dropdown-header noti-title">
                     <h6 class="text-overflow m-0">Welcome!</h6>
                 </div>
-                <a href="javascript:void(0);" class="dropdown-item notify-item">
+                <a href="#" class="dropdown-item notify-item">
                     <i class="remixicon-account-circle-line"></i>
                     <span>My Account</span>
                 </a>
-                <a href="javascript:void(0);" class="dropdown-item notify-item">
+                <a href="#" class="dropdown-item notify-item">
                     <i class="remixicon-settings-3-line"></i>
                     <span>Settings</span>
                 </a>
-                <a href="javascript:void(0);" class="dropdown-item notify-item">
+                <a href="#" class="dropdown-item notify-item">
                     <i class="remixicon-wallet-line"></i>
-                    <span>My Wallet <span class="badge badge-success float-right">3</span></span>
+                    <span>My Wallet
+                        <span class="badge badge-success float-right">3</span>
+                    </span>
                 </a>
-                <a href="javascript:void(0);" class="dropdown-item notify-item">
+                <a href="#" class="dropdown-item notify-item">
                     <i class="remixicon-lock-line"></i>
                     <span>Lock Screen</span>
                 </a>
                 <div class="dropdown-divider"></div>
-                <a href="javascript:void(0);" class="dropdown-item notify-item"
+                <a href="#" class="dropdown-item notify-item"
                     onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                     <i class="remixicon-logout-box-line"></i>
                     <span>Logout</span>
                 </a>
             </div>
+        </li>
+
+        <!-- Shortcut to Client (placed AFTER user profile) -->
+        <li class="dropdown notification-list" style="display: flex; align-items: center;">
+            <a class="nav-link waves-effect waves-light"
+                href="http://localhost:5173"
+                target="_blank"
+                title="Chuyển sang giao diện khách hàng"
+                style="padding: 0 12px;">
+                <i class="fe-monitor"
+                    style="font-size: 20px; color: #6C5CE7; transition: 0.2s;"></i>
+            </a>
         </li>
 
         <!-- Logout Form -->
@@ -64,11 +78,11 @@
             <a class="btn"
                 href="{{ route('login') }}"
                 style="
-            background-color: #6C5CE7;
-            color: #FFFFFF;
-            padding: 8px 16px;
-            border-radius: 6px;
-            transition: all 0.2s;
+              background-color: #6C5CE7;
+              color: #FFFFFF;
+              padding: 8px 16px;
+              border-radius: 6px;
+              transition: all 0.2s;
         "
                 onmouseover="this.style.backgroundColor='#5845d4';"
                 onmouseout="this.style.backgroundColor='#6C5CE7';">
@@ -78,6 +92,7 @@
         @endguest
 
     </ul>
+
 
     <!-- Logo -->
     <div class="logo-box">

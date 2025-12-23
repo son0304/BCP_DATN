@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Image, Venue, Court, Review};
+use App\Models\{Image, Venue, Court, Post, Review};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -21,7 +21,7 @@ class ImageApiController extends Controller
             $modelClass = $this->getModelClass($request->type);
             if ($modelClass) {
                 $query->where('imageable_type', $modelClass)
-                      ->where('imageable_id', $request->id);
+                    ->where('imageable_id', $request->id);
             }
         }
 
@@ -39,29 +39,42 @@ class ImageApiController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'type' => 'required|string|in:venue,court,review',
+            'type' => 'required|string|in:venue,court,review,post',
             'id'   => 'required|integer',
             'files.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120'
         ]);
 
         $modelClass = $this->getModelClass($request->type);
-        if (!$modelClass) {
-            return response()->json(['success' => false, 'message' => 'Invalid type'], 400);
+
+        // THAY ĐỔI Ở ĐÂY: Nếu ID > 0 thì mới tìm Model, nếu = 0 thì bỏ qua (cho phép tạo ảnh rời)
+        $model = null;
+        if ($request->id > 0) {
+            $model = $modelClass::findOrFail($request->id);
         }
 
-        $model = $modelClass::findOrFail($request->id);
         $saved = [];
 
         foreach ($request->file('files', []) as $file) {
-            // Lưu file vào thư mục tương ứng
+            // Lưu file vào thư mục
             $path = $file->store("uploads/{$request->type}s", 'public');
 
-            // Lưu bản ghi vào bảng images
-            $image = $model->images()->create([
-                'url' => 'storage/' . $path,
-                'description' => $request->input('description'),
-                'is_primary' => false
-            ]);
+            // Tạo bản ghi trong database
+            // Nếu có model thì dùng quan hệ morph, nếu không thì dùng Model Image tạo trực tiếp
+            if ($model) {
+                $image = $model->images()->create([
+                    'url' => 'storage/' . $path,
+                    'description' => $request->input('description'),
+                    'is_primary' => false
+                ]);
+            } else {
+                $image = Image::create([
+                    'url' => 'storage/' . $path,
+                    'imageable_type' => $modelClass, // App\Models\Post
+                    'imageable_id'   => 0,            // Tạm thời để 0
+                    'description' => $request->input('description'),
+                    'is_primary' => false
+                ]);
+            }
 
             $saved[] = $image;
         }
@@ -69,7 +82,7 @@ class ImageApiController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Ảnh đã được tải lên thành công!',
-            'images' => $saved
+            'images' => $saved // React sẽ nhận danh sách này để lấy ID
         ]);
     }
 
@@ -99,6 +112,7 @@ class ImageApiController extends Controller
             'venue'  => Venue::class,
             'court'  => Court::class,
             'review' => Review::class,
+            'post'   => Post::class,
             default  => null,
         };
     }

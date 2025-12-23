@@ -82,6 +82,10 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasOne(MerchantProfile::class);
     }
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
 
 
 

@@ -1,6 +1,5 @@
 <?php
 
-// use App\Http\Controllers\ChatController as ControllersChatController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Web\{
@@ -16,12 +15,14 @@ use App\Http\Controllers\Web\{
     FlashSaleCampaignController,
     FlashSaleItemController,
     OwnerStatisticController,
+    PostController,
     VenueController,
     PromotionController,
     ServiceCategoryController,
     ServicesCategorieController,
     ServicesController,
-    TransactionController
+    TransactionController,
+    TagController,
 
 };
 use App\Models\FlashSaleCampaign;
@@ -55,6 +56,10 @@ Route::post('/resend-verification', [AuthController::class, 'resendVerification'
 Route::get('/', [HomeController::class, 'index'])->name('home.index');
 Route::get('/courts', [CourtController::class, 'index'])->name('courts.index');
 Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+
+Route::post('/momo/ipn', [BookingController::class, 'ipn'])->name('momo.ipn');
+Route::post('/payment-momo', [BookingController::class, 'paymentMomo'])->name('payment-momo');
+Route::get('/momo/payment-success', [BookingController::class, 'paymentResult'])->name('momo.payment.result');
 
 
 // ==============================
@@ -137,6 +142,23 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('create', [FlashSaleCampaignController::class, 'create'])->name('create');
         Route::post('store', [FlashSaleCampaignController::class, 'store'])->name('store');
     });
+    // --- TAGS MANAGEMENT ---
+    Route::prefix('tags')->name('tags.')->group(function () {
+        Route::get('/', [TagController::class, 'index'])->name('index');
+        Route::get('create', [TagController::class, 'create'])->name('create');
+        Route::post('/', [TagController::class, 'store'])->name('store');
+        Route::get('{tag}/edit', [TagController::class, 'edit'])->name('edit');
+        Route::put('{tag}', [TagController::class, 'update'])->name('update');
+        Route::delete('{tag}', [TagController::class, 'destroy'])->name('destroy');
+    });
+
+    //Post
+    Route::prefix('posts')->name('posts.')->group(function () {
+        Route::get('/', [PostController::class, 'index'])->name('index');
+        Route::get('/{post}', [PostController::class, 'show'])->name('show');
+        Route::patch('/{post}/update-status', [PostController::class, 'updateStatus'])->name('updateStatus');
+        Route::patch('{post}/reject-or-hide', [PostController::class, 'rejectOrHide'])->name('rejectOrHide');
+    });
 });
 
 
@@ -185,6 +207,9 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
     Route::post('courts/{court}/availabilities/update', [AvailabilityController::class, 'updateAll'])
         ->name('courts.updateAvailabilities');
 
+    Route::get('availabilities/get-slots', [AvailabilityController::class, 'getAvailableSlots'])
+        ->name('availabilities.get-slots');
+
     // --- REVIEWS MANAGE BY OWNER ---
     Route::prefix('reviews')->name('reviews.')->group(function () {
         Route::get('/', [ReviewController::class, 'indexByOwner'])->name('index');
@@ -193,10 +218,12 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
     // --- BOOKINGS MANAGE BY OWNER ---
     Route::prefix('bookings')->name('bookings.')->group(function () {
         Route::get('/', [BookingController::class, 'booking_venue'])->name('index');
-        Route::get('{booking}', [BookingController::class, 'show'])->name('show');
+        Route::get('create', [BookingController::class, 'create'])->name('create');
         Route::post('/', [BookingController::class, 'store'])->name('store');
         Route::put('{booking}', [BookingController::class, 'update'])->name('update');
         Route::delete('{booking}', [BookingController::class, 'destroy'])->name('destroy');
+        Route::post('/generate-temp-qr', [BookingController::class, 'generateTempQR'])->name('generate-temp-qr');
+        Route::get('/check-temp-payment', [BookingController::class, 'checkTempPayment'])->name('check-temp-payment');
     });
 
     Route::prefix('flash-sale')->name('flash_sale_campaigns.')->group(function () {
@@ -212,6 +239,5 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
         Route::post('update_stock', [ServicesController::class, 'update_stock'])->name('update_stock');
         Route::put('{id}', [ServicesController::class, 'update'])->name('update');
         Route::delete('{id}', [ServicesController::class, 'destroy'])->name('destroy');
-
     });
 });

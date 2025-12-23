@@ -47,8 +47,8 @@ class PaymentApiController extends Controller
             $partnerCode = env('MOMO_PARTNER_CODE');
             $accessKey = env('MOMO_ACCESS_KEY');
             $secretKey = env('MOMO_SECRET_KEY');
-            $redirectUrl = env('MOMO_REDIRECT_URL');
-            $ipnUrl = env('MOMO_IPN_URL');
+            $redirectUrl = env('MOMO_REDIRECT_URL_LOCAL');
+            $ipnUrl = env('MOMO_IPN_URL_LOCAL');
 
             if (!$accessKey || !$secretKey) {
                 return response()->json(['message' => 'Chưa cấu hình MoMo trong .env hoặc chưa clear cache'], 500);

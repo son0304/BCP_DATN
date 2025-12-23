@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\AuthApiController;
-use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DistrictApiController;
 use App\Http\Controllers\Api\ImageApiController;
 use App\Http\Controllers\Api\PromotionApiController;
@@ -16,6 +15,9 @@ use App\Http\Controllers\Api\WalletApiController;
 use App\Http\Controllers\Web\LocationController;
 use App\Http\Controllers\Api\VenueTypeApiController;
 use App\Http\Controllers\Api\ChatApiController;
+use App\Http\Controllers\Api\CommentApiController;
+use App\Http\Controllers\Api\PostApiController;
+use App\Http\Controllers\Api\TagApiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -53,8 +55,8 @@ Route::get('/user', [AuthApiController::class, 'index']);
 
 Route::get('/payment/check-status/{id}', [PaymentApiController::class, 'checkTransactionStatus']);
 
-
-
+Route::get('/posts', [PostApiController::class, 'index']);
+Route::get('/tags', [TagApiController::class, 'index']);
 
 Route::get('/promotions', [PromotionApiController::class, 'index']);
 
@@ -62,6 +64,8 @@ Route::apiResource('reviews', ReviewApiController::class)
     ->only(['index', 'show']);
 
 Route::get('/venue_types', [VenueTypeApiController::class, 'index']);
+
+Route::get('/posts/{postId}/comments', [CommentApiController::class, 'index']);
 
 // ==================== PROTECTED ROUTES ====================
 // Những route này cần JWT token
@@ -94,7 +98,8 @@ Route::middleware(['jwt.auth'])->group(function () {
     Route::post('/reviews/{id}', [ReviewApiController::class, 'update']);
     Route::delete('/reviews/{id}', [ReviewApiController::class, 'destroy']);
 
-
+    Route::post('/comments', [CommentApiController::class, 'store']);
+    Route::delete('/comments/{id}', [CommentApiController::class, 'destroy']);
 
     // Reviews (protected actions)
     Route::apiResource('reviews', ReviewApiController::class)
@@ -102,4 +107,6 @@ Route::middleware(['jwt.auth'])->group(function () {
     // Payment
 
     Route::post('/payment/wallet', [PaymentApiController::class, 'paymentWallet']);
+
+    Route::post('/posts', [PostApiController::class, 'store']);
 });

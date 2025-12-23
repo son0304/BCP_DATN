@@ -12,9 +12,11 @@ use App\Http\Controllers\Web\{
     AuthController,
     ChatController,
     OwnerStatisticController,
+    PostController,
     VenueController,
     PromotionController,
-    TransactionController
+    TagController,
+    TransactionController,
 };
 
 // ==============================
@@ -111,6 +113,24 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     Route::prefix('transactions')->name('transactions.')->group(function () {
         Route::get('/', [TransactionController::class, 'index'])->name('index');
+    });
+
+    // --- TAGS MANAGEMENT ---
+    Route::prefix('tags')->name('tags.')->group(function () {
+        Route::get('/', [TagController::class, 'index'])->name('index');
+        Route::get('create', [TagController::class, 'create'])->name('create');
+        Route::post('/', [TagController::class, 'store'])->name('store');
+        Route::get('{tag}/edit', [TagController::class, 'edit'])->name('edit');
+        Route::put('{tag}', [TagController::class, 'update'])->name('update');
+        Route::delete('{tag}', [TagController::class, 'destroy'])->name('destroy');
+    });
+
+    //Post
+    Route::prefix('posts')->name('posts.')->group(function () {
+        Route::get('/', [PostController::class, 'index'])->name('index');
+        Route::get('/{post}', [PostController::class, 'show'])->name('show');
+        Route::patch('/{post}/update-status', [PostController::class, 'updateStatus'])->name('updateStatus');
+        Route::patch('{post}/reject-or-hide', [PostController::class, 'rejectOrHide'])->name('rejectOrHide');
     });
 });
 

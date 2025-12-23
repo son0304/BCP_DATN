@@ -18,6 +18,7 @@ import Index_Detail_Venue from '../Pages/Venues/Detail_Venue/Index_Detail_Venue'
 import Ticket_Detail from '../Pages/Ticket/Ticket_Detail'
 import Map_Venue from '../Pages/Maps/Map_Venue'
 import { Edit_Profile } from '../Pages/User/Edit_Profile'
+import Home_Post from '../Pages/Post/Home_Post'
 const AppRouter = () => {
     return (
         <Routes>
@@ -51,6 +52,12 @@ const AppRouter = () => {
                     <Route index element={<Index_Blog />} />
                     <Route path=":id" element={<Detail_Blog />} />
                 </Route>
+
+                {/* Post */}
+                <Route path='posts' element={<Home_Post />}>
+                    <Route />
+                </Route>
+                
             </Route>
         </Routes>
     );

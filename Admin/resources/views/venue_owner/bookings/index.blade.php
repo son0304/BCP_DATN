@@ -142,15 +142,17 @@
                             <td class="text-nowrap fw-bold text-end">{{ number_format($ticket->total_amount, 0, '.', ',') }}₫</td>
 
                             <td class="text-center">
-                                <span class="badge
-                                    @if($ticket->status == 'draft') bg-draft
-                                    @elseif($ticket->status == 'confirmed') bg-success
-                                    @elseif($ticket->status == 'cancelled') bg-danger
-                                    @elseif($ticket->status == 'completed') bg-primary
-                                    @else bg-secondary
-                                    @endif">
-                                    {{ ucfirst($ticket->status) }}
-                                </span>
+                               @php
+                                    $statusMap = [
+                                        1 => ['label' => 'Chờ xác nhận', 'class' => 'bg-warning'],
+                                        2 => ['label' => 'Đã xác nhận', 'class' => 'bg-success'],
+                                        3 => ['label' => 'Đã Check-in', 'class' => 'bg-info text-dark'],
+                                        4 => ['label' => 'Hoàn thành', 'class' => 'bg-primary'],
+                                        5 => ['label' => 'Đã hủy', 'class' => 'bg-danger'],
+                                    ];
+                                    $st = $statusMap[$ticket->status] ?? ['label' => 'K xác định', 'class' => 'bg-secondary'];
+                                @endphp
+                                <span class="badge {{ $st['class'] }}">{{ $st['label'] }}</span>
                             </td>
 
                             <td class="text-center">

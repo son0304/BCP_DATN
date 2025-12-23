@@ -1,522 +1,485 @@
 @extends('app')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="h4 mb-0">Tạo thương hiệu sân mới</h2>
-        <p class="text-muted mb-0">Nhập thông tin chi tiết cho thương hiệu sân.</p>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h4 mb-0">Tạo thương hiệu sân mới</h2>
+            <p class="text-muted mb-0">Nhập thông tin chi tiết cho thương hiệu sân.</p>
+        </div>
+        <div>
+            <a href="{{ route('owner.venues.index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Quay lại danh sách
+            </a>
+        </div>
     </div>
-    <div>
-        <a href="{{ route('owner.venues.index') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Quay lại danh sách
-        </a>
-    </div>
-</div>
 
-<form action="{{ route('owner.venues.store') }}" method="POST" enctype="multipart/form-data">
-    @csrf
-    <div class="row">
-        {{-- Cột trái: Thông tin chính --}}
-        <div class="col-lg-8">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Thông tin cơ bản</h5>
-                </div>
-                <div class="card-body">
-                    {{-- Tên thương hiệu --}}
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Tên thương hiệu (sân) <span class="text-danger">*</span></label>
-                        <input type="text" name="name"
-                            class="form-control @error('name') is-invalid @enderror"
-                            value="{{ old('name') }}" required>
-                        @error('name')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+    <form id="venue-create-form" action="{{ route('owner.venues.store') }}" method="POST" enctype="multipart/form-data">
+        @csrf
+        <div class="row">
+            <div class="col-lg-8">
+                {{-- CARD 1: THÔNG TIN CƠ BẢN --}}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Thông tin cơ bản</h5>
                     </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tên thương hiệu (sân) <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
+                                value="{{ old('name') }}" required>
+                            @error('name')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Chủ sở hữu</label>
+                            @if (auth()->user()->role->name === 'admin')
+                                <select name="owner_id" class="form-select @error('owner_id') is-invalid @enderror" required>
+                                    <option value="">-- Chọn chủ sở hữu --</option>
+                                    @foreach ($owners as $owner)
+                                        <option value="{{ $owner->id }}"
+                                            {{ old('owner_id') == $owner->id ? 'selected' : '' }}>
+                                            {{ $owner->name }} ({{ $owner->email }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('owner_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            @else
+                                <input type="hidden" name="owner_id" value="{{ auth()->user()->id }}">
+                                <input type="text" class="form-control" value="{{ auth()->user()->name }}" disabled>
+                            @endif
+                        </div>
 
-                    {{-- Chủ sở hữu --}}
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Chủ sở hữu</label>
-                        @if (auth()->user()->role->name === 'admin')
-                        <select name="owner_id" class="form-select @error('owner_id') is-invalid @enderror" required>
-                            <option value="">-- Chọn chủ sở hữu --</option>
-                            @foreach ($owners as $owner)
-                            <option value="{{ $owner->id }}" {{ old('owner_id') == $owner->id ? 'selected' : '' }}>
-                                {{ $owner->name }} ({{ $owner->email }})
-                            </option>
+                        <hr class="my-4">
+                        <h6 class="fw-bold">Thông tin địa chỉ</h6>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tỉnh/Thành <span class="text-danger">*</span></label>
+                                <select name="province_id" id="province_id"
+                                    class="form-select @error('province_id') is-invalid @enderror"
+                                    data-old="{{ old('province_id') }}" required>
+                                    <option value="">-- Đang tải... --</option>
+                                </select>
+                                @error('province_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Quận/Huyện <span class="text-danger">*</span></label>
+                                <select name="district_id" id="district_id"
+                                    class="form-select @error('district_id') is-invalid @enderror"
+                                    data-old="{{ old('district_id') }}" required disabled>
+                                    <option value="">-- Chọn Tỉnh/Thành trước --</option>
+                                </select>
+                                @error('district_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Địa chỉ chi tiết <span class="text-danger">*</span></label>
+                            <input type="text" name="address_detail" value="{{ old('address_detail') }}"
+                                class="form-control @error('address_detail') is-invalid @enderror" required>
+                            @error('address_detail')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                {{-- CARD 2: DANH SÁCH SÂN --}}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Danh sách sân</h5>
+                        <button type="button" id="add-court-btn" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus"></i> Thêm sân
+                        </button>
+                    </div>
+                    <div class="card-body" id="court-list">
+                        @if (old('courts'))
+                            @foreach (old('courts') as $courtIndex => $court)
+                                <div class="border rounded p-3 mb-3 court-item" data-index="{{ $courtIndex }}">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0 fw-bold">Sân #<span class="court-number">{{ $courtIndex + 1 }}</span></h6>
+                                        <button type="button" class="btn btn-sm btn-danger remove-court"><i class="fas fa-times"></i></button>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Tên sân</label>
+                                            <input type="text" name="courts[{{ $courtIndex }}][name]"
+                                                value="{{ $court['name'] ?? '' }}"
+                                                class="form-control @error("courts.{$courtIndex}.name") is-invalid @enderror"
+                                                required>
+                                            @error("courts.{$courtIndex}.name")
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Loại sân</label>
+                                            <select name="courts[{{ $courtIndex }}][venue_type_id]"
+                                                class="form-select court-type-select @error("courts.{$courtIndex}.venue_type_id") is-invalid @enderror"
+                                                required>
+                                                <option value="">-- Chọn loại hình --</option>
+                                                @foreach ($venue_types as $type)
+                                                    <option value="{{ $type->id }}"
+                                                        {{ ($court['venue_type_id'] ?? '') == $type->id ? 'selected' : '' }}>
+                                                        {{ $type->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            @error("courts.{$courtIndex}.venue_type_id")
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Mặt sân</label>
+                                            <input type="text" name="courts[{{ $courtIndex }}][surface]"
+                                                value="{{ $court['surface'] ?? '' }}"
+                                                class="form-control @error("courts.{$courtIndex}.surface") is-invalid @enderror"
+                                                placeholder="Cỏ nhân tạo, cỏ tự nhiên...">
+                                            @error("courts.{$courtIndex}.surface")
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Trong nhà / Ngoài trời</label>
+                                            <select name="courts[{{ $courtIndex }}][is_indoor]"
+                                                class="form-select @error("courts.{$courtIndex}.is_indoor") is-invalid @enderror">
+                                                <option value="0" {{ ($court['is_indoor'] ?? '0') == '0' ? 'selected' : '' }}>Ngoài trời</option>
+                                                <option value="1" {{ ($court['is_indoor'] ?? '0') == '1' ? 'selected' : '' }}>Trong nhà</option>
+                                            </select>
+                                            @error("courts.{$courtIndex}.is_indoor")
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
+
+                                    <h6 class="fw-bold mt-3 d-flex justify-content-between align-items-center">
+                                        <span>Khung giờ và giá</span>
+                                        <button type="button" class="btn btn-sm btn-outline-success add-time-slot"><i class="fas fa-plus"></i> Thêm khung giờ</button>
+                                    </h6>
+                                    <div class="table-responsive mt-2">
+                                        <table class="table table-bordered table-sm align-middle time-slot-table">
+                                            <thead>
+                                                <tr class="bg-light">
+                                                    <th>Giờ bắt đầu</th>
+                                                    <th>Giờ kết thúc</th>
+                                                    <th>Giá (VNĐ)</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @if (!empty($court['time_slots']))
+                                                    @foreach ($court['time_slots'] as $slotIndex => $slot)
+                                                        <tr class="@if ($errors->has("courts.{$courtIndex}.time_slots.{$slotIndex}.*")) table-danger @endif">
+                                                            <td>
+                                                                <input type="time"
+                                                                    name="courts[{{ $courtIndex }}][time_slots][{{ $slotIndex }}][start_time]"
+                                                                    value="{{ $slot['start_time'] ?? '' }}"
+                                                                    class="form-control form-control-sm time-start @error("courts.{$courtIndex}.time_slots.{$slotIndex}.start_time") is-invalid @enderror"
+                                                                    required>
+                                                                @error("courts.{$courtIndex}.time_slots.{$slotIndex}.start_time")
+                                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                                @enderror
+                                                            </td>
+                                                            <td>
+                                                                <input type="time"
+                                                                    name="courts[{{ $courtIndex }}][time_slots][{{ $slotIndex }}][end_time]"
+                                                                    value="{{ $slot['end_time'] ?? '' }}"
+                                                                    class="form-control form-control-sm time-end @error("courts.{$courtIndex}.time_slots.{$slotIndex}.end_time") is-invalid @enderror"
+                                                                    required>
+                                                                @error("courts.{$courtIndex}.time_slots.{$slotIndex}.end_time")
+                                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                                @enderror
+                                                            </td>
+                                                            <td>
+                                                                <input type="number"
+                                                                    name="courts[{{ $courtIndex }}][time_slots][{{ $slotIndex }}][price]"
+                                                                    value="{{ $slot['price'] ?? '' }}"
+                                                                    class="form-control form-control-sm time-price @error("courts.{$courtIndex}.time_slots.{$slotIndex}.price") is-invalid @enderror"
+                                                                    required>
+                                                                @error("courts.{$courtIndex}.time_slots.{$slotIndex}.price")
+                                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                                @enderror
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                @endif
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             @endforeach
-                        </select>
-                        @error('owner_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        @else
-                        <input type="hidden" name="owner_id" value="{{ auth()->user()->id }}">
-                        <input type="text" class="form-control" value="{{ auth()->user()->name }}" disabled>
                         @endif
                     </div>
-
-                    <hr class="my-4">
-                    <h6 class="fw-bold">Thông tin địa chỉ</h6>
-
-                    <div class="row">
-                        {{-- Tỉnh/Thành --}}
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Tỉnh/Thành <span class="text-danger">*</span></label>
-                            <select name="province_id" id="province_id" class="form-select @error('province_id') is-invalid @enderror" required>
-                                <option value="">-- Chọn Tỉnh/Thành --</option>
-                                @foreach ($provinces as $province)
-                                <option value="{{ $province->id }}" {{ old('province_id') == $province->id ? 'selected' : '' }}>
-                                    {{ $province->name }}
-                                </option>
-                                @endforeach
-                            </select>
-                            @error('province_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        {{-- Quận/Huyện --}}
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Quận/Huyện <span class="text-danger">*</span></label>
-                            <select name="district_id" id="district_id" class="form-select @error('district_id') is-invalid @enderror" required disabled>
-                                <option value="">-- Vui lòng chọn Tỉnh/Thành trước --</option>
-                            </select>
-                            @error('district_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    {{-- Địa chỉ chi tiết --}}
-                    <div class="mb-3">
-                        <label class="form-label">Địa chỉ chi tiết <span class="text-danger">*</span></label>
-                        <input type="text" name="address_detail"
-                            value="{{ old('address_detail') }}"
-                            class="form-control @error('address_detail') is-invalid @enderror" required>
-                        @error('address_detail')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
                 </div>
             </div>
-
-            {{-- 💡 DANH SÁCH SÂN --}}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">Danh sách sân</h5>
-                    <button type="button" id="add-court-btn" class="btn btn-sm btn-success">
-                        <i class="fas fa-plus"></i> Thêm sân
-                    </button>
-                </div>
-                <div class="card-body" id="court-list">
-                    @if (old('courts'))
-                    @foreach (old('courts') as $courtIndex => $court)
-                    <div class="border rounded p-3 mb-3 court-item" data-index="{{ $courtIndex }}">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0 fw-bold">Sân #<span class="court-number">{{ $courtIndex + 1 }}</span></h6>
-                            <button type="button" class="btn btn-sm btn-danger remove-court"><i class="fas fa-times"></i></button>
-                        </div>
-                        <div class="row">
-                            {{-- Tên sân con --}}
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Tên sân</label>
-                                <input type="text" name="courts[{{ $courtIndex }}][name]"
-                                    value="{{ $court['name'] ?? '' }}"
-                                    class="form-control @error(" courts.{$courtIndex}.name") is-invalid @enderror"
-                                    required>
-                                @error("courts.{$courtIndex}.name")
+            <div class="col-lg-4">
+                {{-- CARD 3: THÔNG TIN BỔ SUNG --}}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Thông tin bổ sung</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Số điện thoại</label>
+                            <input type="tel" name="phone" value="{{ old('phone') }}"
+                                class="form-control @error('phone') is-invalid @enderror" placeholder="09xxxxxxxx">
+                            @error('phone')
                                 <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Giờ mở cửa</label>
+                                <input type="time" name="start_time"
+                                    class="form-control custom-input @error('start_time') is-invalid @enderror"
+                                    value="{{ old('start_time') }}">
+                                @error('start_time')
+                                    <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            {{-- Loại sân con --}}
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Loại sân</label>
-                                <select name="courts[{{ $courtIndex }}][venue_type_id]"
-                                    class="form-select court-type-select @error(" courts.{$courtIndex}.venue_type_id") is-invalid @enderror"
-                                    required>
-                                    <option value="">-- Chọn loại hình --</option>
-                                    @foreach ($venue_types as $type)
-                                    <option value="{{ $type->id }}" {{ ($court['venue_type_id'] ?? '') == $type->id ? 'selected' : '' }}>
+                                <label class="form-label fw-bold">Giờ đóng cửa</label>
+                                <input type="time" name="end_time"
+                                    class="form-control custom-input @error('end_time') is-invalid @enderror"
+                                    value="{{ old('end_time') }}">
+                                @error('end_time')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <hr>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Hình ảnh thương hiệu (Tối đa 5) <span class="text-danger">*</span></label>
+
+                            <ul class="nav nav-tabs" id="imageTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="file-tab" data-bs-toggle="tab"
+                                        data-bs-target="#file-tab-pane" type="button" role="tab"
+                                        aria-controls="file-tab-pane" aria-selected="true">Tải file</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="link-tab" data-bs-toggle="tab"
+                                        data-bs-target="#link-tab-pane" type="button" role="tab"
+                                        aria-controls="link-tab-pane" aria-selected="false">Chèn link</button>
+                                </li>
+                            </ul>
+
+                            <div class="tab-content border border-top-0 p-3 rounded-bottom" id="imageTabContent">
+                                <div class="tab-pane fade show active" id="file-tab-pane" role="tabpanel" aria-labelledby="file-tab" tabindex="0">
+                                    <input type="file" name="images[]" id="images_input"
+                                        class="form-control @error('images') is-invalid @enderror @error('images.*') is-invalid @enderror"
+                                        accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" multiple>
+                                    <div class="form-text text-muted">Chọn file ảnh.</div>
+                                </div>
+
+                                <div class="tab-pane fade" id="link-tab-pane" role="tabpanel" aria-labelledby="link-tab" tabindex="0">
+                                    <div id="image-links-container">
+                                        @if (old('image_links'))
+                                            @foreach (old('image_links') as $i => $link)
+                                                <div class="input-group mb-2 image-link-item">
+                                                    <input type="url" name="image_links[]"
+                                                        class="form-control form-control-sm image-link-input @error('image_links.' . $i) is-invalid @enderror"
+                                                        value="{{ $link }}" placeholder="https://..." required>
+                                                    <button class="btn btn-outline-danger btn-sm remove-link-btn" type="button"><i class="fas fa-trash"></i></button>
+                                                    @error('image_links.' . $i)
+                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                            @endforeach
+                                        @endif
+                                    </div>
+                                    <button type="button" id="add-link-btn" class="btn btn-sm btn-outline-primary mt-2">
+                                        <i class="fas fa-plus me-1"></i> Thêm link ảnh
+                                    </button>
+                                </div>
+                            </div>
+
+                            <input type="hidden" name="primary_image_index" id="primary_image_index" value="{{ old('primary_image_index', 0) }}">
+
+                            @error('images') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                            @error('images.*') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                            @error('image_links') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                            @error('image_links.*') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                            @error('primary_image_index') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                        </div>
+
+                        <h6 class="fw-bold mb-3">Xem trước và chọn ảnh chính</h6>
+                        <div id="images-preview" class="row g-2 mb-4"></div>
+
+                        <label class="form-label fw-bold d-block">Loại hình sân</label>
+                        <div class="border rounded p-2 @error('venue_types') border-danger @enderror">
+                            @foreach ($venue_types as $type)
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input venue-type-checkbox custom-checkbox" type="checkbox"
+                                        name="venue_types[]" id="venue_type_{{ $type->id }}"
+                                        value="{{ $type->id }}"
+                                        {{ is_array(old('venue_types')) && in_array($type->id, old('venue_types')) ? 'checked' : '' }}>
+
+                                    <label class="form-check-label custom-checkbox2" for="venue_type_{{ $type->id }}">
                                         {{ $type->name }}
-                                    </option>
-                                    @endforeach
-                                </select>
-                                @error("courts.{$courtIndex}.venue_type_id")
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                                    </label>
+                                </div>
+                            @endforeach
                         </div>
-                        <div class="row">
-                            {{-- Mặt sân --}}
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Mặt sân</label>
-                                <input type="text" name="courts[{{ $courtIndex }}][surface]"
-                                    value="{{ $court['surface'] ?? '' }}"
-                                    class="form-control @error(" courts.{$courtIndex}.surface") is-invalid @enderror"
-                                    placeholder="Cỏ nhân tạo, cỏ tự nhiên...">
-                                @error("courts.{$courtIndex}.surface")
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            {{-- Trong nhà/Ngoài trời --}}
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Trong nhà / Ngoài trời</label>
-                                <select name="courts[{{ $courtIndex }}][is_indoor]"
-                                    class="form-select @error(" courts.{$courtIndex}.is_indoor") is-invalid @enderror">
-                                    <option value="0" {{ ($court['is_indoor'] ?? '0') == '0' ? 'selected' : '' }}>Ngoài trời</option>
-                                    <option value="1" {{ ($court['is_indoor'] ?? '0') == '1' ? 'selected' : '' }}>Trong nhà</option>
-                                </select>
-                                @error("courts.{$courtIndex}.is_indoor")
-                                <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <h6 class="fw-bold mt-3 d-flex justify-content-between align-items-center">
-                            <span>Khung giờ và giá</span>
-                            <button type="button" class="btn btn-sm btn-outline-success add-time-slot"><i class="fas fa-plus"></i> Thêm khung giờ</button>
-                        </h6>
-                        <div class="table-responsive mt-2">
-                            <table class="table table-bordered table-sm align-middle time-slot-table">
-                                <thead>
-                                    <tr class="bg-light">
-                                        <th>Giờ bắt đầu</th>
-                                        <th>Giờ kết thúc</th>
-                                        <th>Giá (VNĐ)</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @if (!empty($court['time_slots']))
-                                    @foreach ($court['time_slots'] as $slotIndex => $slot)
-                                    <tr class="@if ($errors->has(" courts.{$courtIndex}.time_slots.{$slotIndex}.*")) table-danger @endif">
-                                        <td>
-                                            <input type="time"
-                                                name="courts[{{ $courtIndex }}][time_slots][{{ $slotIndex }}][start_time]"
-                                                value="{{ $slot['start_time'] ?? '' }}"
-                                                class="form-control form-control-sm time-start @error(" courts.{$courtIndex}.time_slots.{$slotIndex}.start_time") is-invalid @enderror"
-                                                required>
-                                            @error("courts.{$courtIndex}.time_slots.{$slotIndex}.start_time")
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </td>
-                                        <td>
-                                            <input type="time"
-                                                name="courts[{{ $courtIndex }}][time_slots][{{ $slotIndex }}][end_time]"
-                                                value="{{ $slot['end_time'] ?? '' }}"
-                                                class="form-control form-control-sm time-end @error(" courts.{$courtIndex}.time_slots.{$slotIndex}.end_time") is-invalid @enderror"
-                                                required>
-                                            @error("courts.{$courtIndex}.time_slots.{$slotIndex}.end_time")
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </td>
-                                        <td>
-                                            <input type="number"
-                                                name="courts[{{ $courtIndex }}][time_slots][{{ $slotIndex }}][price]"
-                                                value="{{ $slot['price'] ?? '' }}"
-                                                class="form-control form-control-sm time-price @error(" courts.{$courtIndex}.time_slots.{$slotIndex}.price") is-invalid @enderror"
-                                                required>
-                                            @error("courts.{$courtIndex}.time_slots.{$slotIndex}.price")
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </td>
-                                        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button></td>
-                                    </tr>
-                                    @endforeach
-                                    @endif
-                                </tbody>
-                            </table>
-                        </div>
+                        @error('venue_types')
+                            <div class="text-danger mt-1 small"><i class="fas fa-exclamation-circle"></i> {{ $message }}</div>
+                        @enderror
                     </div>
-                    @endforeach
-                    @endif
                 </div>
             </div>
         </div>
 
-        {{-- Cột phải: Thông tin bổ sung --}}
-        <div class="col-lg-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Thông tin bổ sung</h5>
-                </div>
-                <div class="card-body">
-                    {{-- Số điện thoại --}}
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Số điện thoại</label>
-                        <input type="tel" name="phone"
-                            value="{{ old('phone') }}"
-                            class="form-control @error('phone') is-invalid @enderror"
-                            placeholder="09xxxxxxxx">
-                        @error('phone')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <div class="row">
-                        {{-- Giờ mở cửa --}}
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Giờ mở cửa</label>
-                            <input type="time" name="start_time"
-                                class="form-control custom-input @error('start_time') is-invalid @enderror"
-                                value="{{ old('start_time') }}">
-                            @error('start_time')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        {{-- Giờ đóng cửa --}}
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Giờ đóng cửa</label>
-                            <input type="time" name="end_time"
-                                class="form-control custom-input @error('end_time') is-invalid @enderror"
-                                value="{{ old('end_time') }}">
-                            @error('end_time')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <hr>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Hình ảnh thương hiệu (Tối đa 5) <span class="text-danger">*</span></label>
-                        
-                        <ul class="nav nav-tabs" id="imageTab" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="file-tab" data-bs-toggle="tab" data-bs-target="#file-tab-pane" type="button" role="tab" aria-controls="file-tab-pane" aria-selected="true">Tải file</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="link-tab" data-bs-toggle="tab" data-bs-target="#link-tab-pane" type="button" role="tab" aria-controls="link-tab-pane" aria-selected="false">Chèn link</button>
-                            </li>
-                        </ul>
-                        
-                        <div class="tab-content border border-top-0 p-3 rounded-bottom" id="imageTabContent">
-                            {{-- Tab 1: Tải file --}}
-                            <div class="tab-pane fade show active" id="file-tab-pane" role="tabpanel" aria-labelledby="file-tab" tabindex="0">
-                                <input type="file" name="images[]" id="images_input"
-                                    class="form-control @error('images') is-invalid @enderror @error('images.*') is-invalid @enderror"
-                                    accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" multiple>
-                                <div class="form-text text-muted">Chọn file ảnh.</div>
-                            </div>
-
-                            {{-- Tab 2: Chèn link --}}
-                            <div class="tab-pane fade" id="link-tab-pane" role="tabpanel" aria-labelledby="link-tab" tabindex="0">
-                                 <div id="image-links-container">
-                                     @if(old('image_links'))
-                                         @foreach(old('image_links') as $i => $link)
-                                             <div class="input-group mb-2 image-link-item">
-                                                 <input type="url" name="image_links[]" class="form-control form-control-sm image-link-input @error('image_links.'.$i) is-invalid @enderror" value="{{ $link }}" placeholder="https://..." required>
-                                                 <button class="btn btn-outline-danger btn-sm remove-link-btn" type="button"><i class="fas fa-trash"></i></button>
-                                                 @error('image_links.'.$i)
-                                                     <div class="invalid-feedback">{{ $message }}</div>
-                                                 @enderror
-                                             </div>
-                                         @endforeach
-                                     @endif
-                                 </div>
-                                 <button type="button" id="add-link-btn" class="btn btn-sm btn-outline-primary mt-2">
-                                     <i class="fas fa-plus me-1"></i> Thêm link ảnh
-                                 </button>
-                            </div>
-                        </div>
-                        
-                        {{-- Input hidden để lưu index của ảnh chính trong MẢNG KẾT HỢP --}}
-                        <input type="hidden" name="primary_image_index" id="primary_image_index" value="{{ old('primary_image_index', 0) }}">
-
-                        @error('images')
-                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                        @error('images.*')
-                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                        @error('image_links')
-                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                        @error('image_links.*')
-                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                        @error('primary_image_index')
-                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                    </div>
-
-                    <h6 class="fw-bold mb-3">Xem trước và chọn ảnh chính</h6>
-                    <div id="images-preview" class="row g-2 mb-4">
-                        {{-- Ảnh preview sẽ được thêm vào đây bằng JS --}}
-                    </div>
-
-
-                    <label class="form-label fw-bold d-block">Loại hình sân</label>
-                    <div class="border rounded p-2 @error('venue_types') border-danger @enderror">
-                        @foreach ($venue_types as $type)
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input venue-type-checkbox custom-checkbox" type="checkbox"
-                                name="venue_types[]" id="venue_type_{{ $type->id }}"
-                                value="{{ $type->id }}"
-                                {{ is_array(old('venue_types')) && in_array($type->id, old('venue_types')) ? 'checked' : '' }}>
-
-                            <label class="form-check-label custom-checkbox2" for="venue_type_{{ $type->id }}">
-                                {{ $type->name }}
-                            </label>
-                        </div>
-                        @endforeach
-                    </div>
-                    @error('venue_types')
-                    <div class="text-danger mt-1 small">
-                        <i class="fas fa-exclamation-circle"></i> {{ $message }}
-                    </div>
-                    @enderror
-                </div>
-            </div>
+        <div class="text-center mt-4">
+            <input type="hidden" name="is_active" value="0">
+            <button type="submit" class="btn btn-primary px-4 py-2">
+                <i class="fas fa-save me-2"></i> Lưu và tạo mới
+            </button>
         </div>
-    </div>
+    </form>
 
-    <div class="text-center mt-4">
-        <input type="hidden" name="is_active" value="0">
-        <button type="submit" class="btn btn-primary px-4 py-2">
-            <i class="fas fa-save me-2"></i> Lưu và tạo mới
-        </button>
-    </div>
-</form>
-
-{{-- ✅ JS: Thêm sân + khung giờ + tự động cập nhật loại sân  --}}
+   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        let courtIndex = {{ old('courts') ? count(old('courts')) : 0 }};
-        const courtList = document.getElementById('court-list');
-        const addCourtBtn = document.getElementById('add-court-btn');
-        // ... (Giữ nguyên các hàm helper cho Court/Time Slot)
+document.addEventListener('DOMContentLoaded', () => {
+   
+    let courtIndex = {{ old('courts') ? count(old('courts')) : 0 }};
+    const courtList = document.getElementById('court-list');
+    const addCourtBtn = document.getElementById('add-court-btn');
 
-        function getSelectedVenueTypes() {
-            const checkedBoxes = document.querySelectorAll('.venue-type-checkbox:checked');
-            return Array.from(checkedBoxes).map(cb => ({
-                id: cb.value,
-                name: cb.nextElementSibling.textContent.trim()
-            }));
+    
+    function timeToMinutes(timeStr) {
+        if (!timeStr) return 0;
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        return hours * 60 + minutes;
+    }
+
+    // Lấy giờ hoạt động của Thương hiệu
+    function getVenueHours() {
+        const open = document.querySelector('input[name="start_time"]').value;
+        const close = document.querySelector('input[name="end_time"]').value;
+        return { 
+            open: open, 
+            close: close,
+            openMin: timeToMinutes(open),
+            
+            closeMin: timeToMinutes(close) === 0 ? 1440 : timeToMinutes(close) 
+        };
+    }
+
+    // Kiểm tra khung giờ có nằm trong giờ thương hiệu không
+    function validateSlotRange(row) {
+        const venue = getVenueHours();
+        const startInput = row.querySelector('.time-start');
+        const endInput = row.querySelector('.time-end');
+        
+        if (!venue.open || !venue.close || !startInput.value || !endInput.value) return;
+
+        const sMin = timeToMinutes(startInput.value);
+        const eMin = timeToMinutes(endInput.value) === 0 ? 1440 : timeToMinutes(endInput.value);
+
+        // Xóa thông báo lỗi cũ
+        row.querySelectorAll('.error-msg').forEach(el => el.remove());
+        row.classList.remove('table-danger');
+
+        // So sánh
+        if (sMin < venue.openMin || eMin > venue.closeMin) {
+            row.classList.add('table-danger');
+            const msg = `<div class="error-msg text-danger small">Ngoài giờ hoạt động (${venue.open} - ${venue.close})</div>`;
+            startInput.closest('td').insertAdjacentHTML('beforeend', msg);
         }
+    }
 
+    function getSelectedVenueTypes() {
+        return Array.from(document.querySelectorAll('.venue-type-checkbox:checked')).map(cb => ({
+            id: cb.value,
+            name: cb.nextElementSibling.textContent.trim()
+        }));
+    }
 
-        function renderVenueTypeOptions(selectedTypes) {
-            if (selectedTypes.length === 0) {
-                return `<option value="">-- Chưa chọn loại hình sân ở trên --</option>`;
-            }
-            return selectedTypes.map(type => `<option value="${type.id}">${type.name}</option>`).join('');
-        }
+    function refreshAllCourtTypeSelects() {
+        const selectedTypes = getSelectedVenueTypes();
+        let options = selectedTypes.length === 0 
+            ? `<option value="">-- Chưa chọn loại hình --</option>` 
+            : `<option value="">-- Chọn loại hình --</option>` + selectedTypes.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
 
-        function splitTimeIntoHourlySlots(startTime, endTime, price) {
-            // CẤU HÌNH GIỜ VÀNG
-            const GOLDEN_HOUR_START = 17; // 5 PM (17:00)
-            const GOLDEN_HOUR_MULTIPLIER = 1.5;
-            const slots = [];
+        document.querySelectorAll('.court-type-select').forEach(select => {
+            const currentVal = select.value;
+            select.innerHTML = options;
+            select.value = currentVal;
+        });
+    }
 
-            // Khởi tạo ngày/giờ ảo
-            const today = new Date('2000-01-01');
-            const startParts = startTime.split(':').map(Number);
-            const endParts = endTime.split(':').map(Number);
+    document.querySelectorAll('.venue-type-checkbox').forEach(cb => cb.addEventListener('change', refreshAllCourtTypeSelects));
 
-            let start = new Date(today);
-            start.setHours(startParts[0], startParts[1], 0, 0);
+    
+    function splitTimeIntoHourlySlots(startTime, endTime, price) {
+        const GOLDEN_HOUR_START = 17; 
+        const GOLDEN_HOUR_MULTIPLIER = 1.5;
+        const slots = [];
+        const venue = getVenueHours();
 
-            let end = new Date(today);
-            end.setHours(endParts[0], endParts[1], 0, 0);
+        let sMin = timeToMinutes(startTime);
+        let eMin = timeToMinutes(endTime) === 0 ? 1440 : timeToMinutes(endTime);
 
-            // Xử lý trường hợp xuyên đêm (End time nhỏ hơn Start time, ví dụ 22:00 -> 06:00)
-            // Hoặc trường hợp kết thúc vào 00:00 (End time = Start time)
-            if (end <= start) {
-                end.setDate(end.getDate() + 1);
-            }
+        const basePrice = Number(price);
+        let currentMin = sMin;
 
-            const basePrice = Number(price);
-            let current = new Date(start);
+        while (currentMin < eMin) {
+            let nextMin = currentMin + 60;
+            if (nextMin > eMin) nextMin = eMin;
 
-            // Lặp chừng nào giờ bắt đầu hiện tại còn trước giờ kết thúc
-            while (current < end) {
-                const next = new Date(current);
-                next.setHours(next.getHours() + 1);
+            let hours = Math.floor(currentMin / 60);
+            let mins = currentMin % 60;
+            let startStr = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 
-                // Giờ kết thúc thực tế của slot phải là min(next full hour, global end time)
-                // Điều chỉnh nextHour chỉ bằng end nếu nextHour vượt quá end
-                const nextHour = (next > end) ? end : next;
+            let nHours = Math.floor(nextMin / 60);
+            let nMins = nextMin % 60;
+            let endStr = `${String(nHours === 24 ? 0 : nHours).padStart(2, '0')}:${String(nMins).padStart(2, '0')}`;
 
-                // Nếu giờ bắt đầu và giờ kết thúc slot trùng nhau (chỉ xảy ra nếu current = end), thì dừng
-                if (current.getTime() === nextHour.getTime()) {
-                    break;
-                }
-
-                let currentPrice;
-                // Kiểm tra giờ vàng (Áp dụng nếu slot bắt đầu từ 17:00 trở đi)
-                if (current.getHours() >= GOLDEN_HOUR_START) {
-                    currentPrice = basePrice * GOLDEN_HOUR_MULTIPLIER;
-                } else {
-                    currentPrice = basePrice;
-                }
-                currentPrice = Math.round(currentPrice);
-
-                const slotStart = current.toTimeString().substring(0, 5);
-                const slotEnd = nextHour.toTimeString().substring(0, 5);
-
-                slots.push({
-                    start_time: slotStart,
-                    end_time: slotEnd,
-                    price: currentPrice
-                });
-
-                current = nextHour; // Chuyển sang giờ tiếp theo
-
-                // Nếu đã đạt đến thời gian kết thúc (end), dừng
-                if (current.getTime() === end.getTime()) {
-                    break;
-                }
-            }
-
-            return slots;
-        }
-
-        // Hàm cập nhật tên input cho time slots và số sân
-        function updateTimeSlotNames() {
-            document.querySelectorAll('.court-item').forEach((courtItem, courtIdx) => {
-                // Cập nhật số sân hiển thị
-                const courtNumber = courtItem.querySelector('.court-number');
-                if (courtNumber) {
-                    courtNumber.textContent = courtIdx + 1;
-                }
-
-                // Cập nhật tên input cho các trường cơ bản của sân
-                courtItem.querySelector('[name$="[name]"]').name = `courts[${courtIdx}][name]`;
-                courtItem.querySelector('[name$="[venue_type_id]"]').name = `courts[${courtIdx}][venue_type_id]`;
-                courtItem.querySelector('[name$="[surface]"]').name = `courts[${courtIdx}][surface]`;
-                courtItem.querySelector('[name$="[is_indoor]"]').name = `courts[${courtIdx}][is_indoor]`;
-
-                // Cập nhật tên input cho time slots
-                const tbody = courtItem.querySelector('tbody');
-                const rows = tbody.querySelectorAll('tr');
-
-                rows.forEach((row, slotIdx) => {
-                    const startInput = row.querySelector('.time-start');
-                    const endInput = row.querySelector('.time-end');
-                    const priceInput = row.querySelector('.time-price');
-
-                    if (startInput) startInput.name =
-                        `courts[${courtIdx}][time_slots][${slotIdx}][start_time]`;
-                    if (endInput) endInput.name =
-                        `courts[${courtIdx}][time_slots][${slotIdx}][end_time]`;
-                    if (priceInput) priceInput.name =
-                        `courts[${courtIdx}][time_slots][${slotIdx}][price]`;
-                });
+            let currentPrice = (hours >= GOLDEN_HOUR_START) ? basePrice * GOLDEN_HOUR_MULTIPLIER : basePrice;
+            
+            slots.push({
+                start: startStr,
+                end: endStr,
+                price: Math.round(currentPrice / 1000) * 1000
             });
+
+            currentMin = nextMin;
         }
+        return slots;
+    }
 
+    function updateAllNames() {
+        document.querySelectorAll('.court-item').forEach((court, cIdx) => {
+            const num = court.querySelector('.court-number');
+            if(num) num.innerText = cIdx + 1;
+            court.querySelectorAll('.time-slot-table tbody tr').forEach((row, sIdx) => {
+                row.querySelector('.time-start').name = `courts[${cIdx}][time_slots][${sIdx}][start_time]`;
+                row.querySelector('.time-end').name = `courts[${cIdx}][time_slots][${sIdx}][end_time]`;
+                row.querySelector('.time-price').name = `courts[${cIdx}][time_slots][${sIdx}][price]`;
+            });
+        });
+    }
 
-        //  Thêm sân mới
-        addCourtBtn.addEventListener('click', () => {
-            const options = renderVenueTypeOptions(getSelectedVenueTypes());
-
-            const newCourt = `
+    addCourtBtn.addEventListener('click', () => {
+        const types = getSelectedVenueTypes();
+        let options = types.length === 0 ? `<option value="">-- Chưa chọn loại hình --</option>` : types.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        const html = `
             <div class="border rounded p-3 mb-3 court-item">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0 fw-bold">Sân #<span class="court-number">${courtIndex + 1}</span></h6>
-                    <button type="button" class="btn btn-sm btn-danger remove-court">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <h6 class="mb-0 fw-bold">Sân #<span class="court-number"></span></h6>
+                    <button type="button" class="btn btn-sm btn-danger remove-court"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
@@ -525,370 +488,126 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Loại sân</label>
-                        <select name="courts[${courtIndex}][venue_type_id]" class="form-select court-type-select" required>
-                            ${options}
-                        </select>
+                        <select name="courts[${courtIndex}][venue_type_id]" class="form-select court-type-select" required><option value="">-- Chọn --</option>${options}</select>
                     </div>
                 </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Mặt sân</label>
-                        <input type="text" name="courts[${courtIndex}][surface]" class="form-control" placeholder="Cỏ nhân tạo, cỏ tự nhiên...">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Trong nhà</label>
-                        <select name="courts[${courtIndex}][is_indoor]" class="form-select">
-                            <option value="0">Ngoài trời</option>
-                            <option value="1">Trong nhà</option>
-                        </select>
-                    </div>
-                </div>
-
-                <h6 class="fw-bold mt-3 d-flex justify-content-between align-items-center">
-                    <span>Khung giờ và giá</span>
-                    <button type="button" class="btn btn-sm btn-outline-success add-time-slot">
-                        <i class="fas fa-plus"></i> Thêm khung giờ
-                    </button>
-                </h6>
-
-                <div class="table-responsive mt-2">
-                    <table class="table table-bordered table-sm align-middle time-slot-table">
-                        <thead>
-                            <tr class="bg-light">
-                                <th>Giờ bắt đầu</th>
-                                <th>Giờ kết thúc</th>
-                                <th>Giá (VNĐ)</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                <table class="table table-bordered table-sm time-slot-table">
+                    <thead><tr class="bg-light"><th>Bắt đầu</th><th>Kết thúc</th><th>Giá (VNĐ)</th><th></th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="time" class="form-control form-control-sm time-start" required></td>
+                            <td><input type="time" class="form-control form-control-sm time-end" required></td>
+                            <td><input type="number" class="form-control form-control-sm time-price" required></td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button type="button" class="btn btn-sm btn-outline-success add-time-slot"><i class="fas fa-plus"></i> Thêm khung giờ</button>
             </div>`;
-            courtList.insertAdjacentHTML('beforeend', newCourt);
-            courtIndex++;
-            updateTimeSlotNames();
-        });
+        courtList.insertAdjacentHTML('beforeend', html);
+        courtIndex++;
+        updateAllNames();
+    });
 
-        // Tự động cập nhật dropdown loại sân khi thay đổi checkbox
-        document.querySelectorAll('.venue-type-checkbox').forEach(cb => {
-            cb.addEventListener('change', () => {
-                const selectedTypes = getSelectedVenueTypes();
-                const options = renderVenueTypeOptions(selectedTypes);
+   
+    document.addEventListener('change', (e) => {
+        if (e.target.classList.contains('time-start') || e.target.classList.contains('time-end') || e.target.classList.contains('time-price')) {
+            const row = e.target.closest('tr');
+            const tbody = row.closest('tbody');
+            const startVal = row.querySelector('.time-start').value;
+            const endVal = row.querySelector('.time-end').value;
+            const priceVal = row.querySelector('.time-price').value;
 
-                document.querySelectorAll('.court-type-select').forEach(select => {
-                    const currentValue = select.value;
-                    select.innerHTML = options;
-
-                    // Nếu lựa chọn hiện tại vẫn còn trong danh sách, giữ nguyên
-                    const stillExists = selectedTypes.some(type => type.id ==
-                        currentValue); // dùng == thay vì === để so sánh string/number
-                    if (stillExists) {
-                        select.value = currentValue;
-                    } else {
-                        select.value = '';
-                    }
-                });
-            });
-        });
-
-        // Quản lý thêm/xóa khung giờ và sân
-        document.addEventListener('click', e => {
-            if (e.target.closest('.add-time-slot')) {
-                const courtItem = e.target.closest('.court-item');
-                const tbody = courtItem.querySelector('tbody');
-
-                tbody.insertAdjacentHTML('beforeend', `
-                    <tr>
-                        <td><input type="time" class="form-control form-control-sm time-start" required></td>
-                        <td><input type="time" class="form-control form-control-sm time-end" required></td>
-                        <td><input type="number" class="form-control form-control-sm time-price" required></td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `);
-                updateTimeSlotNames();
-            }
-
-            if (e.target.closest('.remove-slot')) {
-                e.target.closest('tr').remove();
-                updateTimeSlotNames();
-            }
-
-            if (e.target.closest('.remove-court')) {
-                e.target.closest('.court-item').remove();
-                updateTimeSlotNames(); // Cập nhật lại số thứ tự sân
-            }
-        });
-
-        // Sự kiện thay đổi thời gian - tự động chia slot
-        document.addEventListener('change', e => {
-            if (e.target.classList.contains('time-start') || e.target.classList.contains('time-end') ||
-                e.target.classList.contains('time-price')) {
-                const row = e.target.closest('tr');
-                const startTime = row.querySelector('.time-start').value;
-                const endTime = row.querySelector('.time-end').value;
-                const price = row.querySelector('.time-price').value;
-
-                if (startTime && endTime && price) {
-                    const slots = splitTimeIntoHourlySlots(startTime, endTime, price);
-
-                    if (slots.length > 1) {
-                        const courtItem = row.closest('.court-item');
-                        const tbody = courtItem.querySelector('tbody');
-
-                        // Xóa row hiện tại
-                        row.remove();
-
-                        // Thêm các slot 1 giờ
-                        slots.forEach((slot) => {
-                            tbody.insertAdjacentHTML('beforeend', `
-                                <tr>
-                                    <td><input type="time" name="" class="form-control form-control-sm time-start" value="${slot.start_time}" required></td>
-                                    <td><input type="time" name="" class="form-control form-control-sm time-end" value="${slot.end_time}" required></td>
-                                    <td><input type="number" name="" class="form-control form-control-sm time-price" value="${slot.price}" required></td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button>
-                                    </td>
-                                </tr>
-                            `);
-                        });
-
-                        updateTimeSlotNames();
-                    }
-                }
-            }
-        });
-
-        document.querySelector('form').addEventListener('submit', () => {
-            updateTimeSlotNames();
-        });
-
-
-        const imagesInput = document.getElementById('images_input');
-        const imagesPreviewContainer = document.getElementById('images-preview');
-        const primaryImageIndexInput = document.getElementById('primary_image_index');
-        const addLinkBtn = document.getElementById('add-link-btn');
-        const imageLinksContainer = document.getElementById('image-links-container');
-        const MAX_FILES = 5;
-
-        // Biến toàn cục để lưu trữ các files đã chọn
-        let accumulatedFiles = [];
-        // Biến toàn cục để lưu trữ các link đã nhập
-        let accumulatedLinks = getOldImageLinks();
-        
-        // Helper để lấy link cũ khi validate fail
-        function getOldImageLinks() {
-             const links = [];
-             // Lấy giá trị từ các input link hiện tại nếu có (khi validate fail)
-             document.querySelectorAll('.image-link-input').forEach(input => {
-                if (input.value) {
-                    links.push(input.value);
-                }
-             });
-             return links;
-        }
-
-        // Hàm chính: Cập nhật Preview và primary index
-        function updateCombinedPreview() {
-            imagesPreviewContainer.innerHTML = '';
-            
-            const files = accumulatedFiles;
-            const links = accumulatedLinks;
-            let combinedArray = [...files, ...links];
-            
-            // Xử lý giới hạn 5 ảnh (ưu tiên file)
-            if (combinedArray.length > MAX_FILES) {
-                // Cắt bớt phần tử thừa, ưu tiên file
-                 const numFiles = files.length;
-                 const numLinksToKeep = MAX_FILES - numFiles;
-                 
-                 // Chỉ giữ lại số link cần thiết
-                 accumulatedLinks = links.slice(0, Math.max(0, numLinksToKeep));
-                 
-                 combinedArray = [...files, ...accumulatedLinks];
-            }
-            
-            const finalCount = combinedArray.length;
-
-            if (finalCount === 0) {
-                primaryImageIndexInput.value = '-1';
-                return;
-            }
-
-            // 1. Xác định Primary Index hiện tại
-            let currentPrimaryIndex = parseInt(primaryImageIndexInput.value);
-            
-            // Nếu index không hợp lệ hoặc chưa được set, mặc định chọn ảnh đầu tiên (0)
-            if (currentPrimaryIndex < 0 || currentPrimaryIndex >= finalCount) {
-                currentPrimaryIndex = 0;
-            }
-            
-            // 2. Cập nhật lại input hidden
-            primaryImageIndexInput.value = currentPrimaryIndex;
-
-            // 3. Render Preview
-            combinedArray.forEach((item, index) => {
-                let src = '';
-                let isFile = item instanceof File;
-                const isPrimary = (index === currentPrimaryIndex);
-
-                if (isFile) {
-                    // Đây là file, cần dùng FileReader
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        src = e.target.result;
-                        appendPreviewElement(src, index, isPrimary);
-                    };
-                    reader.readAsDataURL(item);
+            if (startVal && endVal && priceVal) {
+                const slots = splitTimeIntoHourlySlots(startVal, endVal, priceVal);
+                if (slots.length > 1) {
+                    row.remove();
+                    slots.forEach(s => {
+                        tbody.insertAdjacentHTML('beforeend', `
+                            <tr>
+                                <td><input type="time" class="form-control form-control-sm time-start" value="${s.start}" required></td>
+                                <td><input type="time" class="form-control form-control-sm time-end" value="${s.end}" required></td>
+                                <td><input type="number" class="form-control form-control-sm time-price" value="${s.price}" required></td>
+                                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button></td>
+                            </tr>
+                        `);
+                    });
                 } else {
-                    // Đây là link, dùng thẳng URL
-                    src = item;
-                    appendPreviewElement(src, index, isPrimary);
+                    validateSlotRange(row);
                 }
-            });
+                updateAllNames();
+            }
         }
-        
-        // Helper để tạo và thêm element preview
-        function appendPreviewElement(src, index, isPrimary) {
+    });
+
+    
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.add-time-slot')) {
+            const tbody = e.target.closest('.court-item').querySelector('tbody');
+            tbody.insertAdjacentHTML('beforeend', `<tr><td><input type="time" class="form-control form-control-sm time-start" required></td><td><input type="time" class="form-control form-control-sm time-end" required></td><td><input type="number" class="form-control form-control-sm time-price" required></td><td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="fas fa-trash"></i></button></td></tr>`);
+            updateAllNames();
+        }
+        if (e.target.closest('.remove-slot')) { e.target.closest('tr').remove(); updateAllNames(); }
+        if (e.target.closest('.remove-court')) { e.target.closest('.court-item').remove(); updateAllNames(); }
+    });
+
+  
+    const imagesInput = document.getElementById('images_input');
+    const previewContainer = document.getElementById('images-preview');
+    const primaryIndexInput = document.getElementById('primary_image_index');
+    let accumulatedFiles = [];
+
+    function updatePreview() {
+        previewContainer.innerHTML = '';
+        accumulatedFiles.forEach((file, i) => {
             const col = document.createElement('div');
-            col.className = 'col-6 col-md-4 col-lg-6 col-xl-4 image-preview-item';
-            
+            col.className = 'col-6 col-md-4 mb-2';
             col.innerHTML = `
-                <div class="position-relative border rounded p-2 text-center">
-                    <img src="${src}" alt="Preview Image ${index + 1}" class="img-fluid rounded" style="height: 80px; object-fit: cover; width: 100%;">
-                    
-                    <div class="mt-2 form-check">
-                        <input class="form-check-input primary-image-radio" type="radio" 
-                            name="selected_primary_image" id="primary_image_index_${index}" 
-                            value="${index}" ${isPrimary ? 'checked' : ''}>
-                        <label class="form-check-label small fw-bold" for="primary_image_index_${index}">
-                            ${index + 1}. Ảnh chính
-                        </label>
-                    </div>
-                </div>
-            `;
-
-            // Kiểm tra xem đã tồn tại ảnh có index này chưa để tránh lỗi khi FileReader chạy bất đồng bộ
-            const existingElement = imagesPreviewContainer.querySelector(`#primary_image_index_${index}`);
-            if(!existingElement) {
-                 imagesPreviewContainer.appendChild(col);
-            }
-        }
-        
-        // Xử lý khi người dùng chọn file
-        imagesInput.addEventListener('change', function(event) {
-            accumulatedFiles = Array.from(event.target.files);
-            updateCombinedPreview(); 
-            // Sau khi lấy files, reset value để sự kiện change kích hoạt lại ngay cả khi chọn cùng file
-            event.target.value = null; 
-        });
-
-        // Xử lý khi thêm link
-        addLinkBtn.addEventListener('click', () => {
-             const currentCount = accumulatedFiles.length + accumulatedLinks.length;
-             if (currentCount >= MAX_FILES) {
-                 alert(`Chỉ được phép thêm tối đa ${MAX_FILES} ảnh (bao gồm cả file và link).`);
-                 return;
-             }
-             
-             const linkInputHtml = `
-                <div class="input-group mb-2 image-link-item">
-                    <input type="url" name="image_links[]" class="form-control form-control-sm image-link-input" placeholder="https://..." required>
-                    <button class="btn btn-outline-danger btn-sm remove-link-btn" type="button"><i class="fas fa-trash"></i></button>
+                <div class="border rounded p-1 text-center position-relative">
+                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 remove-img" data-idx="${i}">&times;</button>
+                    <img src="${URL.createObjectURL(file)}" class="img-fluid rounded mb-1" style="height:80px; object-fit:cover;">
+                    <div class="form-check small"><input type="radio" name="p_radio" value="${i}" ${primaryIndexInput.value == i ? 'checked' : ''}> Chính</div>
                 </div>`;
-             imageLinksContainer.insertAdjacentHTML('beforeend', linkInputHtml);
-             
-             imageLinksContainer.lastElementChild.querySelector('input').focus();
+            previewContainer.appendChild(col);
         });
-        
-        // Xử lý khi xóa link hoặc nhập/thay đổi link
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.remove-link-btn')) {
-                const item = e.target.closest('.image-link-item');
-                item.remove();
-                
-                // Cập nhật lại accumulatedLinks và preview
-                accumulatedLinks = getOldImageLinks();
-                updateCombinedPreview();
-            }
-        });
-        
-        document.addEventListener('input', function(e) {
-            if (e.target.classList.contains('image-link-input')) {
-                // Cập nhật lại accumulatedLinks và preview (debounce nếu cần thiết, nhưng input khá ổn)
-                accumulatedLinks = getOldImageLinks();
-                updateCombinedPreview();
-            }
-        });
+    }
 
-
-        // Xử lý sự kiện khi radio button chọn ảnh chính được nhấn
-        document.addEventListener('change', function(e) {
-            if (e.target && e.target.classList.contains('primary-image-radio')) {
-                primaryImageIndexInput.value = e.target.value;
-            }
-        });
-        
-        // Chạy lần đầu để hiển thị preview nếu có link cũ (khi validate fail)
-        if (accumulatedLinks.length > 0 || accumulatedFiles.length > 0) {
-            updateCombinedPreview();
-        }
+    imagesInput.addEventListener('change', (e) => {
+        accumulatedFiles = [...accumulatedFiles, ...Array.from(e.target.files)].slice(0, 5);
+        updatePreview();
     });
-</script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $(document).ready(function() {
-        // Cập nhật logic load Quận/Huyện để xử lý trường hợp load trang lại sau validate fail
-        var oldProvinceId = $('#province_id').val();
-        var oldDistrictId = "{{ old('district_id') }}";
-        
-        // Hàm tải quận/huyện
-        function loadDistricts(provinceId, selectedDistrictId) {
-            var districtSelect = $('#district_id');
-            districtSelect.html('<option value="">-- Đang tải... --</option>');
-            districtSelect.prop('disabled', true);
 
-            if (provinceId) {
-                $.ajax({
-                    url: '/api/districts/' + provinceId,
-                    type: 'GET',
-                    dataType: 'json',
-                    success: function(data) {
-                        districtSelect.prop('disabled', false);
-                        districtSelect.html(
-                            '<option value="" disabled selected>-- Chọn Quận/Huyện --</option>'
-                        );
-                        $.each(data, function(key, value) {
-                            var selected = (value.id == selectedDistrictId) ? 'selected' : '';
-                            districtSelect.append('<option value="' + value.id + '" ' + selected + '>' + value.name + '</option>');
-                        });
-                    },
-                    error: function() {
-                        districtSelect.html(
-                            '<option value="">-- Có lỗi xảy ra --</option>');
-                        console.error('Lỗi khi tải danh sách quận/huyện.');
-                    }
-                });
-            } else {
-                districtSelect.html('<option value="">-- Vui lòng chọn Tỉnh/Thành trước --</option>');
-                districtSelect.prop('disabled', true);
-            }
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-img')) {
+            accumulatedFiles.splice(e.target.dataset.idx, 1);
+            updatePreview();
         }
-        
-        // Load quận/huyện lần đầu nếu có old value
-        if (oldProvinceId) {
-            loadDistricts(oldProvinceId, oldDistrictId);
-        }
+        if (e.target.name === 'p_radio') primaryIndexInput.value = e.target.value;
+    });
 
-        // Sự kiện thay đổi Tỉnh/Thành
-        $('#province_id').on('change', function() {
-            var provinceId = $(this).val();
-            // Khi đổi tỉnh, reset quận/huyện
-            loadDistricts(provinceId, ''); 
+    document.getElementById('venue-create-form').addEventListener('submit', function(e) {
+        const dataTransfer = new DataTransfer();
+        accumulatedFiles.forEach(f => dataTransfer.items.add(f));
+        imagesInput.files = dataTransfer.files;
+    });
+
+   
+    const $p = $('#province_id'), $d = $('#district_id');
+    $.get('/api-proxy/provinces', (data) => {
+        let h = '<option value="">-- Chọn --</option>';
+        data.forEach(x => h += `<option value="${x.code}" ${$p.data('old') == x.code ? 'selected' : ''}>${x.name}</option>`);
+        $p.html(h).trigger('change');
+    });
+    $p.on('change', function() {
+        const code = $(this).val();
+        if (!code) return $d.html('<option value="">-- Chọn --</option>').prop('disabled', true);
+        $d.prop('disabled', false).html('<option>Đang tải...</option>');
+        $.get('/api-proxy/districts/' + code, (data) => {
+            let h = '<option value="">-- Chọn --</option>';
+            data.forEach(x => h += `<option value="${x.code}" ${$d.data('old') == x.code ? 'selected' : ''}>${x.name}</option>`);
+            $d.html(h);
         });
     });
+});
 </script>
 @endsection

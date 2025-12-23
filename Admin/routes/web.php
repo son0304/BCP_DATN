@@ -2,6 +2,7 @@
 
 // use App\Http\Controllers\ChatController as ControllersChatController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Web\{
     AdminStatisticController,
     AvailabilityController,
@@ -24,6 +25,16 @@ use App\Http\Controllers\Web\{
 // ====== AUTH & PUBLIC ROUTES ======
 // ==============================
 
+//api dia chi
+Route::get('/api-proxy/provinces', function () {
+    $response = Http::get('https://provinces.open-api.vn/api/?depth=1');
+    return $response->json();
+});
+
+Route::get('/api-proxy/districts/{code}', function ($code) {
+    $response = Http::get("https://provinces.open-api.vn/api/p/{$code}?depth=2");
+    return $response->json()['districts'] ?? [];
+});
 // Auth
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
 Route::post('/register', [AuthController::class, 'register']);

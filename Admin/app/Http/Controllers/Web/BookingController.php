@@ -111,6 +111,35 @@ class BookingController extends Controller
             'status' => $request->status,
             'payment_status' => $request->payment_status,
         ]);
+        if ($request->status == 3 && $oldStatus != 3) {
+        
+        // 1. Lấy khung giờ kết thúc muộn nhất của đơn này
+        // (Sắp xếp theo ngày và giờ kết thúc của slot cuối cùng)
+        $lastItem = $ticket->items->map(function($item) {
+            return [
+                'full_end_time' => Carbon::parse($item->booking->date . ' ' . $item->booking->timeSlot->end_time)
+            ];
+        })->sortByDesc('full_end_time')->first();
+
+        $finalEndTime = $lastItem['full_end_time'];
+
+        // 2. Thiết lập thời gian thực thi
+        $now = now();
+        
+        // Hẹn giờ thông báo: End Time - 10 phút
+        $notifyAt = $finalEndTime->copy()->subMinutes(10);
+        
+        if ($notifyAt->gt($now)) {
+            // Gửi ticket vào hàng đợi, delay đến lúc cần thông báo
+            NotifyOwnerJob::dispatch($ticket)->delay($notifyAt);
+        }
+
+        // Hẹn giờ tự động hoàn thành: Đúng lúc End Time
+        if ($finalEndTime->gt($now)) {
+            AutoCompleteTicketJob::dispatch($ticket)->delay($finalEndTime);
+        }
+    }
+
 
         return redirect()->back()->with('success', 'Cập nhật đơn hàng thành công!');
     }

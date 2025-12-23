@@ -228,18 +228,19 @@ class ServicesController extends Controller
             foreach ($service->images as $image) {
                 $path = str_replace(url('/storage'), 'public', $image->url);
                 Storage::delete($path);
-                $image->delete(); // hard delete image
+                $image->forceDelete(); // ❗ cứng
             }
 
-            // 2️⃣ Soft delete toàn bộ venue_services liên quan
-            $service->venueServices()->delete();
+            // 2️⃣ Xóa cứng toàn bộ venue_services
+            $service->venueServices()->forceDelete();
 
-            // 3️⃣ Soft delete service
-            $service->delete();
+            // 3️⃣ Xóa cứng service
+            $service->forceDelete();
         });
 
-        return back()->with('success', 'Đã xóa dịch vụ và toàn bộ venue_service liên quan');
+        return back()->with('success', 'Đã xóa cứng dịch vụ và toàn bộ dữ liệu liên quan');
     }
+
 
     public function  update_stock(Request $request)
     {
@@ -261,7 +262,8 @@ class ServicesController extends Controller
                 'price' => $validated['price'],
                 'stock' => $validated['stock'],
             ]);
-        } else {
+        }
+        if (!$venue_service) {
             Log::warning("VenueService not found for service_id: {$validated['service_id']} and venue_id: {$validated['venue_id']}");
             return redirect()->back()->with('error', 'Dịch vụ không tồn tại cho sân này. Vui lòng thử lại.');
         }

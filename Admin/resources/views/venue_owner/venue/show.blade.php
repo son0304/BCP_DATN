@@ -229,7 +229,7 @@
     <div class="modal fade" id="updateServiceModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-                {{-- Form Action trỏ về route update_stock --}}
+                {{-- Form Action --}}
                 <form id="formUpdateService" method="POST" action="{{ route('owner.services.update_stock') }}">
                     @csrf
 
@@ -237,7 +237,7 @@
                     <input type="hidden" name="venue_id" id="hiddenVenueId">
                     <input type="hidden" name="service_id" id="hiddenServiceId">
 
-                    {{-- QUAN TRỌNG: Đây là input stock duy nhất được gửi đi. JS sẽ đổ dữ liệu vào đây --}}
+                    {{-- 2. Input stock chính thức (DUY NHẤT) được gửi đi --}}
                     <input type="hidden" name="stock" id="finalStockValue">
 
                     <div class="modal-header">
@@ -263,7 +263,6 @@
                             <div class="col-6" id="stockStatusColumn">
 
                                 {{-- Giao diện 1: Nhập số tồn (Cho sản phẩm thường) --}}
-                                {{-- Lưu ý: Không đặt name="stock" ở đây để tránh trùng lặp --}}
                                 <div id="stockInputGroup">
                                     <label class="form-label small fw-bold">Số lượng tồn kho</label>
                                     <input type="number" id="uiStockInput" class="form-control" min="0">
@@ -273,12 +272,13 @@
                                 <div id="statusToggleGroup" class="d-none">
                                     <label class="form-label small fw-bold">Trạng thái tiện ích</label>
                                     <div class="btn-group w-100" role="group">
-                                        {{-- Name là ui_stock_radio để JS bắt sự kiện, không gửi trực tiếp --}}
-                                        <input type="radio" class="btn-check" name="ui_stock_radio"
+                                        {{-- [ĐÃ XÓA NAME] để không gửi lên server, thêm class stock-radio-btn để xử lý JS --}}
+                                        <input type="radio" class="btn-check stock-radio-btn"
                                             id="statusMaintenance" value="0">
                                         <label class="btn btn-outline-danger" for="statusMaintenance">Bảo trì</label>
 
-                                        <input type="radio" class="btn-check" name="ui_stock_radio" id="statusActive"
+                                        {{-- [ĐÃ XÓA NAME] để không gửi lên server, thêm class stock-radio-btn để xử lý JS --}}
+                                        <input type="radio" class="btn-check stock-radio-btn" id="statusActive"
                                             value="1">
                                         <label class="btn btn-outline-success" for="statusActive">Hoạt động</label>
                                     </div>
@@ -304,10 +304,9 @@
                 var updateModal = document.getElementById('updateServiceModal');
 
                 updateModal.addEventListener('show.bs.modal', function(event) {
-                    // 1. Lấy nút kích hoạt modal
                     var button = event.relatedTarget;
 
-                    // 2. Lấy dữ liệu từ data attributes
+                    // Lấy dữ liệu
                     var venueId = button.getAttribute('data-venue-id');
                     var serviceId = button.getAttribute('data-service-id');
                     var name = button.getAttribute('data-name');
@@ -315,76 +314,75 @@
                     var price = button.getAttribute('data-price');
                     var stock = button.getAttribute('data-stock');
 
-                    // 3. Gán ID vào input ẩn
+                    // Gán ID
                     document.getElementById('hiddenVenueId').value = venueId;
                     document.getElementById('hiddenServiceId').value = serviceId;
-
-                    // 4. Fill dữ liệu hiển thị cơ bản
                     document.getElementById('modalServiceName').value = name;
 
-                    document.getElementById('modalServicePrice').value = price.toLocaleString('vi-VN');ss
+                    // Format giá
+                    var priceInput = document.getElementById('modalServicePrice');
+                    priceInput.value = Math.floor(price);
+
+                    // DOM elements
                     var priceCol = document.getElementById('priceInputColumn');
                     var stockCol = document.getElementById('stockStatusColumn');
-
                     var stockGroup = document.getElementById('stockInputGroup');
                     var statusGroup = document.getElementById('statusToggleGroup');
+                    var uiStockInput = document.getElementById('uiStockInput');
+                    var finalStockInput = document.getElementById('finalStockValue');
 
-                    var uiStockInput = document.getElementById('uiStockInput'); // Input nhập số
-                    var finalStockInput = document.getElementById('finalStockValue'); // Input ẩn gửi đi
+                    // Reset Radio (Vì không có name nên phải reset tay)
+                    var radioBtns = document.querySelectorAll('.stock-radio-btn');
+                    radioBtns.forEach(r => r.checked = false);
 
-                    // Reset Radio
-                    document.getElementById('statusActive').checked = false;
-                    document.getElementById('statusMaintenance').checked = false;
-
-                    // 6. LOGIC HIỂN THỊ THEO TYPE
+                    // === LOGIC XỬ LÝ ===
                     if (type === 'amenities') {
-                        // === TRƯỜNG HỢP: AMENITIES ===
-                        priceCol.classList.add('d-none'); // Ẩn giá
-                        stockCol.classList.replace('col-6', 'col-12'); // Mở rộng cột trạng thái
+                        // 1. Tiện ích
+                        priceCol.classList.add('d-none');
+                        priceInput.value = 0; // Reset giá về 0
 
-                        stockGroup.classList.add('d-none'); // Ẩn nhập số
-                        statusGroup.classList.remove('d-none'); // Hiện Radio
+                        stockCol.classList.replace('col-6', 'col-12');
+                        stockGroup.classList.add('d-none');
+                        statusGroup.classList.remove('d-none');
 
-                        // Set giá trị ban đầu cho Radio
-                        if (stock == 1) {
+                        // Set checked và giá trị gửi đi
+                        if (stock > 0) {
                             document.getElementById('statusActive').checked = true;
+                            finalStockInput.value = 1;
                         } else {
                             document.getElementById('statusMaintenance').checked = true;
+                            finalStockInput.value = 0;
                         }
 
-                        // Set giá trị cho input ẩn
-                        finalStockInput.value = stock;
-
                     } else {
-                        // === TRƯỜNG HỢP: DỊCH VỤ THƯỜNG ===
-                        priceCol.classList.remove('d-none'); // Hiện giá
-                        stockCol.classList.replace('col-12', 'col-6'); // Thu nhỏ cột stock
+                        // 2. Dịch vụ thường
+                        priceCol.classList.remove('d-none');
+                        stockCol.classList.replace('col-12', 'col-6');
+                        stockGroup.classList.remove('d-none');
+                        statusGroup.classList.add('d-none');
 
-                        stockGroup.classList.remove('d-none'); // Hiện nhập số
-                        statusGroup.classList.add('d-none'); // Ẩn Radio
-
-                        // Set giá trị ban đầu cho Input số
                         uiStockInput.value = stock;
-
-                        // Set giá trị cho input ẩn
                         finalStockInput.value = stock;
                     }
 
-                    // 7. LẮNG NGHE SỰ KIỆN ĐỂ CẬP NHẬT INPUT ẨN
+                    // --- EVENT LISTENERS ---
 
-                    // a. Khi gõ số -> update input ẩn
+                    // 1. Khi nhập số (Dịch vụ thường)
                     uiStockInput.oninput = function() {
                         finalStockInput.value = this.value;
                     };
 
-                    // b. Khi chọn Radio -> update input ẩn
-                    var radios = document.querySelectorAll('input[name="ui_stock_radio"]');
-                    radios.forEach(radio => {
-                        radio.onchange = function() {
-                            if (this.checked) {
-                                finalStockInput.value = this.value;
-                            }
-                        };
+                    // 2. Khi click Radio (Tiện ích) - Xử lý logic thay cho thuộc tính "name"
+                    radioBtns.forEach(btn => {
+                        // Dùng sự kiện click để xử lý toggle
+                        btn.onclick = function() {
+                            // Bỏ chọn tất cả các nút khác
+                            radioBtns.forEach(other => {
+                                if (other !== this) other.checked = false;
+                            });
+                            // Cập nhật giá trị vào input ẩn
+                            finalStockInput.value = this.value;
+                        }
                     });
                 });
             });

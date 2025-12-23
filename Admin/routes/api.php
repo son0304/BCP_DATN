@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\TransactionApiController;
 use App\Http\Controllers\Api\WalletApiController;
 use App\Http\Controllers\Web\LocationController;
 use App\Http\Controllers\Api\VenueTypeApiController;
+use App\Http\Controllers\Api\ChatApiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -78,6 +79,13 @@ Route::middleware(['jwt.auth'])->group(function () {
 
     // Logout
     Route::post('/logout', [AuthApiController::class, 'logout']);
+
+    Route::prefix('chats')->group(function () {
+        // Gửi tin nhắn mới (POST: /api/chats/send/{otherUserId})
+        Route::post('/send/{otherUserId}', [ChatApiController::class, 'sendMessage']);
+        // Lấy lịch sử tin nhắn (GET: /api/chats/{otherUserId}/messages)
+        Route::get('/{otherUserId}/messages', [ChatApiController::class, 'getMessages']);
+    });
 
     Route::get('/wallet', [WalletApiController::class, 'myWallet']);
     Route::get('/merchant', [MerchantApiController::class, 'index']);

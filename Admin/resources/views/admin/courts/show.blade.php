@@ -14,6 +14,7 @@
     </div>
 
     <div class="row g-4">
+
         {{-- THÔNG TIN CƠ BẢN --}}
         <div class="col-lg-6">
             <div class="card shadow-sm border-0 h-100 info-card">
@@ -23,35 +24,17 @@
                 <div class="card-body">
 
                     <style>
-                        .info-card .label {
-                            font-size: 0.85rem;
-                            color: #6c757d;
-                        }
-
-                        .info-card .value {
-                            font-size: 1rem;
-                            font-weight: 600;
-                        }
-
+                        .info-card .label { font-size: 0.85rem; color: #6c757d; }
+                        .info-card .value { font-size: 1rem; font-weight: 600; }
                         .info-card .icon-badge {
-                            width: 36px;
-                            height: 36px;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            font-size: 1rem;
-                            border-radius: 50%;
+                            width: 36px; height: 36px; display: flex;
+                            align-items: center; justify-content: center;
+                            font-size: 1rem; border-radius: 50%;
                         }
-
                         .info-card .info-row {
-                            margin-bottom: 12px;
-                            display: flex;
-                            align-items: center;
+                            margin-bottom: 12px; display: flex; align-items: center;
                         }
-
-                        .info-card .info-row .text-container {
-                            flex: 1;
-                        }
+                        .info-card .info-row .text-container { flex: 1; }
                     </style>
 
                     <!-- Tên sân -->
@@ -105,7 +88,7 @@
                     <!-- Bề mặt -->
                     <div class="info-row">
                         <span class="badge bg-secondary text-white icon-badge me-3">
-                            <i class="fas fa-th"></i> <!-- icon dạng lưới -->
+                            <i class="fas fa-th"></i>
                         </span>
                         <div class="text-container">
                             <div class="label">Bề mặt</div>
@@ -115,7 +98,6 @@
 
                     <hr>
 
-                    <!-- Thời gian tạo/cập nhật -->
                     <div class="small text-muted">
                         Tạo lúc: {{ $court->created_at?->format('d/m/Y H:i') ?? 'N/A' }} <br>
                         Cập nhật: {{ $court->updated_at?->format('d/m/Y H:i') ?? 'N/A' }}
@@ -125,7 +107,7 @@
             </div>
         </div>
 
-        {{-- LỊCH HOẠT ĐỘNG --}}
+        {{-- LỊCH HOẠT ĐỘNG - ADMIN --}}
         <div class="col-lg-6">
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white border-0">
@@ -134,18 +116,19 @@
 
                 <div class="card-body">
                     @if ($availabilities->isNotEmpty())
+
+                    {{-- GRID NGÀY --}}
                     <div class="calendar-grid row row-cols-7 g-2 text-center mb-4">
                         @php $localTimezone = 'Asia/Ho_Chi_Minh'; @endphp
+
                         @foreach ($availabilities as $date => $dayAvailabilities)
                         @php
-                        $carbonDate = \Carbon\Carbon::parse($date, $localTimezone);
-                        if ($carbonDate->isPast() && !$carbonDate->isToday()) {
-                        continue;
-                        }
+                            $carbonDate = \Carbon\Carbon::parse($date, $localTimezone);
+                            if ($carbonDate->isPast() && !$carbonDate->isToday()) continue;
                         @endphp
+
                         <div class="col">
-                            <div class="calendar-day p-2 border rounded shadow-sm"
-                                data-date="{{ $date }}">
+                            <div class="calendar-day p-2 border rounded shadow-sm" data-date="{{ $date }}">
                                 <strong>{{ $carbonDate->format('d') }}</strong>
                                 <div class="small text-muted">{{ $carbonDate->isoFormat('ddd') }}</div>
                             </div>
@@ -153,48 +136,69 @@
                         @endforeach
                     </div>
 
-                    {{-- Chi tiết khung giờ --}}
+                    {{-- CHI TIẾT KHUNG GIỜ --}}
                     <div id="scheduleDetail" class="mt-4">
                         <p class="text-muted text-center">Hãy chọn ngày để xem chi tiết khung giờ.</p>
                     </div>
 
+                    {{-- TEMPLATE KHUNG GIỜ --}}
                     @foreach ($availabilities as $date => $dayAvailabilities)
                     @php
-                    $carbonDate = \Carbon\Carbon::parse($date, $localTimezone);
-                    if ($carbonDate->isPast() && !$carbonDate->isToday()) {
-                    continue;
-                    }
+                        $carbonDate = \Carbon\Carbon::parse($date, $localTimezone);
+                        $now = \Carbon\Carbon::now($localTimezone);
+
+                        if ($carbonDate->isPast() && !$carbonDate->isToday()) continue;
                     @endphp
+
                     <template id="tpl-{{ $date }}">
                         <div class="mb-3">
                             <h6>Khung giờ ngày <strong>{{ $carbonDate->format('d/m/Y') }}</strong></h6>
+
                             <ul class="list-group">
+
                                 @foreach ($dayAvailabilities->sortBy('timeSlot.start_time') as $availability)
-                                <li
-                                    class="list-group-item d-flex justify-content-between align-items-center">
+
+                                @php
+                                    $slotStart = \Carbon\Carbon::parse($availability->timeSlot->start_time, $localTimezone);
+                                    $slotEnd   = \Carbon\Carbon::parse($availability->timeSlot->end_time, $localTimezone);
+                                @endphp
+
+                                {{-- NEW REALTIME FILTER --}}
+                                @if ($carbonDate->isToday() && $slotEnd->lt($now))
+                                    @continue
+                                @endif
+
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
                                     <span>{{ $availability->timeSlot->label }}</span>
+
                                     <span>
                                         {{ number_format($availability->price, 0, ',', '.') }}₫
-                                        @if ($availability->status === 'booked')
-                                        <span class="badge bg-danger ms-2">Đã đặt</span>
-                                        @elseif ($availability->status === 'maintenance')
-                                        <span class="badge bg-secondary ms-2">Bảo trì</span>
+
+                                        @if ($availability->status === "booked")
+                                            <span class="badge bg-danger ms-2">Đã đặt</span>
+                                        @elseif ($availability->status === "maintenance")
+                                            <span class="badge bg-secondary ms-2">Bảo trì</span>
                                         @else
-                                        <span class="badge bg-success ms-2">Mở</span>
+                                            <span class="badge bg-success ms-2">Mở</span>
                                         @endif
                                     </span>
                                 </li>
+
                                 @endforeach
+
                             </ul>
                         </div>
                     </template>
+
                     @endforeach
+
                     @else
                     <p class="text-center text-muted py-4">Chưa có lịch hoạt động.</p>
                     @endif
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -228,4 +232,5 @@
         });
     });
 </script>
+
 @endsection

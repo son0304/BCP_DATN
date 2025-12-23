@@ -331,7 +331,7 @@
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
                         <h5 class="mb-0 text-primary fw-bold"><i class="fas fa-cocktail me-2"></i>Dịch vụ</h5>
-                        
+
                     </div>
                     <div class="card-body p-0">
                         @if ($venue->services->count())

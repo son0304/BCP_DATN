@@ -1,6 +1,8 @@
 <?php
 
+// use App\Http\Controllers\ChatController as ControllersChatController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Web\{
     AdminStatisticController,
     AvailabilityController,
@@ -10,6 +12,7 @@ use App\Http\Controllers\Web\{
     UserController,
     BookingController,
     AuthController,
+    ChatController,
     FlashSaleCampaignController,
     FlashSaleItemController,
     OwnerStatisticController,
@@ -19,6 +22,7 @@ use App\Http\Controllers\Web\{
     ServicesCategorieController,
     ServicesController,
     TransactionController
+
 };
 use App\Models\FlashSaleCampaign;
 
@@ -26,6 +30,16 @@ use App\Models\FlashSaleCampaign;
 // ====== AUTH & PUBLIC ROUTES ======
 // ==============================
 
+//api dia chi
+Route::get('/api-proxy/provinces', function () {
+    $response = Http::get('https://provinces.open-api.vn/api/?depth=1');
+    return $response->json();
+});
+
+Route::get('/api-proxy/districts/{code}', function ($code) {
+    $response = Http::get("https://provinces.open-api.vn/api/p/{$code}?depth=2");
+    return $response->json()['districts'] ?? [];
+});
 // Auth
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
 Route::post('/register', [AuthController::class, 'register']);
@@ -49,6 +63,18 @@ Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index'
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
 
     Route::get('/', [AdminStatisticController::class, 'index'])->name('statistics.index');
+
+    Route::prefix('chats')->name('chats.')->group(function () {
+        // Danh sách các cuộc hội thoại
+        Route::get('/', [ChatController::class, 'index'])->name('index');
+
+        // Chi tiết cuộc hội thoại với một Venue Owner cụ thể
+        Route::get('{otherUserId}', [ChatController::class, 'show'])->name('show');
+
+        // Gửi tin nhắn và TẠO Conversation nếu là tin nhắn đầu tiên
+        // Đã đổi {conversationId} thành {otherUserId} và sendMessage thành sendOrStartChat
+        Route::post('{otherUserId}/send', [ChatController::class, 'sendOrStartChat'])->name('send');
+    });
 
     // --- USERS MANAGEMENT ---
     Route::prefix('users')->name('users.')->group(function () {
@@ -122,6 +148,18 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
     // Dashboard
     Route::get('/', [OwnerStatisticController::class, 'index'])->name('statistics.index');
 
+    Route::prefix('chats')->name('chats.')->group(function () {
+        // Danh sách các cuộc hội thoại
+        Route::get('/', [ChatController::class, 'index'])->name('index');
+
+        // Chi tiết cuộc hội thoại với một người dùng cụ thể
+        Route::get('{otherUserId}', [ChatController::class, 'show'])->name('show');
+
+        // Gửi tin nhắn và TẠO Conversation nếu là tin nhắn đầu tiên
+        // Đã đổi {conversationId} thành {otherUserId} và sendMessage thành sendOrStartChat
+        Route::post('{otherUserId}/send', [ChatController::class, 'sendOrStartChat'])->name('send');
+    });
+
     // --- VENUES CRUD (Owner chỉ thao tác với sân của mình) ---
     Route::prefix('venues')->name('venues.')->group(function () {
         Route::get('/', [VenueController::class, 'index'])->name('index'); // danh sách venues của owner
@@ -174,5 +212,6 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
         Route::post('update_stock', [ServicesController::class, 'update_stock'])->name('update_stock');
         Route::put('{id}', [ServicesController::class, 'update'])->name('update');
         Route::delete('{id}', [ServicesController::class, 'destroy'])->name('destroy');
+
     });
 });

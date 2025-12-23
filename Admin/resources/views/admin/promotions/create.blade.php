@@ -3,149 +3,165 @@
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h3 class="card-title">Tạo Voucher Mới</h3>
-                        <a href="{{ route('admin.promotions.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Quay lại
+                        <h4 class="card-title mb-0 text-primary font-weight-bold">Tạo Voucher Mới</h4>
+                        <a href="{{ route('admin.promotions.index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> Quay lại
                         </a>
                     </div>
                 </div>
-                
+
                 <div class="card-body">
-                    @if ($errors->any())
-                        <div class="alert alert-danger mb-4" style="display: block !important;">
-                            <h5 class="alert-heading">
-                                <i class="fas fa-exclamation-triangle me-2"></i>Vui lòng kiểm tra lại thông tin
-                            </h5>
-                            <ul class="mb-0">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
 
                     <form method="POST" action="{{ route('admin.promotions.store') }}">
                         @csrf
-                        
+
                         <div class="row">
+                            {{-- Mã Voucher --}}
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="code">Mã voucher <span class="text-danger">*</span></label>
-                                    <input type="text" 
-                                           class="form-control" 
-                                           id="code" 
-                                           name="code" 
-                                           value="{{ old('code') }}" 
-                                           placeholder="VD: SALE2024">
+                                    <label for="code" class="form-label fw-bold">Mã voucher <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                        class="form-control @error('code') is-invalid @enderror"
+                                        id="code"
+                                        name="code"
+                                        value="{{ old('code') }}"
+                                        placeholder="VD: SALE2024"
+                                        style="text-transform: uppercase">
+                                    @error('code')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                     <small class="form-text text-muted">Mã voucher sẽ được tự động chuyển thành chữ in hoa</small>
                                 </div>
                             </div>
-                            
+
+                            {{-- Loại Voucher --}}
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="type">Loại voucher <span class="text-danger">*</span></label>
-                                    <select class="form-control" 
-                                            id="type" 
-                                            name="type">
+                                    <label for="type" class="form-label fw-bold">Loại voucher <span class="text-danger">*</span></label>
+                                    <select class="form-select @error('type') is-invalid @enderror"
+                                        id="type"
+                                        name="type">
                                         <option value="">Chọn loại voucher</option>
                                         <option value="%" {{ old('type') == '%' ? 'selected' : '' }}>Phần trăm (%)</option>
-                                        <option value="VND" {{ old('type') == 'VND' ? 'selected' : '' }}>Tiền mặt (VND)</option>
+                                        <option value="money" {{ old('type') == 'money' ? 'selected' : '' }}>Tiền mặt (VND)</option>
                                     </select>
+                                    @error('type')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
 
                         <div class="row">
+                            {{-- Giá trị --}}
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="value">Giá trị <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <input type="number" 
-                                               class="form-control" 
-                                               id="value" 
-                                               name="value" 
-                                               value="{{ old('value') }}" 
-                                               placeholder="VD: 10 hoặc 50000">
+                                    <label for="value" class="form-label fw-bold">Giá trị giảm <span class="text-danger">*</span></label>
+                                    <div class="input-group has-validation">
+                                        <input type="number"
+                                            class="form-control @error('value') is-invalid @enderror"
+                                            id="value"
+                                            name="value"
+                                            value="{{ old('value') }}"
+                                            placeholder="VD: 10 hoặc 50000"
+                                            min="0">
                                         <span class="input-group-text" id="valueType">
-                                            @if(old('type') == '%')
-                                                %
-                                            @elseif(old('type') == 'VND')
-                                                ₫
-                                            @else
-                                                -
-                                            @endif
+                                            @if(old('type') == '%') % @elseif(old('type') == 'money') ₫ @else - @endif
                                         </span>
+                                        @error('value')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
                                     </div>
-                                    <small class="form-text text-muted">
-                                       Phần trăm : 10 = 10%<br>
-                                       VND : 50000 = 50,000
+                                    <small class="form-text text-muted fst-italic">
+                                        Ví dụ: Nhập 10 cho 10%, nhập 50000 cho 50,000đ
                                     </small>
                                 </div>
                             </div>
-                            
+
+                            {{-- Giảm tối đa (Chỉ hiện khi chọn %) --}}
                             <div class="col-md-6">
                                 <div class="form-group mb-3" id="capWrapper" style="display: {{ old('type') == '%' ? 'block' : 'none' }};">
-                                    <label for="max_discount_amount">Số tiền giảm tối đa (VND) <span class="text-danger">*</span></label>
-                                    <input type="number" 
-                                           class="form-control" 
-                                           id="max_discount_amount" 
-                                           name="max_discount_amount" 
-                                           value="{{ old('max_discount_amount') }}" 
-                                           placeholder="VD: 50000">
+                                    <label for="max_discount_amount" class="form-label fw-bold">Số tiền giảm tối đa (VND)</label>
+                                    <div class="input-group has-validation">
+                                        <input type="number"
+                                            class="form-control @error('max_discount_amount') is-invalid @enderror"
+                                            id="max_discount_amount"
+                                            name="max_discount_amount"
+                                            value="{{ old('max_discount_amount') }}"
+                                            placeholder="VD: 50000"
+                                            min="0">
+                                        <span class="input-group-text">₫</span>
+                                        @error('max_discount_amount')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <small class="form-text text-muted">Bỏ trống nếu không giới hạn số tiền giảm tối đa</small>
                                 </div>
                             </div>
                         </div>
 
                         <div class="row">
+                            {{-- Giới hạn sử dụng --}}
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="usage_limit">Giới hạn sử dụng <span class="text-danger">*</span></label>
-                                    <input type="number" 
-                                           class="form-control" 
-                                           id="usage_limit" 
-                                           name="usage_limit" 
-                                           value="{{ old('usage_limit', 1) }}" 
-                                       
-                                           placeholder="VD: 100">
-                                    <small class="form-text text-muted">Số lượt sử dụng tối đa cho voucher này (phải lớn hơn 0)</small>
+                                    <label for="usage_limit" class="form-label fw-bold">Giới hạn số lần sử dụng <span class="text-danger">*</span></label>
+                                    <input type="number"
+                                        class="form-control @error('usage_limit') is-invalid @enderror"
+                                        id="usage_limit"
+                                        name="usage_limit"
+                                        value="{{ old('usage_limit', 1) }}"
+                                        min="1"
+                                        placeholder="VD: 100">
+                                    @error('usage_limit')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="form-text text-muted">Tổng số lần voucher này có thể được áp dụng trên toàn hệ thống</small>
                                 </div>
                             </div>
                         </div>
 
                         <div class="row">
+                            {{-- Ngày bắt đầu --}}
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="start_at">Ngày bắt đầu <span class="text-danger">*</span></label>
-                                    <input type="datetime-local" 
-                                           class="form-control" 
-                                           id="start_at" 
-                                           name="start_at" 
-                                           value="{{ old('start_at') }}">
+                                    <label for="start_at" class="form-label fw-bold">Thời gian bắt đầu <span class="text-danger">*</span></label>
+                                    <input type="datetime-local"
+                                        class="form-control @error('start_at') is-invalid @enderror"
+                                        id="start_at"
+                                        name="start_at"
+                                        value="{{ old('start_at') }}">
+                                    @error('start_at')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
-                            
+
+                            {{-- Ngày kết thúc --}}
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="end_at">Ngày kết thúc <span class="text-danger">*</span></label>
-                                    <input type="datetime-local" 
-                                           class="form-control" 
-                                           id="end_at" 
-                                           name="end_at" 
-                                           value="{{ old('end_at') }}">
+                                    <label for="end_at" class="form-label fw-bold">Thời gian kết thúc <span class="text-danger">*</span></label>
+                                    <input type="datetime-local"
+                                        class="form-control @error('end_at') is-invalid @enderror"
+                                        id="end_at"
+                                        name="end_at"
+                                        value="{{ old('end_at') }}">
+                                    @error('end_at')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
 
-                        <div class="form-group mt-4">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Tạo voucher
-                            </button>
-                            <a href="{{ route('admin.promotions.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Hủy
+                        <div class="form-group mt-4 d-flex justify-content-end gap-2">
+                            <a href="{{ route('admin.promotions.index') }}" class="btn btn-secondary px-4">
+                                <i class="fas fa-times me-1"></i> Hủy bỏ
                             </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-1"></i> Tạo voucher
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -154,38 +170,76 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
-    // Hàm cập nhật hiển thị đơn vị giá trị và field max_discount_amount
-    function updateTypeDisplay() {
-        const typeSelect = document.getElementById('type');
-        const type = typeSelect ? typeSelect.value : '';
-        const valueTypeSpan = document.getElementById('valueType');
-        const capWrapper = document.getElementById('capWrapper');
-        
-        if (type === '%') {
-            if (valueTypeSpan) valueTypeSpan.textContent = '%';
-            if (capWrapper) capWrapper.style.display = 'block';
-        } else if (type === 'VND') {
-            if (valueTypeSpan) valueTypeSpan.textContent = '₫';
-            if (capWrapper) capWrapper.style.display = 'none';
-        } else {
-            if (valueTypeSpan) valueTypeSpan.textContent = '-';
-            if (capWrapper) capWrapper.style.display = 'none';
-        }
-    }
-
-    // Cập nhật khi thay đổi loại voucher
     document.addEventListener('DOMContentLoaded', function() {
+        // --- LOGIC 1: XỬ LÝ NGÀY GIỜ ---
+        const startInput = document.getElementById('start_at');
+        const endInput = document.getElementById('end_at');
+
+        if (startInput && endInput) {
+            // 1. Lấy thời gian hiện tại định dạng YYYY-MM-DDThh:mm
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            const minDateTime = now.toISOString().slice(0, 16);
+
+            // 2. Set min cho ngày bắt đầu là hiện tại
+            startInput.min = minDateTime;
+
+            // 3. Hàm cập nhật ngày kết thúc dựa theo ngày bắt đầu
+            function updateEndDateMin() {
+                if (startInput.value) {
+                    // Ngày kết thúc tối thiểu phải bằng ngày bắt đầu
+                    endInput.min = startInput.value;
+
+                    // Nếu ngày kết thúc hiện tại < ngày bắt đầu mới chọn -> Reset ngày kết thúc
+                    if (endInput.value && endInput.value < startInput.value) {
+                        endInput.value = startInput.value;
+                    }
+                } else {
+                    endInput.min = minDateTime;
+                }
+            }
+
+            // 4. Lắng nghe sự kiện thay đổi
+            startInput.addEventListener('change', updateEndDateMin);
+
+            // Chạy lần đầu (phòng trường hợp trình duyệt lưu cache value cũ)
+            updateEndDateMin();
+        }
+
+        // --- LOGIC 2: XỬ LÝ LOẠI VOUCHER (Giữ nguyên code cũ của bạn) ---
         const typeSelect = document.getElementById('type');
+        const codeInput = document.getElementById('code');
+
+        function updateTypeDisplay() {
+            const type = typeSelect ? typeSelect.value : '';
+            const valueTypeSpan = document.getElementById('valueType');
+            const capWrapper = document.getElementById('capWrapper');
+
+            if (type === '%') {
+                if (valueTypeSpan) valueTypeSpan.textContent = '%';
+                if (capWrapper) capWrapper.style.display = 'block';
+            } else if (type === 'money') {
+                if (valueTypeSpan) valueTypeSpan.textContent = '₫';
+                if (capWrapper) capWrapper.style.display = 'none';
+            } else {
+                if (valueTypeSpan) valueTypeSpan.textContent = '-';
+                if (capWrapper) capWrapper.style.display = 'none';
+            }
+        }
+
+        if (codeInput) {
+            codeInput.addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+            });
+        }
+
         if (typeSelect) {
-            // Cập nhật ngay khi trang load (cho trường hợp có old('type'))
             updateTypeDisplay();
-            
-            // Lắng nghe sự kiện thay đổi
             typeSelect.addEventListener('change', updateTypeDisplay);
         }
     });
 </script>
-
+@endpush
 @endsection
-

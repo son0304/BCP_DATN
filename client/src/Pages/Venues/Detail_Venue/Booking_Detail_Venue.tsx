@@ -33,6 +33,7 @@ type SelectedItem = {
   sale_price: number;
 };
 
+// Type cho Voucher (giữ nguyên nếu chưa có file riêng)
 export type Voucher = {
   id: number;
   code: string;
@@ -68,6 +69,7 @@ const Booking_Detail_Venue: React.FC<BookingDetailVenueProps> = ({
   const { mutate } = usePostData<ApiResponse<number>, any>('tickets');
   const navigate = useNavigate();
 
+  // Lấy danh sách courts từ venue, mặc định là mảng rỗng nếu null
   const courts = venue.courts ?? [];
   console.log(courts);
 

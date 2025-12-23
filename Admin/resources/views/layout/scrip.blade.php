@@ -1,4 +1,7 @@
-<!-- Vendor js -->
+<script src="https://js.pusher.com/8.0/pusher.min.js"></script>
+
+<script src="{{ asset('js/app.js') }}"></script>
+
 
 <script src="{{ asset('template/assets/js/vendor.min.js') }}"></script>
 <script src="{{ asset('template/assets/libs/jquery-knob/jquery.knob.min.js') }}"></script>

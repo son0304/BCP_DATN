@@ -9,9 +9,7 @@
 
                 <li class="menu-title">Navigation</li>
 
-                {{-- Menu chung --}}
                 @if (auth()->check())
-
 
                     {{-- Admin menu --}}
                     @if (auth()->user()->role->name === 'admin')
@@ -34,12 +32,6 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{{ route('admin.bookings.index') }}" class="waves-effect">
-                                <i class="ri-ticket-line"></i>
-                                <span> Đơn đặt sân </span>
-                            </a>
-                        </li>
-                        <li>
                             <a href="{{ route('admin.reviews.index') }}" class="waves-effect">
                                 <i class="remixicon-star-line"></i>
                                 <span> Đánh giá </span>
@@ -58,10 +50,14 @@
                                 <span> Voucher </span>
                             </a>
                         </li>
-
+                        <li>
+                            <a href="{{ route('admin.chats.index') }}" class="waves-effect">
+                                <i class="remixicon-chat-3-line"></i>
+                                <span> Message </span>
+                            </a>
+                        </li>
                         <li>
                             <a href="{{ route('admin.transactions.index') }}" class="waves-effect">
-                                {{-- Icon hóa đơn --}}
                                 <i class="ri-file-list-3-line"></i>
                                 <span> Quản lý giao dịch </span>
                             </a>
@@ -77,7 +73,6 @@
                             </a>
                         </li>
                         <li>
-
                             <a href="{{ route('owner.venues.index') }}" class="waves-effect">
                                 <i class="remixicon-store-2-line"></i>
                                 <span> Thương Hiệu </span>
@@ -90,6 +85,7 @@
                                 <span> Flash Sale </span>
                             </a>
                         </li>
+                     
                         <li>
                             <a href="{{ route('owner.reviews.index') }}" class="waves-effect">
                                 <i class="remixicon-star-line"></i>
@@ -108,7 +104,14 @@
                                 <span> Đơn đặt sân </span>
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('owner.chats.index') }}" class="waves-effect">
+                                <i class="remixicon-chat-3-line"></i>
+                                <span> Message </span>
+                            </a>
+                        </li>
                     @endif
+
                 @endif
 
             </ul>

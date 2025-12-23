@@ -24,6 +24,14 @@
                     </div>
                 </div>
 
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Thông tin cơ bản -->
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Thông tin cơ bản</h5>
+
                 <div class="row">
                     <!-- 1. THÔNG TIN CƠ BẢN -->
                     <div class="col-md-6">

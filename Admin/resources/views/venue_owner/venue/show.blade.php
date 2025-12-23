@@ -192,7 +192,6 @@
                     </div>
                 </div>
 
-                {{-- Hình ảnh --}}
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white py-3 border-bottom">
                         <h5 class="mb-0 text-primary fw-bold"><i class="fas fa-images me-2"></i>Thư viện ảnh</h5>
@@ -206,6 +205,7 @@
                                         style="max-height: 200px; object-fit: cover;" alt="Ảnh chính">
                                 </div>
                             @endif
+                            {{-- Hiển thị các ảnh còn lại --}}
                             <div class="row g-2">
                                 @foreach ($venue->images->where('is_primary', 0)->take(6) as $image)
                                     <div class="col-4">

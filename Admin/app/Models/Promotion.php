@@ -9,7 +9,7 @@ class Promotion extends Model
 {
     /** @use HasFactory<\Database\Factories\PromotionFactory> */
     use HasFactory;
-    protected $fillable = ['code', 'value', 'type','start_at','end_at', 'usage_limit', 'used_count', 'created_by', 'max_discount_amount'];
+    protected $fillable = ['code', 'value', 'type','start_at','end_at', 'usage_limit', 'used_count', 'created_by', 'max_discount_amount', 'venue_id'];
 
     /**
      * The attributes that should be cast.
@@ -35,6 +35,14 @@ class Promotion extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Venue mà voucher này áp dụng (null = voucher toàn hệ thống)
+     */
+    public function venue()
+    {
+        return $this->belongsTo(Venue::class, 'venue_id');
     }
 
     /**

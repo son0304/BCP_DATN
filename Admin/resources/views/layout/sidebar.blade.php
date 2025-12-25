@@ -85,6 +85,13 @@
         </li>
 
         <li>
+            <a href="{{ route('owner.promotions.index') }}" class="waves-effect">
+                <i class="ri-coupon-line"></i>
+                <span> Voucher </span>
+            </a>
+        </li>
+
+        <li>
             <a href="{{ route('owner.bookings.index') }}" class="waves-effect">
                 <i class="ri-ticket-line"></i>
                 <span> Đơn đặt sân </span>

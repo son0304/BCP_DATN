@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Promotion;
+use App\Models\Venue;
+use App\Helpers\PermissionHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +19,15 @@ class PromotionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Promotion::with('creator');
+        $user = Auth::user();
+        $query = Promotion::with(['creator', 'venue']);
+
+        // Nếu là Owner, chỉ hiển thị voucher của venues của mình
+        if (PermissionHelper::isVenueOwner($user)) {
+            $venueIds = Venue::where('owner_id', $user->id)->pluck('id');
+            $query->whereIn('venue_id', $venueIds);
+        }
+        // Admin xem tất cả (không filter venue_id)
 
         // Search functionality
         if ($request->filled('search')) {
@@ -30,6 +40,11 @@ class PromotionController extends Controller
         // Filter by type
         if ($request->filled('type')) {
             $query->where('type', $request->type);
+        }
+
+        // Filter by venue (chỉ Admin)
+        if (PermissionHelper::isAdmin($user) && $request->filled('venue_id')) {
+            $query->where('venue_id', $request->venue_id);
         }
 
         // Filter by status (active/expired)
@@ -51,7 +66,12 @@ class PromotionController extends Controller
 
         $promotions = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
 
-        return view('admin.promotions.index', compact('promotions'));
+        // Xác định view để trả về
+        $viewName = PermissionHelper::isVenueOwner($user) 
+            ? 'venue_owner.promotions.index' 
+            : 'admin.promotions.index';
+
+        return view($viewName, compact('promotions'));
     }
 
     /**
@@ -59,7 +79,28 @@ class PromotionController extends Controller
      */
     public function create()
     {
-        return view('admin.promotions.create');
+        $user = Auth::user();
+        $venues = null;
+
+        // Nếu là Owner, lấy danh sách venues của mình
+        if (PermissionHelper::isVenueOwner($user)) {
+            $venues = Venue::where('owner_id', $user->id)
+                ->where('is_active', 1)
+                ->get();
+            
+            if ($venues->isEmpty()) {
+                return redirect()->back()
+                    ->with('error', 'Bạn chưa có venue nào được kích hoạt. Vui lòng tạo venue trước.');
+            }
+
+            $viewName = 'venue_owner.promotions.create';
+        } else {
+            // Admin có thể tạo voucher toàn hệ thống hoặc cho venue cụ thể
+            $venues = Venue::where('is_active', 1)->get();
+            $viewName = 'admin.promotions.create';
+        }
+
+        return view($viewName, compact('venues'));
     }
 
     /**
@@ -130,16 +171,66 @@ class PromotionController extends Controller
      */
     public function show(Promotion $promotion)
     {
-        $promotion->load('tickets.user', 'creator');
-        return view('admin.promotions.show', compact('promotion'));
+        $user = Auth::user();
+        
+        // Kiểm tra quyền: Owner chỉ xem được voucher của venue mình
+        if (PermissionHelper::isVenueOwner($user)) {
+            if ($promotion->venue_id) {
+                $venue = Venue::find($promotion->venue_id);
+                if (!$venue || $venue->owner_id !== $user->id) {
+                    abort(403, 'Bạn không có quyền xem voucher này.');
+                }
+            } else {
+                // Owner không thể xem voucher toàn hệ thống
+                abort(403, 'Bạn không có quyền xem voucher này.');
+            }
+        }
+
+        $promotion->load('tickets.user', 'creator', 'venue');
+        
+        $viewName = PermissionHelper::isVenueOwner($user) 
+            ? 'venue_owner.promotions.show' 
+            : 'admin.promotions.show';
+            
+        return view($viewName, compact('promotion'));
     }
 
     /**
      * Show the form for editing the specified resource.
      */
+    /**
+     * Show the form for editing the specified resource.
+     */
     public function edit(Promotion $promotion)
     {
-        return view('admin.promotions.edit', compact('promotion'));
+        $user = Auth::user();
+        
+        // Kiểm tra quyền: Owner chỉ sửa được voucher của venue mình
+        if (PermissionHelper::isVenueOwner($user)) {
+            if ($promotion->venue_id) {
+                $venue = Venue::find($promotion->venue_id);
+                if (!$venue || $venue->owner_id !== $user->id) {
+                    abort(403, 'Bạn không có quyền sửa voucher này.');
+                }
+            } else {
+                abort(403, 'Bạn không có quyền sửa voucher này.');
+            }
+        }
+
+        $venues = null;
+        if (PermissionHelper::isVenueOwner($user)) {
+            $venues = Venue::where('owner_id', $user->id)
+                ->where('is_active', 1)
+                ->get();
+        } else {
+            $venues = Venue::where('is_active', 1)->get();
+        }
+
+        $viewName = PermissionHelper::isVenueOwner($user) 
+            ? 'venue_owner.promotions.edit' 
+            : 'admin.promotions.edit';
+            
+        return view($viewName, compact('promotion', 'venues'));
     }
 
     /**
@@ -147,18 +238,38 @@ class PromotionController extends Controller
      */
     public function update(Request $request, Promotion $promotion)
     {
-        // 3. Validate dữ liệu Cập nhật
-        $request->validate([
-            // Mã code là duy nhất nhưng trừ chính nó ra
+        $user = Auth::user();
+        $isOwner = PermissionHelper::isVenueOwner($user);
+
+        // Kiểm tra quyền: Owner chỉ sửa được voucher của venue mình
+        if ($isOwner) {
+            if ($promotion->venue_id) {
+                $venue = Venue::find($promotion->venue_id);
+                if (!$venue || $venue->owner_id !== $user->id) {
+                    abort(403, 'Bạn không có quyền sửa voucher này.');
+                }
+            } else {
+                abort(403, 'Bạn không có quyền sửa voucher này.');
+            }
+        }
+
+        // Validation rules
+        $rules = [
             'code'                => ['required', 'string', 'max:50', Rule::unique('promotions')->ignore($promotion->id)],
             'value'               => 'required|numeric|min:0',
             'type'                => 'required|in:money,%',
-            'start_at'            => 'required|date', // Khi update có thể giữ nguyên ngày cũ, không bắt buộc after_or_equal today
+            'start_at'            => 'required|date',
             'end_at'              => 'required|date|after:start_at',
-            // Giới hạn sử dụng mới không được nhỏ hơn số lượng đã dùng
             'usage_limit'         => 'required|integer|min:' . $promotion->used_count,
             'max_discount_amount' => 'nullable|numeric|min:0',
-        ], [
+        ];
+
+        // Owner không thể đổi venue (giữ nguyên venue_id)
+        if (!$isOwner) {
+            $rules['venue_id'] = 'nullable|exists:venues,id';
+        }
+
+        $request->validate($rules, [
             'code.required'        => 'Mã khuyến mãi không được bỏ trống.',
             'code.unique'          => 'Mã khuyến mãi này đã tồn tại.',
             'value.required'       => 'Giá trị giảm không được bỏ trống.',
@@ -175,7 +286,7 @@ class PromotionController extends Controller
             $startAt = \Carbon\Carbon::parse($request->start_at, 'Asia/Ho_Chi_Minh')->utc();
             $endAt = \Carbon\Carbon::parse($request->end_at, 'Asia/Ho_Chi_Minh')->utc();
 
-            $promotion->update([
+            $updateData = [
                 'code'                => strtoupper($request->code),
                 'value'               => $request->value,
                 'type'                => $request->type,
@@ -183,10 +294,19 @@ class PromotionController extends Controller
                 'end_at'              => $endAt->format('Y-m-d H:i:s'),
                 'usage_limit'         => $request->usage_limit,
                 'max_discount_amount' => $request->type === '%' ? ($request->max_discount_amount ?? $promotion->max_discount_amount) : null,
-            ]);
+            ];
+
+            // Admin có thể đổi venue_id, Owner giữ nguyên
+            if (!$isOwner && $request->has('venue_id')) {
+                $updateData['venue_id'] = $request->venue_id;
+            }
+
+            $promotion->update($updateData);
 
             DB::commit();
-            return redirect()->route('admin.promotions.index')
+            
+            $routeName = $isOwner ? 'owner.promotions.index' : 'admin.promotions.index';
+            return redirect()->route($routeName)
                 ->with('success', 'Voucher đã được cập nhật thành công!');
         } catch (\Exception $e) {
             DB::rollback();
@@ -201,6 +321,21 @@ class PromotionController extends Controller
      */
     public function destroy(Promotion $promotion)
     {
+        $user = Auth::user();
+        $isOwner = PermissionHelper::isVenueOwner($user);
+
+        // Kiểm tra quyền: Owner chỉ xóa được voucher của venue mình
+        if ($isOwner) {
+            if ($promotion->venue_id) {
+                $venue = Venue::find($promotion->venue_id);
+                if (!$venue || $venue->owner_id !== $user->id) {
+                    abort(403, 'Bạn không có quyền xóa voucher này.');
+                }
+            } else {
+                abort(403, 'Bạn không có quyền xóa voucher này.');
+            }
+        }
+
         DB::beginTransaction();
         try {
             // Kiểm tra xem voucher đã được sử dụng chưa
@@ -211,7 +346,9 @@ class PromotionController extends Controller
             $promotion->delete();
 
             DB::commit();
-            return redirect()->route('admin.promotions.index')
+            
+            $routeName = $isOwner ? 'owner.promotions.index' : 'admin.promotions.index';
+            return redirect()->route($routeName)
                 ->with('success', 'Voucher đã được xóa thành công!');
         } catch (\Exception $e) {
             DB::rollback();

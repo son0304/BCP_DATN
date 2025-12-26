@@ -226,7 +226,7 @@ class VenueApiController extends Controller
             // 3. Xử lý ảnh Venue
             if ($request->hasFile('venue_profiles')) {
                 foreach ($request->file('venue_profiles') as $file) {
-                    $path = $file->store('uploads/venue_images', 'public');
+                    $path = $file->store('uploads/venues', 'public');
                     $venue->images()->create([
                         'url' => 'storage/' . $path, // Nên lưu path gốc, dùng Accessor để lấy full URL
                         // FIX LỖI B: Dùng $venue->id thay vì $request->venue_id

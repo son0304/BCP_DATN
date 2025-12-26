@@ -16,6 +16,7 @@ class Post extends Model
         'title',
         'content',
         'is_active',
+        'process_status',
         'note',
     ];
 

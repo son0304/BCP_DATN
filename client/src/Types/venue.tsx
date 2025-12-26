@@ -35,6 +35,7 @@ export interface Venue {
     lng: number | string; // API trả về string
     phone?: string | null;
     email?: string | null;
+    type: string;           // THÊM DÒNG NÀY
     is_active: boolean | number; // API trả về number (1/0)
     created_at: ISODateTimeString;
     updated_at: ISODateTimeString;

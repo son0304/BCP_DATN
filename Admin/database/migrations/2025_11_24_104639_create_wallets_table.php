@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->enum('status', ['active', 'locked'])->default('active');
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
+
             $table->decimal('balance', 14, 2)->default(0);
             $table->timestamps();
         });

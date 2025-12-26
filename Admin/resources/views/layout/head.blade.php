@@ -13,7 +13,6 @@
     <link href="{{ asset('template/assets/css/app.min.css') }}" rel="stylesheet" type="text/css">
 
 
-</head>
 
     <!-- App css -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -23,4 +22,17 @@
     <link href=" {{ asset('template\assets\css\app.min.css') }}" rel="stylesheet" type="text/css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #venueMap {
+            height: 300px;
+            width: 100%;
+            border-radius: 8px;
+            z-index: 1;
+        }
+    </style>
 </head>

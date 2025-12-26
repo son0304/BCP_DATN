@@ -7,7 +7,7 @@
         <div class="card-header bg-white border-0 pb-0">
             <h1 class="h3 mb-0 fw-bold"><i class="fas fa-comments me-2"></i></i> Hộp thư đến</h1>
         </div>
-        
+
         @if (session('success'))
             <div class="alert alert-success mx-4 mt-3" role="alert">
                 {{ session('success') }}

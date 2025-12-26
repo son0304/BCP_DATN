@@ -20,6 +20,8 @@ return new class extends Migration
             // Comment cha (reply)
             $table->foreignId('parent_id')->nullable()
                 ->constrained('comments')->nullOnDelete();
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
+
             $table->timestamps();
             $table->softDeletes();
         });

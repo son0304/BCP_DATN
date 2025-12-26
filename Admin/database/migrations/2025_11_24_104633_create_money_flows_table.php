@@ -21,6 +21,8 @@ return new class extends Migration
             $table->decimal('venue_owner_amount', 12, 2);
 
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('pending');
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
+
             $table->unsignedBigInteger('venue_id')->nullable();
 
             $table->timestamps();

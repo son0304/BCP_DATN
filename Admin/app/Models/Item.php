@@ -21,7 +21,8 @@ class Item extends Model
         'quantity',         // Số lượng
         'unit_price',       // Đơn giá tại thời điểm mua
         'discount_amount',  // Giảm giá
-        'status',           // active, refund
+        'status',
+        'process_status',         
     ];
 
 

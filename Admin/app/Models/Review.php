@@ -11,7 +11,7 @@ class Review extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $fillable = ['user_id', 'venue_id', 'rating', 'comment'];
+    protected $fillable = ['user_id', 'venue_id', 'rating', 'comment', 'process_status',];
 
     public function user()
     {

@@ -29,6 +29,8 @@ return new class extends Migration
 
             // Trạng thái item: active (đang bán), sold_out (hết hàng), inactive (chủ sân ẩn)
             $table->enum('status', ['active', 'sold_out', 'inactive'])->default('active');
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
+
 
             $table->timestamps();
         });

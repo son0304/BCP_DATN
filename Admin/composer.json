@@ -9,8 +9,10 @@
         "php": "^8.2",
         "endroid/qr-code": "^5.0",
         "laravel/framework": "^12.0",
+        "laravel/reverb": "^1.0",
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.10.1",
+        "livewire/livewire": "*",
         "pusher/pusher-php-server": "^7.2",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "tymon/jwt-auth": "^2.2"

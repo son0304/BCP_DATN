@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Events\DataCreated;
+use App\Events\DataDeleted;
 use App\Http\Controllers\Controller;
 use App\Models\Court;
 use App\Models\Venue;
@@ -31,6 +33,8 @@ use Illuminate\Validation\Rule;
 
 class VenueController extends Controller
 {
+
+    protected $nameChannel = 'venues';
     //==============ADMIN=================//
     public function index()
     {
@@ -54,36 +58,33 @@ class VenueController extends Controller
 
     public function showVenueDetail(Venue $venue)
     {
-        // Load tất cả quan hệ cần thiết
+        // 1. Load các quan hệ
         $venue->load([
-            'owner.merchantProfile',
+            'owner.merchantProfile', // Đảm bảo đã load cái này
             'province',
             'district',
             'courts',
             'images',
-            'services' => function ($query) {
-                $query->with(['category', 'images']);
-            }
+            'services.images'
         ]);
 
-        Log::info('Loaded Venue', [
-            'venue' => $venue
-        ]);
         $user = Auth::user();
 
-        // Kiểm tra quyền truy cập
+        // 2. Kiểm tra quyền
         if ($user->role->name !== 'admin' && $user->id !== $venue->owner_id) {
-            abort(403, 'Bạn không có quyền truy cập trang này.');
+            abort(403);
         }
 
-        // Điều hướng view theo role
+        // 3. LẤY HỒ SƠ MERCHANT RA BIẾN RIÊNG
+        $merchant_profile = $venue->owner->merchantProfile ?? null;
+
+        // 4. TRUYỀN THÊM BIẾN VÀO COMPACT
         if ($user->role->name === 'admin') {
-            return view('admin.venue.show', compact('venue'));
+            return view('admin.venue.show', compact('venue', 'merchant_profile'));
         } else {
-            return view('venue_owner.venue.show', compact('venue'));
+            return view('venue_owner.venue.show', compact('venue', 'merchant_profile'));
         }
     }
-
 
 
     public function updateStatus(Request $request, Venue $venue)
@@ -195,28 +196,36 @@ class VenueController extends Controller
 
     public function store(Request $request)
     {
+        Log::info('Venue Store Request', [
+            'request' => $request->all()
+        ]);
         $user = Auth::user();
 
         // --- 1. Định nghĩa Rules và Messages ---
         $rules = [
             'name' => 'required|string|max:255',
-             'province_id' => 'nullable|numeric',
-              'district_id' => 'nullable|numeric',
+            'province_id' => 'nullable|numeric',
+            'district_id' => 'nullable|numeric',
             'address_detail' => 'required|string',
             'phone' => ['nullable', 'regex:/^(0|\+84)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/'],
             'start_time' => 'required|date_format:H:i',
             'end_time' => ['required', 'regex:/^(?:[01]\d|2[0-3]):[0-5]\d$|^24:00$/'],
+
+            // 📍 Lat / Lng
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+
             'venue_types' => 'required|array|min:1',
             'venue_types.*' => 'exists:venue_types,id',
 
-            // Rules cho files và links ảnh
-            'images' => 'nullable|array', // Files tải lên
+            // Images
+            'images' => 'nullable|array',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'image_links' => 'nullable|array', // Links ảnh chèn vào
+            'image_links' => 'nullable|array',
             'image_links.*' => 'nullable|url|max:500',
-            'primary_image_index' => 'required|integer|min:0', // Index trong mảng combined
+            'primary_image_index' => 'required|integer|min:0',
 
-            // Rules cho Courts và Time Slots (Giữ nguyên)
+            // Courts & Time slots
             'courts' => 'nullable|array',
             'courts.*.name' => 'required|string|max:255',
             'courts.*.venue_type_id' => 'required|exists:venue_types,id',
@@ -227,6 +236,7 @@ class VenueController extends Controller
             'courts.*.time_slots.*.end_time' => ['required', 'regex:/^(?:[01]\d|2[0-3]):[0-5]\d$|^24:00$/'],
             'courts.*.time_slots.*.price' => 'required|numeric|min:0',
         ];
+
 
         if (PermissionHelper::isAdmin($user)) {
             $rules['owner_id'] = 'required|exists:users,id';
@@ -373,6 +383,8 @@ class VenueController extends Controller
                 'province_id' => $validatedData['province_id'],
                 'district_id' => $validatedData['district_id'],
                 'address_detail' => $validatedData['address_detail'],
+                'lat' => $validatedData['lat'],
+                'lng' => $validatedData['lng'],
                 'phone' => $validatedData['phone'] ?? null,
                 'start_time' => $validatedData['start_time'],
                 'end_time' => $validatedData['end_time'],
@@ -388,28 +400,31 @@ class VenueController extends Controller
             if (!empty($allImagesData)) {
                 foreach ($allImagesData as $index => $imageData) {
                     $url = null;
-                    $isPrimary = $index === $mainImageIndex;
+                    // Logic xác định ảnh đại diện chuẩn (chỉ 1 ảnh đúng)
+                    $isPrimary = $index === (int)$mainImageIndex;
 
                     if ($imageData instanceof \Illuminate\Http\UploadedFile) {
-                        // File tải lên -> Lưu vào storage
+                        // 1. Lưu file vật lý vào disk public (vẫn trả về 'uploads/venues/name.jpg')
                         $path = $imageData->store('uploads/venues', 'public');
-                        $url = $path;
+
+                        // 2. TRUYỀN CỨNG 'storage/' VÀO URL THEO Ý BẠN
+                        $url = 'storage/' . $path;
                     } elseif (is_string($imageData)) {
-                        // Link ảnh -> Dùng URL
+                        // Nếu là link ảnh online thì giữ nguyên
                         $url = $imageData;
                     }
 
                     if ($url) {
                         $image = $venue->images()->create([
-                            'url' => $url,
+                            'url' => $url, // Kết quả trong DB: storage/uploads/venues/filename.jpg
                             'is_primary' => $isPrimary,
                         ]);
-                        // Lưu lại model để rollback file vật lý nếu cần
+
+                        // Lưu lại model để rollback nếu transaction lỗi
                         $imagesToRollback->push($image);
                     }
                 }
             }
-
             // C. Attach Venue Types
             if (!empty($validatedData['venue_types'])) {
                 $venue->venueTypes()->attach($validatedData['venue_types']);
@@ -470,7 +485,10 @@ class VenueController extends Controller
             }
 
             DB::commit();
+            $venue->load(['owner', 'province']);
+            Log::info('Đang bắn event cho Venue ID: ' . $venue->id);
 
+            broadcast(new DataCreated($venue, $this->nameChannel, 'venue.created'));
             $redirectRoute = PermissionHelper::isAdmin($user) ? 'admin.venues.index' : 'owner.venues.index';
             return redirect()->route($redirectRoute)->with('success', 'Đăng ký thương hiệu và sân thành công!');
         } catch (\Exception $e) {
@@ -504,224 +522,192 @@ class VenueController extends Controller
         $provinces = Province::orderBy('name')->get();
         $districts = District::where('province_id', $venue->province_id)->orderBy('name')->get();
         $venue_types = VenueType::orderBy('name')->get();
-        $venue->load('images'); // Load ảnh
-
+        $venue->load('images');
         return view('venue_owner.venue.edit', compact('venue', 'owners', 'provinces', 'districts', 'venue_types'));
     }
 
-    public function update(Request $request, Venue $venue)
-{
-    $user = Auth::user();
+    public function update(Request $request, $id)
+    {
+        $venue = Venue::findOrFail($id);
+        $user = Auth::user();
 
-    if (!PermissionHelper::ownsVenue($venue->id, $user) && !PermissionHelper::isAdmin($user)) {
-        abort(403, 'Bạn không có quyền sửa địa điểm này.');
-    }
+        // 1. KIỂM TRA QUYỀN HẠN
+        if (!PermissionHelper::isAdmin($user) && !PermissionHelper::ownsVenue($venue->id, $user)) {
+            abort(403, 'Bạn không có quyền chỉnh sửa thương hiệu này.');
+        }
 
-    // --- Validation Rules (Thêm rules cho courts) ---
-    $rules = [
-        'name' => 'required|string|max:255',
-        'province_id' => 'required',
-        'district_id' => 'required',
-        'address_detail' => 'required|string',
-        'phone' => ['nullable', 'regex:/^(0|\+84)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/'],
-        'start_time' => 'required|date_format:H:i',
-        'end_time' => 'required',
-        'venue_types' => 'required|array|min:1',
+        // 2. VALIDATION
+        $rules = [
+            'name' => 'required|string|max:255',
+            'province_id' => 'required',
+            'district_id' => 'required',
+            'address_detail' => 'required|string',
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+            'phone' => ['nullable', 'regex:/^(0|\+84)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/'],
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => ['required', 'regex:/^(?:[01]\d|2[0-3]):[0-5]\d$|^24:00$/'],
+            'venue_types' => 'required|array|min:1',
+            'venue_types.*' => 'exists:venue_types,id',
 
-        // Courts & Slots
-        'courts' => 'nullable|array',
-        'courts.*.name' => 'required|string|max:255',
-        'courts.*.venue_type_id' => 'required|exists:venue_types,id',
-        'courts.*.time_slots' => 'nullable|array',
+            // Image Rules
+            'new_files.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048', // Max 2MB
+            'image_links.*' => 'url',
+            'primary_image_index' => 'required', // String identifier (VD: existing_5, new_file_0)
+        ];
 
-        // Images (Giữ nguyên logic cũ)
-        'primary_image_index' => 'required',
-    ];
+        // Nếu là Admin thì validate owner_id, ngược lại bỏ qua
+        if (PermissionHelper::isAdmin($user)) {
+            $rules['owner_id'] = 'required|exists:users,id';
+        }
 
-    // Nếu là admin thì check owner
-    if (PermissionHelper::isAdmin($user)) {
-        $rules['owner_id'] = 'required|exists:users,id';
-    }
-
-    $validator = Validator::make($request->all(), $rules);
-
-    // ... (Giữ validator->after logic kiểm tra giờ giấc như create) ...
-
-    if ($validator->fails()) {
-        return redirect()->back()->withErrors($validator)->withInput();
-    }
-
-    $data = $validator->validated();
-
-    // Format giờ
-    if (strlen($data['start_time']) === 5) $data['start_time'] .= ':00';
-    if ($data['end_time'] === '24:00') $data['end_time'] = '23:59:59';
-    elseif (strlen($data['end_time']) === 5) $data['end_time'] .= ':00';
-
-    DB::beginTransaction();
-    try {
-        // 1. Update Venue
-        $venue->update([
-            'name' => $data['name'],
-            'owner_id' => isset($data['owner_id']) ? $data['owner_id'] : $venue->owner_id,
-            'province_id' => $data['province_id'],
-            'district_id' => $data['district_id'],
-            'address_detail' => $data['address_detail'],
-            'phone' => $data['phone'] ?? null,
-            'start_time' => $data['start_time'],
-            'end_time' => $data['end_time'],
-            'is_active' => $request->has('is_active') ? 1 : 0,
+        $validator = Validator::make($request->all(), $rules, [
+            'name.required' => 'Tên thương hiệu không được để trống.',
+            'lat.required' => 'Vui lòng chọn vị trí trên bản đồ.',
+            'venue_types.required' => 'Chọn ít nhất 1 loại hình sân.',
+            'primary_image_index.required' => 'Vui lòng chọn 1 ảnh làm ảnh đại diện.',
+            'end_time.regex' => 'Giờ đóng cửa không hợp lệ.',
         ]);
 
-        $venue->venueTypes()->sync($data['venue_types']);
+        // Logic Validate nâng cao (After Hook)
+        $validator->after(function ($validator) use ($request, $venue) {
+            // A. Kiểm tra giờ
+            $start = $request->input('start_time');
+            $end = $request->input('end_time');
+            // (Bạn có thể thêm logic check start < end ở đây nếu cần)
 
-        // 2. XỬ LÝ COURTS & SLOTS (PHẦN MỚI)
-        $submittedCourts = $request->input('courts', []);
+            // B. Kiểm tra tổng số lượng ảnh sau khi cập nhật
+            $deletedIds = array_filter(explode(',', $request->input('deleted_image_ids', '')));
 
-        // Lấy danh sách ID các sân ĐÃ SUBMIT có chứa ID (tức là sân cũ)
-        $submittedCourtIds = [];
-        foreach($submittedCourts as $c) {
-            if(isset($c['id'])) $submittedCourtIds[] = $c['id'];
+            // Số ảnh cũ còn lại
+            $remainingExisting = $venue->images()->whereNotIn('id', $deletedIds)->count();
+
+            // Số ảnh mới (File + Link)
+            $newFilesCount = $request->file('new_files') ? count($request->file('new_files')) : 0;
+            $newLinksCount = $request->input('image_links') ? count($request->input('image_links')) : 0;
+
+            $totalImages = $remainingExisting + $newFilesCount + $newLinksCount;
+
+            if ($totalImages === 0) {
+                $validator->errors()->add('images', 'Phải có ít nhất 1 hình ảnh cho thương hiệu.');
+            }
+            if ($totalImages > 5) {
+                $validator->errors()->add('images', 'Tổng số ảnh không được vượt quá 5.');
+            }
+        });
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        // Xóa các sân không còn trong danh sách submit (User đã nhấn xóa trên UI)
-        // Lưu ý: Cần xóa ràng buộc (TimeSlots, Availability, Booking...) trước nếu ko cascade
-        $venue->courts()->whereNotIn('id', $submittedCourtIds)->delete();
+        $data = $validator->validated();
 
-        foreach ($submittedCourts as $courtData) {
-            // Update hoặc Create Court
-            $court = Court::updateOrCreate(
-                ['id' => $courtData['id'] ?? null, 'venue_id' => $venue->id], // Điều kiện tìm (nếu có id)
-                [
-                    'venue_id' => $venue->id,
-                    'name' => $courtData['name'],
-                    'venue_type_id' => $courtData['venue_type_id'],
-                    'surface' => $courtData['surface'] ?? null,
-                    'is_indoor' => $courtData['is_indoor'] ?? 0,
-                ]
-            );
+        // 3. XỬ LÝ DỮ LIỆU
+        // Format lại giờ (thêm :00 giây)
+        if (strlen($data['start_time']) === 5) $data['start_time'] .= ':00';
+        if ($data['end_time'] === '24:00') {
+            $data['end_time'] = '23:59:59';
+        } elseif (strlen($data['end_time']) === 5) {
+            $data['end_time'] .= ':00';
+        }
 
-            // Xử lý TimeSlots cho sân này
-            $submittedSlots = $courtData['time_slots'] ?? [];
-            $submittedSlotIds = [];
-            foreach($submittedSlots as $s) {
-                if(isset($s['id'])) $submittedSlotIds[] = $s['id'];
-            }
+        DB::beginTransaction();
+        try {
+            // 4. CẬP NHẬT VENUE (Thông tin cơ bản)
+            $venue->update([
+                'name' => $data['name'],
+                'owner_id' => $data['owner_id'] ?? $venue->owner_id,
+                'province_id' => $data['province_id'],
+                'district_id' => $data['district_id'],
+                'address_detail' => $data['address_detail'],
+                'lat' => $data['lat'],
+                'lng' => $data['lng'],
+                'phone' => $data['phone'] ?? null,
+                'start_time' => $data['start_time'],
+                'end_time' => $data['end_time'],
+                'is_active' => $request->has('is_active') ? 1 : 0,
+            ]);
 
-            // Xóa slot thừa
-            $court->timeSlots()->whereNotIn('id', $submittedSlotIds)->delete();
+            // Sync loại hình sân
+            $venue->venueTypes()->sync($data['venue_types']);
 
-            foreach ($submittedSlots as $slotData) {
-                // Format time
-                $sStart = $slotData['start_time'];
-                $sEnd = $slotData['end_time'];
-                if(strlen($sStart)===5) $sStart .= ':00';
-                if($sEnd === '24:00') $sEnd = '23:59:59';
-                elseif(strlen($sEnd)===5) $sEnd .= ':00';
+            // 5. XỬ LÝ HÌNH ẢNH (Quan trọng)
 
-                $slot = TimeSlot::updateOrCreate(
-                    ['id' => $slotData['id'] ?? null, 'court_id' => $court->id],
-                    [
-                        'court_id' => $court->id,
-                        'start_time' => $sStart,
-                        'end_time' => $sEnd,
-                        // Update giá tiền vào bảng Availability luôn nếu cần thiết kế đơn giản
-                        // Hoặc chỉ update TimeSlot, giá tiền thường nằm ở Availability
-                    ]
-                );
-
-                // Cập nhật giá cho các availability trong tương lai
-                // (Logic đơn giản: update giá cho 30 ngày tới chưa book)
-                Availability::where('slot_id', $slot->id)
-                    ->where('date', '>=', now()->toDateString())
-                    ->where('status', 'open')
-                    ->update(['price' => $slotData['price']]);
-
-                // Nếu slot mới tạo, cần insert Availability
-                if(!isset($slotData['id'])) {
-                   // Logic insert availability giống Create (Loop 30 ngày)
-                   // ... copy logic từ hàm store ...
-                   $availabilitiesToInsert = [];
-                   for ($i = 0; $i < 30; $i++) {
-                        $date = Carbon::today()->addDays($i)->toDateString();
-                        $availabilitiesToInsert[] = [
-                            'court_id' => $court->id,
-                            'date' => $date,
-                            'slot_id' => $slot->id,
-                            'price' => $slotData['price'],
-                            'status' => 'open',
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
+            // A. Xóa ảnh cũ bị đánh dấu
+            $deletedIds = array_filter(explode(',', $request->input('deleted_image_ids', '')));
+            if (!empty($deletedIds)) {
+                $imagesToDelete = $venue->images()->whereIn('id', $deletedIds)->get();
+                foreach ($imagesToDelete as $img) {
+                    // Nếu là file local (không chứa http) thì xóa file vật lý
+                    if (!filter_var($img->url, FILTER_VALIDATE_URL)) {
+                        $relativePath = str_replace('/storage/', '', $img->url);
+                        Storage::disk('public')->delete($relativePath);
                     }
-                    Availability::insert($availabilitiesToInsert);
+                    $img->delete();
                 }
             }
-        }
 
-        // 3. XỬ LÝ ẢNH (Logic giữ nguyên từ controller cũ của bạn)
-        // ... (Code xóa ảnh cũ, thêm ảnh mới, set primary) ...
-        // Lưu ý: Logic ảnh của controller cũ của bạn khá tốt, hãy giữ lại phần xử lý Images.
-        // Chỉ cần đảm bảo phần input names từ View khớp ('existing_images_to_delete', 'new_files', 'image_links')
+            // Mảng tạm để mapping Key từ Frontend -> Model vừa tạo
+            $newImagesMap = [];
 
-        // === PASTE PHẦN XỬ LÝ ẢNH CŨ VÀO ĐÂY ===
-        // A. Xóa ảnh cũ
-        $deletedImageIds = array_filter(explode(',', $request->input('existing_images_to_delete', '')));
-        if (!empty($deletedImageIds)) {
-             $imgs = $venue->images()->whereIn('id', $deletedImageIds)->get();
-             foreach($imgs as $img) {
-                 if (strpos($img->url, 'http') !== 0) Storage::disk('public')->delete($img->url);
-                 $img->delete();
-             }
-        }
-
-        $newlyCreatedImages = collect();
-        // B. Files mới
-        if ($request->hasFile('new_files')) {
-            foreach ($request->file('new_files') as $file) {
-                $path = $file->store('uploads/venues', 'public');
-                $newlyCreatedImages->push($venue->images()->create(['url' => $path, 'is_primary' => false]));
+            // B. Upload và Lưu File mới
+            if ($request->hasFile('new_files')) {
+                foreach ($request->file('new_files') as $idx => $file) {
+                    $path = $file->store('uploads/venues', 'public');
+                    $img = $venue->images()->create([
+                        'url' => '/storage/' . $path,
+                        'is_primary' => false
+                    ]);
+                    // Key này khớp với JS: new_file_0, new_file_1...
+                    $newImagesMap["new_file_{$idx}"] = $img;
+                }
             }
-        }
-        // C. Links mới
-        if ($request->has('image_links')) {
-            foreach ($request->input('image_links') as $link) {
-                if($link) $newlyCreatedImages->push($venue->images()->create(['url' => $link, 'is_primary' => false]));
+
+            // C. Lưu Link ảnh mới
+            if ($request->has('image_links')) {
+                foreach ($request->input('image_links') as $idx => $link) {
+                    if (!empty($link)) {
+                        $img = $venue->images()->create([
+                            'url' => trim($link),
+                            'is_primary' => false
+                        ]);
+                        // Key này khớp với JS: new_link_0, new_link_1...
+                        $newImagesMap["new_link_{$idx}"] = $img;
+                    }
+                }
             }
-        }
 
-        // D. Set Primary
-        // Reset all
-        $venue->images()->update(['is_primary' => false]);
+            // D. Thiết lập Ảnh đại diện (Primary)
+            $primaryKey = $request->input('primary_image_index'); // Ví dụ: 'existing_15' hoặc 'new_file_0'
 
-        $primaryVal = $request->input('primary_image_index');
-        // Logic: Nếu primaryVal trùng ID ảnh cũ -> Set.
-        // Nếu không -> xem như index ảnh mới (nếu cần thiết, hoặc user chọn ảnh mới thì input value nên xử lý khác)
-        // Để đơn giản: Nếu tìm thấy ID trong DB thì set, nếu ko thì lấy từ mảng mới tạo.
+            // Reset toàn bộ về false trước
+            $venue->images()->update(['is_primary' => false]);
 
-        $img = $venue->images()->find($primaryVal);
-        if($img) {
-            $img->update(['is_primary' => true]);
-        } elseif ($newlyCreatedImages->isNotEmpty()) {
-            // Fallback hoặc logic index (0,1,2)
-            if(is_numeric($primaryVal) && $primaryVal < $newlyCreatedImages->count()) {
-                 $newlyCreatedImages[$primaryVal]->update(['is_primary' => true]);
+            if (str_starts_with($primaryKey, 'existing_')) {
+                // Trường hợp chọn ảnh cũ
+                $id = str_replace('existing_', '', $primaryKey);
+                // Đảm bảo ảnh này thuộc về venue và chưa bị xóa
+                $venue->images()->where('id', $id)->update(['is_primary' => true]);
+            } elseif (isset($newImagesMap[$primaryKey])) {
+                // Trường hợp chọn ảnh vừa mới thêm (File hoặc Link)
+                $newImagesMap[$primaryKey]->update(['is_primary' => true]);
             } else {
-                 $newlyCreatedImages->first()->update(['is_primary' => true]);
+                // Fallback: Nếu Key không hợp lệ (hiếm), lấy ảnh đầu tiên còn lại làm primary
+                $firstImg = $venue->images()->first();
+                if ($firstImg) {
+                    $firstImg->update(['is_primary' => true]);
+                }
             }
-        } elseif ($venue->images()->exists()) {
-             $venue->images()->first()->update(['is_primary' => true]);
-        }
-        // ==========================================
 
-        DB::commit();
-        return redirect()->route('owner.venues.index')->with('success', 'Cập nhật thành công!');
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error($e);
-        return back()->with('error', 'Lỗi: ' . $e->getMessage());
+            DB::commit();
+            return redirect()->route('owner.venues.index')->with('success', 'Cập nhật thương hiệu thành công!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Venue Update Error: " . $e->getMessage());
+            Log::error($e->getTraceAsString()); // Log chi tiết để debug
+            return back()->with('error', 'Đã có lỗi xảy ra: ' . $e->getMessage())->withInput();
+        }
     }
-}
     public function destroy(Venue $venue)
     {
         if (!PermissionHelper::ownsVenue($venue->id, Auth::user())) {
@@ -733,10 +719,12 @@ class VenueController extends Controller
             $venue->images->each(function ($image) {
                 Storage::disk('public')->delete($image->url);
             });
+            $venueId = $venue->id;
 
             $venue->delete();
 
             DB::commit();
+            broadcast(new DataDeleted($venueId, $this->nameChannel, 'venue.deleted'));
             return redirect()->route('owner.venues.index')->with('success', 'Xóa sân thành công!');
         } catch (\Exception $e) {
             DB::rollBack();

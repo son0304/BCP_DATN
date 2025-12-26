@@ -15,6 +15,7 @@ class Availability extends Model
         'price',
         'date',
         'status',
+        'process_status',
         'note',
     ];
 

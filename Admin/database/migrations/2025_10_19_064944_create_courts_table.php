@@ -17,12 +17,13 @@ return new class extends Migration
             $table->foreignId('venue_type_id')->nullable()->constrained('venue_types')->nullOnDelete();
             $table->string('name');
             $table->string('surface')->nullable();
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
+
             $table->decimal('price_per_hour', 10, 2)->default(0);
             $table->boolean('is_indoor')->default(false);
             $table->timestamps();
             $table->softDeletes();
         });
-
     }
 
     /**

@@ -9,7 +9,7 @@ class Promotion extends Model
 {
     /** @use HasFactory<\Database\Factories\PromotionFactory> */
     use HasFactory;
-    protected $fillable = ['code', 'value', 'type','start_at','end_at', 'usage_limit', 'used_count', 'created_by', 'max_discount_amount'];
+    protected $fillable = ['code', 'value', 'type','start_at','end_at', 'usage_limit', 'used_count', 'created_by',  'process_status', 'max_discount_amount'];
 
     /**
      * The attributes that should be cast.
@@ -43,22 +43,22 @@ class Promotion extends Model
     public function isActive(): bool
     {
         $now = now();
-        
+
         // Kiểm tra voucher đã bắt đầu chưa
         if ($this->start_at > $now) {
             return false; // Voucher chưa bắt đầu
         }
-        
+
         // Kiểm tra voucher đã hết hạn chưa
         if ($this->end_at < $now) {
             return false; // Voucher đã hết hạn
         }
-        
+
         // Kiểm tra giới hạn sử dụng
         if ($this->usage_limit > 0 && $this->used_count >= $this->usage_limit) {
             return false; // Đã hết lượt sử dụng
         }
-        
+
         return true; // Voucher đang hoạt động
     }
 

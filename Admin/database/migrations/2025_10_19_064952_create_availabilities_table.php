@@ -18,6 +18,7 @@ return new class extends Migration
             $table->date('date');
             $table->decimal('price', 10)->default(0);
             $table->enum('status', ['open', 'booked', 'closed', 'maintenance'])->default('open');
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
             $table->text('note')->nullable();
             $table->timestamps();
             $table->softDeletes();

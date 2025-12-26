@@ -16,6 +16,8 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('venue_id')->constrained('venues')->cascadeOnDelete();
             $table->integer('rating')->default(5);
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
+
             $table->text('comment')->nullable();
             $table->timestamps();
             $table->softDeletes();

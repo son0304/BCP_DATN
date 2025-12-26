@@ -35,6 +35,8 @@ const Order_Container = ({ id }: { id: any }) => {
     const [selectedServices, setSelectedServices] = useState<ServiceItem[]>([]);
     const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0); 
+
 
     // --- LOGIC TÍNH TIỀN ---
     const { rawTotalPrice, finalPrice, discountAmount } = useMemo(() => {
@@ -116,6 +118,8 @@ const Order_Container = ({ id }: { id: any }) => {
             onSuccess: (res) => {
                 if (res.success) {
                     showNotification('Đặt sân thành công!', 'success');
+                    setRefreshTrigger(prev => prev + 1); 
+                    setSelectedItems([]); 
                     navigate(`/booking/${res.data}`);
                 } else {
                     showNotification(res.message || 'Đặt sân thất bại.', 'error');
@@ -153,6 +157,8 @@ const Order_Container = ({ id }: { id: any }) => {
                                 id={id}
                                 selectedItems={selectedItems}
                                 onChange={setSelectedItems}
+                                refreshTrigger={refreshTrigger} // 4. Truyền xuống cho con
+
                             />
                         </div>
 
@@ -162,6 +168,8 @@ const Order_Container = ({ id }: { id: any }) => {
                                 venueId={id}
                                 selectedServices={selectedServices}
                                 onChange={setSelectedServices}
+                                refreshTrigger={refreshTrigger} 
+
                             />
                         </div>
                     </div>

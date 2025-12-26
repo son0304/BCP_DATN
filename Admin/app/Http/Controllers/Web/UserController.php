@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Models\Role;
 use App\Models\Province;
@@ -14,18 +16,12 @@ use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        // 1. Validate dữ liệu tìm kiếm trên URL
-        $request->validate([
-            'search' => 'nullable|string|max:255',
-            'role_id' => 'nullable|integer|exists:roles,id',
-            'is_active' => 'nullable|boolean',
-        ]);
-
         $query = User::with(['role', 'province', 'district']);
 
         Log::info('message:' . $query->toSql());
@@ -35,10 +31,7 @@ class UserController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%");
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%");
             });
@@ -55,7 +48,7 @@ class UserController extends Controller
         }
 
         $users = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
-        $roles = Role::select('id', 'name')->get();
+        $roles = Role::select('id', 'name')->get(); // Chỉ select những cột cần thiết
 
         return view('admin.users.index', compact('users', 'roles'));
     }
@@ -67,7 +60,7 @@ class UserController extends Controller
     {
         $roles = Role::select('id', 'name')->get();
         $provinces = Province::select('id', 'name')->get();
-        $districts = District::select('id', 'name', 'province_id')->get();
+        $districts = District::select('id', 'name')->get();
 
         return view('admin.users.create', compact('roles', 'provinces', 'districts'));
     }
@@ -75,30 +68,8 @@ class UserController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        // 2. Validate Thêm mới trực tiếp tại đây
-        $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email',
-            'password' => 'required|string|min:6|confirmed', // Cần input password_confirmation ở form
-            'role_id' => 'required|integer|exists:roles,id',
-            'phone' => ['nullable', 'regex:/^(0|\+84)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/'],
-            'province_id' => 'nullable|integer|exists:provinces,id',
-            'district_id' => 'nullable|integer|exists:districts,id',
-            'is_active' => 'nullable|in:0,1,on', // 'on' là giá trị checkbox gửi lên
-        ], [
-            'name.required' => 'Tên không được để trống.',
-            'email.required' => 'Email không được để trống.',
-            'email.email' => 'Email không đúng định dạng.',
-            'email.unique' => 'Email này đã được sử dụng.',
-            'password.required' => 'Mật khẩu không được để trống.',
-            'password.min' => 'Mật khẩu phải có ít nhất 6 ký tự.',
-            'password.confirmed' => 'Xác nhận mật khẩu không khớp.',
-            'role_id.required' => 'Vui lòng chọn vai trò.',
-            'phone.regex' => 'Số điện thoại không hợp lệ.',
-        ]);
-
         DB::beginTransaction();
         try {
             User::create([
@@ -109,16 +80,18 @@ class UserController extends Controller
                 'phone' => $request->phone,
                 'province_id' => $request->province_id,
                 'district_id' => $request->district_id,
-                'is_active' => $request->has('is_active'),
+                'lat' => $request->lat,
+                'lng' => $request->lng,
+                'is_active' => $request->has('is_active') ? true : false,
             ]);
 
             DB::commit();
-            return redirect()->route('admin.users.index') // Sửa lại route cho đúng tên route của bạn
+            return redirect()->route('admin.admin.users.index')
                 ->with('success', 'Người dùng đã được tạo thành công!');
         } catch (\Exception $e) {
             DB::rollback();
             return back()->withInput()
-                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+                ->with('error', 'Có lỗi xảy ra khi tạo người dùng: ' . $e->getMessage());
         }
     }
 
@@ -136,41 +109,22 @@ class UserController extends Controller
         Log::info('message:' . $user->toJson());
 
 
-        $tickets = $user->tickets()
-            ->with([
-                'items.booking.court.venue',
-                'items.booking.timeSlot'
-            ])
+        // Paginate bookings
+        $bookings = $user->bookings()
+            ->with(['court.venue', 'timeSlot'])
             ->orderBy('created_at', 'desc')
-            ->paginate(5, ['*'], 'tickets_page');
+            ->paginate(5, ['*'], 'bookings_page');
 
+        // Paginate venues
         $venues = $user->venues()
             ->with(['province', 'district'])
             ->orderBy('created_at', 'desc')
             ->paginate(5, ['*'], 'venues_page');
 
+        // Get roles for search form
         $roles = Role::select('id', 'name')->get();
 
-        return view('admin.users.show', compact('user', 'tickets', 'venues', 'roles'));
-    }
-
-    public function destroy(User $user)
-    {
-        DB::beginTransaction();
-        try {
-            if ($user->tickets()->exists() || $user->venues()->exists()) {
-                return back()->with('error', 'Không thể xóa người dùng này vì họ có dữ liệu liên quan (đơn đặt sân hoặc sở hữu địa điểm)!');
-            }
-
-            $user->delete();
-
-            DB::commit();
-            return redirect()->route('admin.users.index')
-                ->with('success', 'Người dùng đã được xóa thành công!');
-        } catch (\Exception $e) {
-            DB::rollback();
-            return back()->with('error', 'Lỗi khi xóa: ' . $e->getMessage());
-        }
+        return view('admin.users.show', compact('user', 'bookings', 'venues', 'roles'));
     }
 
     /**
@@ -180,7 +134,7 @@ class UserController extends Controller
     {
         $roles = Role::select('id', 'name')->get();
         $provinces = Province::select('id', 'name')->get();
-        $districts = District::select('id', 'name', 'province_id')->get();
+        $districts = District::select('id', 'name')->get();
 
         return view('admin.users.edit', compact('user', 'roles', 'provinces', 'districts'));
     }
@@ -188,27 +142,8 @@ class UserController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, User $user)
+    public function update(UpdateUserRequest $request, User $user)
     {
-        // 3. Validate Cập nhật trực tiếp tại đây
-        $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'password' => 'nullable|string|min:6|confirmed',
-            'role_id' => 'required|integer|exists:roles,id',
-            'phone' => ['nullable', 'regex:/^(0|\+84)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/'],
-            'province_id' => 'nullable|integer|exists:provinces,id',
-            'district_id' => 'nullable|integer|exists:districts,id',
-            'is_active' => 'nullable|in:0,1,on',
-        ], [
-            'name.required' => 'Tên không được để trống.',
-            'email.required' => 'Email không được để trống.',
-            'email.unique' => 'Email này đã được người khác sử dụng.',
-            'password.confirmed' => 'Xác nhận mật khẩu không khớp.',
-            'role_id.required' => 'Vui lòng chọn vai trò.',
-            'phone.regex' => 'Số điện thoại không hợp lệ.',
-        ]);
-
         DB::beginTransaction();
         try {
             $updateData = [
@@ -218,10 +153,12 @@ class UserController extends Controller
                 'phone' => $request->phone,
                 'province_id' => $request->province_id,
                 'district_id' => $request->district_id,
-                'is_active' => $request->has('is_active'),
+                'lat' => $request->lat,
+                'lng' => $request->lng,
+                'is_active' => $request->has('is_active') ? true : false,
             ];
 
-            // Chỉ update password nếu người dùng nhập vào
+            // Only update password if provided
             if ($request->filled('password')) {
                 $updateData['password'] = Hash::make($request->password);
             }
@@ -229,12 +166,35 @@ class UserController extends Controller
             $user->update($updateData);
 
             DB::commit();
-            return redirect()->route('admin.users.index')
-                ->with('success', 'Cập nhật thông tin thành công!');
+            return redirect()->route('admin.admin.users.index')
+                ->with('success', 'Thông tin người dùng đã được cập nhật thành công!');
         } catch (\Exception $e) {
             DB::rollback();
             return back()->withInput()
-                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+                ->with('error', 'Có lỗi xảy ra khi cập nhật người dùng: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(User $user)
+    {
+        DB::beginTransaction();
+        try {
+            // Check if user has bookings or venues
+            if ($user->bookings()->exists() || $user->venues()->exists()) {
+                return back()->with('error', 'Không thể xóa người dùng này vì họ có đặt sân hoặc sở hữu địa điểm!');
+            }
+
+            $user->delete();
+
+            DB::commit();
+            return redirect()->route('admin.admin.users.index')
+                ->with('success', 'Người dùng đã được xóa thành công!');
+        } catch (\Exception $e) {
+            DB::rollback();
+            return back()->with('error', 'Có lỗi xảy ra khi xóa người dùng: ' . $e->getMessage());
         }
     }
 
@@ -252,7 +212,7 @@ class UserController extends Controller
             return back()->with('success', "Người dùng đã được {$status} thành công!");
         } catch (\Exception $e) {
             DB::rollback();
-            return back()->with('error', 'Lỗi: ' . $e->getMessage());
+            return back()->with('error', 'Có lỗi xảy ra khi thay đổi trạng thái người dùng: ' . $e->getMessage());
         }
     }
 }

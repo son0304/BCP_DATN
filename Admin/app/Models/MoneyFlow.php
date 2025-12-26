@@ -16,6 +16,7 @@ class MoneyFlow extends Model
         'venue_id',
         'admin_amount',
         'venue_owner_amount',
+        'process_status',
     ];
 
     protected $casts = [

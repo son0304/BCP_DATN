@@ -125,10 +125,7 @@ class ServicesController extends Controller
 
     public function update(Request $request, $id)
     {
-        // 1. Log dữ liệu để debug
-        Log::info("Request Data for update Service ID $id: ", $request->all());
-
-        // 2. Validate dữ liệu
+        // 1. Validate
         $validated = $request->validate([
             'name'        => 'required|string|max:255',
             'category_id' => 'required|exists:service_categories,id',
@@ -137,16 +134,17 @@ class ServicesController extends Controller
             'price'       => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
             'status'      => 'required|in:active,inactive',
-            'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'venue_ids'   => 'nullable|array', // Mảng các ID sân được chọn
+            'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            // Kiểm tra mảng venue_ids
+            'venue_ids'   => 'nullable|array',
             'venue_ids.*' => 'exists:venues,id',
         ]);
 
         DB::beginTransaction();
         try {
-            // 3. Tìm và Cập nhật bảng Service
             $service = Service::findOrFail($id);
 
+            // 2. Cập nhật thông tin cơ bản
             $service->update([
                 'name'        => $validated['name'],
                 'category_id' => $validated['category_id'],
@@ -156,64 +154,61 @@ class ServicesController extends Controller
                 'status'      => $validated['status'],
             ]);
 
-            // 4. Xử lý Ảnh (Nếu có upload ảnh mới)
+            // 3. Xử lý Ảnh
             if ($request->hasFile('image')) {
-                // Xóa ảnh cũ nếu có (Tuỳ chọn: kiểm tra logic lưu ảnh của bạn)
+                // Xóa ảnh cũ
                 if ($service->images()->exists()) {
                     $oldImage = $service->images()->first();
-                    // Xóa file vật lý
-                    $path = str_replace(asset(''), '', $oldImage->url); // Xử lý đường dẫn nếu cần
-                    // Storage::delete($path); // Uncomment nếu bạn dùng Storage
-
-                    // Xóa record trong DB
+                    $storagePath = str_replace('/storage/', '', $oldImage->url);
+                    Storage::disk('public')->delete($storagePath);
                     $oldImage->delete();
                 }
 
                 // Lưu ảnh mới
                 $file = $request->file('image');
                 $filename = time() . '_' . $file->getClientOriginalName();
-                $path = $file->storeAs('services', $filename, 'public'); // Lưu vào storage/app/public/services
+                $path = $file->storeAs('services', $filename, 'public');
 
-                // Tạo record trong bảng images (Polymorphic hoặc HasMany tuỳ cấu trúc)
                 $service->images()->create([
                     'url' => '/storage/' . $path,
-                    'is_primary' => 1 // Giả sử
+                    'is_primary' => 1
                 ]);
             }
 
-            // 5. Cập nhật bảng trung gian (venue_service)
-            // Logic: Cập nhật giá mới cho các sân được chọn, nhưng GIỮ NGUYÊN STOCK hiện tại
-
-            $venueIds = $request->input('venue_ids', []);
+            // 4. Xử lý Sân (Quan trọng)
+            $venueIds = $request->input('venue_ids', []); // Danh sách sân được chọn từ form
             $inputPrice = ($validated['type'] === 'amenities') ? 0 : ($validated['price'] ?? 0);
 
+            // Lấy danh sách các sân hiện tại để lấy lại stock cũ
+            $currentVenues = $service->venues()->get()->keyBy('id');
             $syncData = [];
 
-            $currentVenues = $service->venues->keyBy('id');
-
             foreach ($venueIds as $venueId) {
-                // Mặc định stock là 0 (cho sân mới thêm vào)
-                $currentStock = 0;
+                // Mặc định stock = 0 nếu là sân mới
+                $stockToSave = 0;
 
+                // Nếu sân này đã có trong DB, giữ nguyên stock cũ
                 if (isset($currentVenues[$venueId])) {
-                    $currentStock = $currentVenues[$venueId]->pivot->stock ?? 0;
+                    $stockToSave = $currentVenues[$venueId]->pivot->stock;
                 }
 
-                // Chuẩn bị dữ liệu sync
                 $syncData[$venueId] = [
-                    'price' => $inputPrice,
-                    'stock' => $currentStock // Quan trọng: Giữ nguyên tồn kho
+                    'price' => $inputPrice, // Giá mới từ form
+                    'stock' => $stockToSave // Stock cũ
                 ];
             }
 
-
+            // Hàm sync sẽ:
+            // - Thêm mới các sân chưa có.
+            // - Cập nhật các sân đã có.
+            // - XÓA các sân không có trong $syncData (những sân bị bỏ tick).
             $service->venues()->sync($syncData);
 
             DB::commit();
             return redirect()->back()->with('success', 'Cập nhật dịch vụ thành công!');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Error updating service: " . $e->getMessage());
+            Log::error("Error updating service ID $id: " . $e->getMessage());
             return redirect()->back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }

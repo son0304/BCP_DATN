@@ -22,6 +22,7 @@ class MerchantProfile extends Model
         'bank_account_number',
         'bank_account_name',
         'status',
+        'process_status',
         'admin_note',
     ];
 

@@ -24,6 +24,7 @@ class Venue extends Model
         'lng',
         'phone',
         'is_active',
+        'process_status',
         'admin_note',
     ];
 
@@ -83,8 +84,5 @@ class Venue extends Model
         )->withPivot('created_at', 'updated_at');
     }
 
-    public function products()
-    {
-        return $this->hasMany(Product::class);
-    }
+  
 }

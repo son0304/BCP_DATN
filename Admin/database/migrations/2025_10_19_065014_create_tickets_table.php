@@ -19,7 +19,10 @@ return new class extends Migration
             $table->decimal('discount_amount', 10, 2)->default(0);
             $table->decimal('total_amount', 10, 2)->default(0);
             $table->enum('status', ['pending', 'confirmed', 'cancelled', 'completed'])->default('pending');
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
+
             $table->enum('payment_status', ['unpaid', 'paid', 'refunded'])->default('unpaid');
+
 
             $table->text('notes')->nullable();
             $table->timestamps();

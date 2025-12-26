@@ -15,6 +15,7 @@ class Comment extends Model
         'user_id',
         'content',
         'parent_id',
+        'process_status',
     ];
 
     public function post()

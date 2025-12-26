@@ -197,6 +197,29 @@
                     </div>
                 </div>
 
+                {{-- Thêm vào bên dưới Card "Thông tin địa điểm" --}}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-secondary"><i class="fas fa-map-marked-alt me-2"></i>Vị trí trên bản đồ</h5>
+                        @if ($venue->lat && $venue->lng)
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ $venue->lat }},{{ $venue->lng }}"
+                                target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-directions"></i> Xem trên Google Maps
+                            </a>
+                        @endif
+                    </div>
+                    <div class="card-body p-0">
+                        @if ($venue->lat && $venue->lng)
+                            <div id="venueMap"></div>
+                        @else
+                            <div class="p-4 text-center text-muted">
+                                <i class="fas fa-map-marker-slash fa-2x mb-2"></i>
+                                <p>Chưa cập nhật tọa độ cho địa điểm này.</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
 
                 {{-- 3. DANH SÁCH SÂN CON --}}
                 <div class="card shadow-sm border-0 mb-4">
@@ -451,5 +474,37 @@
             </form>
         </div>
     </div>
+
+    @if ($venue->lat && $venue->lng)
+        <!-- Leaflet JS -->
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Tọa độ từ database
+                var lat = {{ $venue->lat }};
+                var lng = {{ $venue->lng }};
+                var venueName = "{{ $venue->name }}";
+
+                // Khởi tạo bản đồ
+                var map = L.map('venueMap').setView([lat, lng], 16);
+
+                // Thêm lớp bản đồ (OpenStreetMap)
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
+
+                // Thêm Marker (điểm đánh dấu)
+                var marker = L.marker([lat, lng]).addTo(map);
+
+                // Hiển thị Popup khi click vào điểm đánh dấu
+                marker.bindPopup("<b>" + venueName + "</b><br>Vị trí sân bóng.").openPopup();
+
+                // Fix lỗi bản đồ bị lệch khi nằm trong tab hoặc card ẩn
+                setTimeout(function() {
+                    map.invalidateSize()
+                }, 500);
+            });
+        </script>
+    @endif
 
 @endsection

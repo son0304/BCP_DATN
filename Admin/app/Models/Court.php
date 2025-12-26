@@ -14,6 +14,7 @@ class Court extends Model
         'venue_type_id',
         'name',
         'surface',
+        'process_status',
         'is_indoor'
     ];
 

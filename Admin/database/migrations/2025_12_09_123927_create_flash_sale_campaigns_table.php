@@ -17,6 +17,7 @@ return new class extends Migration
 
             // Trạng thái: pending (sắp tới), active (đang chạy), inactive (tắt), completed (xong)
             $table->enum('status', ['pending', 'active', 'inactive', 'completed'])->default('pending');
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
 
             $table->timestamps(); // Tự động tạo created_at, updated_at
         });

@@ -18,10 +18,11 @@ class WalletLog extends Model
         'wallet_id',
         'ticket_id',
         'booking_id',
-        'type',           
+        'type',
         'amount',
         'before_balance',
         'after_balance',
+        'process_status',
         'description',
     ];
 

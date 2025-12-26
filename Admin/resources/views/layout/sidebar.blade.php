@@ -51,6 +51,20 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('admin.posts.index') }}" class="waves-effect">
+                                <i class="ri-price-tag-3-line"></i>
+                                <span> Quản lý Posts </span>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="{{ route('admin.tags.index') }}" class="waves-effect">
+                                <i class="ri-price-tag-3-line"></i>
+                                <span> Quản lý Tags </span>
+                            </a>
+                        </li>
+
+                        <li>
                             <a href="{{ route('admin.chats.index') }}" class="waves-effect">
                                 <i class="remixicon-chat-3-line"></i>
                                 <span> Message </span>
@@ -111,30 +125,9 @@
                             </a>
                         </li>
                     @endif
-                <li>
-                    <a href="{{ route('admin.tags.index') }}" class="waves-effect">
-                        <i class="ri-price-tag-3-line"></i>
-                        <span> Quản lý Tags </span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="{{ route('admin.posts.index') }}" class="waves-effect">
-                        <i class="ri-price-tag-3-line"></i>
-                        <span> Quản lý Posts </span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="{{ route('admin.transactions.index') }}" class="waves-effect">
-                        {{-- Icon hóa đơn --}}
-                        <i class="ri-file-list-3-line"></i>
-                        <span> Quản lý giao dịch </span>
-                    </a>
-                </li>
-                @endif
 
                 @endif
+
 
             </ul>
 

@@ -33,9 +33,11 @@ type OrderBookingProps = {
     id: number; // Venue ID
     selectedItems: SelectedItem[]; // Nhận từ cha để hiển thị màu đã chọn
     onChange: (items: SelectedItem[]) => void; // Hàm update state của cha
+    refreshTrigger: number; // Thêm dòng này
+
 };
 
-const Order_Booking: React.FC<OrderBookingProps> = ({ id, selectedItems, onChange }) => {
+const Order_Booking: React.FC<OrderBookingProps> = ({ id, selectedItems, onChange, refreshTrigger  }) => {
     const { showNotification } = useNotification();
 
     // State nội bộ
@@ -45,7 +47,6 @@ const Order_Booking: React.FC<OrderBookingProps> = ({ id, selectedItems, onChang
     // 1. GỌI API: Lấy dữ liệu sân theo ID và Date
     const { data, refetch, isLoading } = useFetchDataById<any>('court', id, { date: selectedDate });
     const courts = data?.data || [];
-    console.log('Courts data:', courts);
 
 
     // Logic: Refetch khi đổi ngày
@@ -59,6 +60,12 @@ const Order_Booking: React.FC<OrderBookingProps> = ({ id, selectedItems, onChang
             setActiveCourtId(courts[0].id);
         }
     }, [courts, activeCourtId]);
+
+    useEffect(() => {
+        if (refreshTrigger > 0) {
+            refetch(); 
+        }
+    }, [refreshTrigger, refetch]);
 
     // Logic: Lấy slots của court đang active
     const activeCourtSlots = useMemo(() => {

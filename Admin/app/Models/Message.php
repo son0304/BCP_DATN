@@ -27,6 +27,7 @@ class Message extends Model
         'conversation_id',
         'sender_id',
         'guest_token',
+        'process_status',
         'message',
     ];
 
@@ -43,7 +44,7 @@ class Message extends Model
      */
     public function sender(): BelongsTo
     {
-        // sender_id có thể là NULL (dành cho bot/guest), 
+        // sender_id có thể là NULL (dành cho bot/guest),
         // nhưng BelongsTo vẫn hoạt động tốt khi key là null.
         return $this->belongsTo(User::class, 'sender_id');
     }

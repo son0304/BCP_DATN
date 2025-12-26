@@ -18,6 +18,7 @@ class FlashSaleItem extends Model
         'quantity',
         'sold_count',
         'status',
+        'process_status',
     ];
 
     // Relationship: Item thuộc về 1 Chiến dịch

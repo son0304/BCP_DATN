@@ -25,6 +25,8 @@ return new class extends Migration
 
             // Trạng thái & Ghi chú
             $table->enum('status', ['pending', 'approved', 'rejected', 'resubmitted'])->default('pending');
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
+
             $table->text('admin_note')->nullable()->comment('Lý do từ chối nếu có');
 
             $table->timestamps();

@@ -1,107 +1,131 @@
-import React, { useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import React, { useState, useMemo, useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { useFetchData } from "../../Hooks/useApi";
+import { Link } from "react-router-dom";
 
-// --- 1. CONFIG ICON ---
-const defaultIcon = L.divIcon({
-  className: "custom-pin",
-  html: `<div style="background-color: #10B981; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>`,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
+// --- ICON CONFIG ---
+const createIcon = (color: string, size: number, iconClass?: string) =>
+  L.divIcon({
+    className: "custom-marker",
+    html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white;">
+        ${iconClass ? `<i class="${iconClass}" style="font-size: ${size / 2.5}px"></i>` : ""}
+      </div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+  });
+
+const defaultIcon = createIcon("#10B981", 26, "fa-solid fa-stadium");
+const activeIcon = createIcon("#EF4444", 38, "fa-solid fa-location-dot");
+const userIcon = L.divIcon({
+  className: "user-marker",
+  html: `<div class="user-location-pulse"></div>`,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
 });
 
-const activeIcon = L.divIcon({
-  className: "custom-pin-active",
-  html: `<div style="background-color: #EF4444; width: 36px; height: 36px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 14px;"><i class="fa-solid fa-location-dot"></i></div>`,
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-  popupAnchor: [0, -20],
-});
+// --- COMPONENT CON: XỬ LÝ ĐỊNH VỊ ---
+const LocationMarker = ({ setMapCenter }: { setMapCenter: any }) => {
+  const [position, setPosition] = useState<L.LatLng | null>(null);
+  
+  const map = useMapEvents({
+    locationfound(e) {
+      setPosition(e.latlng);
+      setMapCenter([e.latlng.lat, e.latlng.lng]);
+      map.flyTo(e.latlng, 15); // Tự động bay tới vị trí người dùng
+    },
+    locationerror() {
+      alert("Không thể truy cập vị trí của bạn. Hãy kiểm tra quyền GPS trên trình duyệt.");
+    },
+  });
 
-// --- 2. FAKE DATA ---
-const FAKE_VENUES = [
-  { id: 1, name: "Sân Bóng Đá Kỳ Hòa", address: "824 Sư Vạn Hạnh, Q.10", price: 300000, rating: 4.5, image: "https://images.unsplash.com/photo-1575361204480-aadea25e6e68?auto=format&fit=crop&w=300&q=80", lat: 10.7781, lng: 106.6665, type: "Bóng đá" },
-  { id: 2, name: "CLB Cầu Lông 18", address: "18 Cộng Hòa, Tân Bình", price: 120000, rating: 4.8, image: "https://images.unsplash.com/photo-1626224583764-84764d622398?auto=format&fit=crop&w=300&q=80", lat: 10.8016, lng: 106.6533, type: "Cầu lông" },
-  { id: 3, name: "Sân Tennis Hồ Xuân Hương", address: "2 Hồ Xuân Hương, Q.3", price: 250000, rating: 4.2, image: "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=300&q=80", lat: 10.7765, lng: 106.6912, type: "Tennis" },
-  { id: 4, name: "Pickleball Center Saigon", address: "102 Nguyễn Du, Q.1", price: 180000, rating: 5.0, image: "https://images.unsplash.com/photo-1563206767-5b1d972b9fb1?auto=format&fit=crop&w=300&q=80", lat: 10.7745, lng: 106.6985, type: "Pickleball" },
-  { id: 5, name: "Sân Bóng Rổ Hoa Lư", address: "2 Đinh Tiên Hoàng, Q.1", price: 150000, rating: 4.6, image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=300&q=80", lat: 10.7892, lng: 106.7003, type: "Bóng rổ" }
-];
+  return position === null ? null : (
+    <Marker position={position} icon={userIcon}>
+      <Popup>Bạn đang ở đây!</Popup>
+    </Marker>
+  );
+};
 
-const FlyToLocation = ({ center }: { center: [number, number] }) => {
+// --- COMPONENT CON: ĐIỀU KHIỂN CAMERA ---
+const MapController = ({ center }: { center: [number, number] }) => {
   const map = useMap();
-  map.flyTo(center, 14, { duration: 1.5 });
+  useEffect(() => {
+    map.flyTo(center, map.getZoom(), { duration: 1.5 });
+  }, [center]);
   return null;
 };
 
-// --- 3. MAIN COMPONENT ---
-const Map_Venue = () => {
+// --- COMPONENT CHÍNH ---
+const Map_Venue: React.FC = () => {
   const [selectedVenue, setSelectedVenue] = useState<any>(null);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([10.7765, 106.6912]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([21.0377, 105.7750]);
+  const [activeCategory, setActiveCategory] = useState("Tất cả");
+
+  const { data, isLoading, isError } = useFetchData<any>('venues');
+  const allVenues = useMemo(() => data?.data || [], [data]);
+
+  const filteredVenues = useMemo(() => {
+    if (activeCategory === "Tất cả") return allVenues;
+    return allVenues.filter((v: any) => v.venue_types?.some((t: any) => t.name === activeCategory));
+  }, [allVenues, activeCategory]);
 
   const handleSelectVenue = (venue: any) => {
     setSelectedVenue(venue);
-    setMapCenter([venue.lat, venue.lng]);
+    setMapCenter([Number(venue.lat), Number(venue.lng)]);
   };
 
+  const getVenueThumbnail = (images: any[]) => {
+    if (!images || images.length === 0) return "https://via.placeholder.com/300";
+    const primary = images.find(img => img.is_primary === 1);
+    return primary ? primary.url : images[0].url;
+  };
+
+  if (isLoading) return <div className="h-[600px] flex items-center justify-center font-bold">Đang tải...</div>;
+
   return (
-    // Wrapper ngoài cùng để tạo khoảng cách với Header/Footer
-    <div className="w-full bg-[#F8FAFC] py-10 px-4 font-sans flex justify-center">
-      
-      {/* 
-          CONTAINER CHÍNH:
-          - max-w-7xl: Giới hạn chiều rộng (khoảng 1280px) để không bị bè ra 2 bên.
-          - h-[650px]: Chiều cao cố định, vừa tầm mắt.
-          - mx-auto: Căn giữa màn hình.
-      */}
-      <div className="w-full max-w-7xl h-[600px] md:h-[650px] bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col lg:flex-row">
-        
-        {/* === LEFT: LIST (35% Width) === */}
-        <div className="w-full lg:w-[35%] flex flex-col border-r border-gray-200 bg-white z-10 relative">
-          
-          {/* Header List */}
-          <div className="p-5 border-b border-gray-100 bg-white shadow-sm z-20">
-            <h2 className="text-xl font-extrabold text-gray-800 flex items-center gap-2">
+    <div className="w-full bg-[#F1F5F9] py-10 px-4 flex justify-center">
+      <div className="w-full max-w-7xl h-[650px] bg-white rounded-[2rem] shadow-2xl flex flex-col lg:flex-row overflow-hidden border border-gray-100">
+
+        {/* CỘT TRÁI: DANH SÁCH */}
+        <div className="w-full lg:w-[38%] flex flex-col border-r bg-white z-10">
+          <div className="p-6 border-b">
+            <h2 className="text-2xl font-black text-gray-800 flex items-center gap-2">
               <i className="fa-solid fa-map-location-dot text-emerald-600"></i> Tìm sân gần bạn
             </h2>
-            <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar pb-1">
-               {['Tất cả', 'Bóng đá', 'Cầu lông', 'Tennis'].map(tag => (
-                  <button key={tag} className="px-3 py-1 bg-gray-50 border border-gray-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 text-xs font-bold rounded-lg text-gray-600 whitespace-nowrap transition">
-                     {tag}
-                  </button>
-               ))}
+            <div className="flex gap-2 mt-4 overflow-x-auto no-scrollbar">
+              {['Tất cả', 'Cầu lông', 'Bóng đá', 'Pickleball'].map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => setActiveCategory(tag)}
+                  className={`px-4 py-2 border text-xs font-black rounded-xl transition-all ${
+                    activeCategory === tag ? "bg-emerald-600 text-white shadow-lg" : "bg-gray-50 text-gray-500 hover:bg-emerald-50"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
             </div>
           </div>
-          
-          {/* List Items (Scrollable) */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-[#F9FAFB] custom-scrollbar">
-            {FAKE_VENUES.map((venue) => (
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#F8FAFC]">
+            {filteredVenues.map((venue: any) => (
               <div
                 key={venue.id}
                 onClick={() => handleSelectVenue(venue)}
-                className={`group flex gap-3 p-3 bg-white rounded-xl border cursor-pointer transition-all duration-200 ${
-                  selectedVenue?.id === venue.id 
-                    ? "border-emerald-500 ring-1 ring-emerald-500 shadow-md bg-emerald-50/10" 
-                    : "border-gray-100 hover:border-emerald-300 hover:shadow-sm"
+                className={`flex gap-4 p-4 bg-white rounded-2xl border cursor-pointer transition-all duration-300 ${
+                  selectedVenue?.id === venue.id ? "border-emerald-500 ring-4 ring-emerald-500/10 shadow-lg scale-[1.02]" : "border-gray-100"
                 }`}
               >
-                <div className="relative w-24 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                   <img src={venue.image} alt="venue" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                </div>
-
-                <div className="flex flex-col justify-between w-full py-0.5">
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-800 line-clamp-1 group-hover:text-emerald-700">
-                      {venue.name}
-                    </h3>
-                    <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">
-                      <i className="fa-solid fa-location-dot text-gray-400 mr-1"></i>{venue.address}
-                    </p>
-                  </div>
-                  
-                  <div className="flex justify-between items-end mt-1">
-                     <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-bold uppercase">{venue.type}</span>
-                     <span className="text-sm font-extrabold text-amber-500">{venue.price.toLocaleString()}đ</span>
+                <img src={getVenueThumbnail(venue.images)} className="w-24 h-24 rounded-2xl object-cover shadow-sm" alt="" />
+                <div className="flex flex-col justify-between py-1 flex-1">
+                  <h3 className="text-sm font-black text-gray-800">{venue.name}</h3>
+                  <p className="text-[11px] text-gray-500 line-clamp-2"><i className="fa-solid fa-location-dot text-emerald-500 mr-1"></i>{venue.address_detail}</p>
+                  <div className="flex gap-1 mt-2">
+                    {venue.venue_types?.map((t: any) => (
+                      <span key={t.id} className="text-[9px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-bold border border-emerald-100 uppercase">{t.name}</span>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -109,59 +133,63 @@ const Map_Venue = () => {
           </div>
         </div>
 
-        {/* === RIGHT: MAP (65% Width) === */}
-        <div className="flex-1 h-full relative bg-gray-100 z-0">
-          <MapContainer 
-            center={mapCenter} 
-            zoom={13} 
-            scrollWheelZoom={true} 
-            className="w-full h-full"
-            zoomControl={false}
-          >
-            <TileLayer
-              attribution='&copy; OpenStreetMap'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <FlyToLocation center={mapCenter} />
+        {/* CỘT PHẢI: BẢN ĐỒ */}
+        <div className="flex-1 h-full relative z-0">
+          <MapContainer center={mapCenter} zoom={14} className="w-full h-full" zoomControl={false}>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            
+            <MapController center={mapCenter} />
+            
+            {/* --- XỬ LÝ VỊ TRÍ NGƯỜI DÙNG Ở ĐÂY --- */}
+            <LocationMarker setMapCenter={setMapCenter} />
 
-            {FAKE_VENUES.map((venue) => (
-              <Marker 
-                key={venue.id} 
-                position={[venue.lat, venue.lng]} 
+            {filteredVenues.map((venue: any) => (
+              <Marker
+                key={venue.id}
+                position={[Number(venue.lat), Number(venue.lng)]}
                 icon={selectedVenue?.id === venue.id ? activeIcon : defaultIcon}
                 eventHandlers={{ click: () => handleSelectVenue(venue) }}
               >
-                <Popup className="custom-popup-clean" closeButton={false} offset={[0, -20]}>
-                  <div className="w-48 font-sans p-1">
-                    <div className="relative h-28 rounded-lg overflow-hidden mb-2">
-                       <img src={venue.image} className="w-full h-full object-cover" alt="popup" />
-                       <span className="absolute top-2 right-2 bg-white/90 px-1.5 rounded text-[10px] font-bold shadow flex items-center gap-1">
-                          {venue.rating} <i className="fa-solid fa-star text-amber-400"></i>
-                       </span>
-                    </div>
-                    <h3 className="text-sm font-bold text-gray-800 line-clamp-1">{venue.name}</h3>
-                    <p className="text-[10px] text-gray-500 mt-0.5">{venue.address}</p>
-                    <button className="w-full mt-2 bg-emerald-600 text-white text-[10px] font-bold py-1.5 rounded hover:bg-emerald-700 transition">
-                       Đặt sân ngay
-                    </button>
+                <Popup offset={[0, -10]}>
+                  <div className="w-44 p-1">
+                    <img src={getVenueThumbnail(venue.images)} className="w-full h-24 object-cover rounded-lg mb-2 shadow-sm" alt="" />
+                    <h3 className="text-xs font-bold">{venue.name}</h3>
+                    <Link to={`/venues/${venue.id}`} className="block mt-2">
+                      <button className="w-full bg-emerald-600 text-white text-[10px] font-bold py-2 rounded-lg">XEM CHI TIẾT</button>
+                    </Link>
                   </div>
                 </Popup>
               </Marker>
             ))}
-          </MapContainer>
-          
-          {/* Zoom Controls Custom */}
-          <div className="absolute bottom-6 right-6 z-[400] flex flex-col gap-2">
-             <button className="w-9 h-9 bg-white rounded-lg shadow-md flex items-center justify-center text-gray-600 hover:text-emerald-600 transition" title="Phóng to">
-                <i className="fa-solid fa-plus"></i>
-             </button>
-             <button className="w-9 h-9 bg-white rounded-lg shadow-md flex items-center justify-center text-gray-600 hover:text-emerald-600 transition" title="Thu nhỏ">
-                <i className="fa-solid fa-minus"></i>
-             </button>
-          </div>
-        </div>
 
+            <MapControls />
+          </MapContainer>
+        </div>
       </div>
+    </div>
+  );
+};
+
+// --- NÚT ĐIỀU KHIỂN ---
+const MapControls = () => {
+  const map = useMap();
+  
+  const handleLocate = () => {
+    map.locate(); // Kích hoạt sự kiện locationfound của Leaflet
+  };
+
+  return (
+    <div className="absolute bottom-8 right-8 z-[1000] flex flex-col gap-3">
+      {/* NÚT GPS */}
+      <button 
+        onClick={handleLocate}
+        className="w-12 h-12 bg-white rounded-2xl shadow-2xl flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-all active:scale-90 border border-gray-100"
+      >
+        <i className="fa-solid fa-location-crosshairs text-xl"></i>
+      </button>
+
+      <button onClick={() => map.zoomIn()} className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-gray-600 hover:text-emerald-600"><i className="fa-solid fa-plus text-lg"></i></button>
+      <button onClick={() => map.zoomOut()} className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center text-gray-600 hover:text-emerald-600"><i className="fa-solid fa-minus text-lg"></i></button>
     </div>
   );
 };

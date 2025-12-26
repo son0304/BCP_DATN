@@ -20,6 +20,8 @@ return new class extends Migration
             $table->dateTime('end_at');
             $table->integer('usage_limit')->default(0);
             $table->integer('used_count')->default(0);
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
+
             $table->timestamps();
             $table->softDeletes();
         });

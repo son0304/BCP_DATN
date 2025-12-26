@@ -19,6 +19,7 @@ return new class extends Migration
             // SENDER ID: Cần phải là NULLABLE để BOT hoặc GUEST có thể gửi.
             $table->unsignedBigInteger('sender_id')->nullable();
             $table->foreign('sender_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
 
             $table->string('guest_token', 100)->nullable()->index(); // Dành cho khách
             $table->text('message');

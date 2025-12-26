@@ -27,6 +27,8 @@ return new class extends Migration
             // 'refund' (Hoàn tiền)
             // 'withdraw' (Rút tiền - nếu có)
             $table->enum('type', ['deposit', 'payment', 'refund', 'withdraw']);
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
+
 
             // Số tiền giao dịch (Lưu số dương) - Dùng 15,2 để hỗ trợ số tiền lớn VNĐ
             $table->decimal('amount', 15, 2);

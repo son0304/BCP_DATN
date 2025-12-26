@@ -24,7 +24,8 @@ return new class extends Migration
             $table->time('start_time');
             $table->time('end_time');
             $table->boolean('is_active')->default(true);
-            $table->string('admin note')->nullable();
+            $table->string('admin_note')->nullable();
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
             $table->timestamps();
             $table->softDeletes();
         });

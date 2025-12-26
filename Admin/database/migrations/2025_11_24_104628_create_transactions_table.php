@@ -19,6 +19,8 @@ return new class extends Migration
             $table->decimal('amount', 12, 2);
             $table->string('note')->nullable();
             $table->enum('status', ['pending', 'success', 'failed', 'refunded'])->default('pending');
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
+
             $table->timestamps();
         });
     }

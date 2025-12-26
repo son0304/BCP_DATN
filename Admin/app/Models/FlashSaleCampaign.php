@@ -17,6 +17,7 @@ class FlashSaleCampaign extends Model
         'start_datetime',
         'end_datetime',
         'status',
+        'process_status',
     ];
 
     // Cast dữ liệu ngày tháng để code dễ xử lý

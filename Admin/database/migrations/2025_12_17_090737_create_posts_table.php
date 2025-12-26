@@ -17,6 +17,8 @@ return new class extends Migration
             $table->foreignId('tag_id')->constrained('tags');
             $table->string('title');
             $table->longText('content');
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
+
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();

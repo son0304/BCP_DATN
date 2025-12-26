@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('time_slot_id')->constrained('time_slots')->cascadeOnDelete();
             $table->date('date');
             $table->enum('status', ['pending', 'confirmed', 'cancelled'])->default('pending');
+            $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
             $table->timestamps();
             $table->softDeletes();
         });

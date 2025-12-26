@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useFetchDataById } from '../../../../Hooks/useApi';
 
 // 1. Định nghĩa Type cho Item được chọn
@@ -16,7 +16,7 @@ type ApiServiceData = {
     venue_id: number;
     service_id: number;
     price: string;
-    stock: number; 
+    stock: number;
     status: number;
     service: {
         id: number;
@@ -35,14 +35,22 @@ type OrderServiceProps = {
     venueId: number;
     selectedServices: ServiceItem[];
     onChange: (services: ServiceItem[]) => void;
+    refreshTrigger: number;
+
 };
 
-const Order_Service: React.FC<OrderServiceProps> = ({ venueId, selectedServices, onChange }) => {
+const Order_Service: React.FC<OrderServiceProps> = ({ venueId, selectedServices, onChange, refreshTrigger }) => {
     const MAX_QUANTITY = 10;
 
-    const { data, isLoading } = useFetchDataById('services', venueId);
+    const { data, isLoading, refetch } = useFetchDataById('services', venueId);
     const servicesList: ApiServiceData[] = (data as any)?.data || [];
 
+
+    useEffect(() => {
+        if (refreshTrigger > 0) {
+            refetch(); 
+        }
+    }, [refreshTrigger, refetch]);
     // --- Hàm xử lý Tăng/Giảm (Chỉ áp dụng cho dịch vụ thường) ---
     const handleToggleService = (item: ApiServiceData, increment: boolean = true) => {
         // [Safety check] Không xử lý nếu là tiện ích
@@ -111,7 +119,7 @@ const Order_Service: React.FC<OrderServiceProps> = ({ venueId, selectedServices,
 
                     // Lấy thông tin cơ bản
                     const price = parseFloat(item.price);
-                    
+
                     // Xử lý ảnh
                     const imageUrl = (item.service.images && item.service.images.length > 0)
                         ? item.service.images[0].url
@@ -120,7 +128,7 @@ const Order_Service: React.FC<OrderServiceProps> = ({ venueId, selectedServices,
                     // --- LOGIC CHO AMENITIES ---
                     if (isAmenity) {
                         // stock == 1 là Hoạt động, stock == 0 là Bảo trì
-                        const isActive = item.stock === 1; 
+                        const isActive = item.stock === 1;
 
                         return (
                             <div key={item.id} className="relative flex justify-between items-center p-3 border border-gray-100 rounded-xl bg-gray-50/50">
@@ -160,7 +168,7 @@ const Order_Service: React.FC<OrderServiceProps> = ({ venueId, selectedServices,
                     // --- LOGIC CHO DỊCH VỤ THƯỜNG (Mua bán được) ---
                     const isSelected = selectedServices.find(s => s.id === item.id);
                     const quantity = isSelected ? isSelected.quantity : 0;
-                    
+
                     const isOutOfStock = item.stock <= 0;
                     const isLowStock = item.stock > 0 && item.stock < 5;
                     const disableAddBtn = isOutOfStock || quantity >= MAX_QUANTITY || quantity >= item.stock;

@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\DataCreated;
 use App\Http\Controllers\Controller;
+use App\Jobs\AutoCompleteTicketJob;
+use App\Jobs\NotifyOwnerJob;
 use App\Mail\Booking_Status;
 use App\Models\Availability;
 use App\Models\Booking;
 use App\Models\Item;
+use App\Models\MoneyFlow;
 use App\Models\Promotion;
 use App\Models\Ticket;
+use App\Models\TimeSlot;
 use App\Models\VenueService;
 use App\Models\Wallet;
 use App\Models\WalletLog;
@@ -24,6 +29,7 @@ class TicketApiController extends Controller
 {
 
 
+    protected $namChannel = 'booking';
 
     /**
      * Display a listing of the resource.
@@ -103,18 +109,20 @@ class TicketApiController extends Controller
 
             // --- Validate Services ---
             'services' => 'nullable|array',
-            // CHÚ Ý: Frontend phải gửi key là 'venue_service_id' hoặc bạn map lại dữ liệu trước khi validate
             'services.*.venue_service_id' => 'required|exists:venue_services,id',
             'services.*.quantity' => 'required|integer|min:1',
         ]);
 
-        $user = Auth::user();
+        // [QUAN TRỌNG] Lấy thông tin TimeSlot 1 lần duy nhất
+        $timeSlotIds = collect($validated['bookings'])->pluck('time_slot_id')->unique();
+        $timeSlotsMap = TimeSlot::whereIn('id', $timeSlotIds)->get()->keyBy('id');
 
         try {
-            $ticket = DB::transaction(function () use ($validated) {
+            // Sử dụng Transaction
+            $result = DB::transaction(function () use ($validated, $timeSlotsMap) {
 
                 // ====================================================
-                // GIAI ĐOẠN 1: TÍNH TOÁN & KHÓA DỮ LIỆU (LOCKING)
+                // GIAI ĐOẠN 1: TÍNH TOÁN & KHÓA DỮ LIỆU
                 // ====================================================
 
                 $bookingTotal = 0;
@@ -122,9 +130,12 @@ class TicketApiController extends Controller
                 $bookingItemsPayload = [];
                 $serviceItemsPayload = [];
 
+                // Mảng chứa thông tin để lên lịch Job (Scheduler)
+                $schedulerData = [];
+
                 // --- 1.1 Xử lý Booking ---
                 foreach ($validated['bookings'] as $bookingData) {
-                    // Lock availability để tránh trùng lịch
+                    // Lock availability
                     $availability = Availability::where('court_id', $bookingData['court_id'])
                         ->where('slot_id', $bookingData['time_slot_id'])
                         ->where('date', $bookingData['date'])
@@ -133,7 +144,7 @@ class TicketApiController extends Controller
 
                     if (!$availability || $availability->status !== 'open') {
                         throw ValidationException::withMessages([
-                            'bookings' => "Sân ID {$bookingData['court_id']} khung giờ này đã có người đặt."
+                            'bookings' => "Sân ID {$bookingData['court_id']} ngày {$bookingData['date']} khung giờ này đã có người đặt."
                         ]);
                     }
 
@@ -144,31 +155,34 @@ class TicketApiController extends Controller
                         'data' => $bookingData,
                         'final_price' => $finalPrice
                     ];
+
+                    // [UPDATE] Thu thập cả Giờ Bắt Đầu và Giờ Kết Thúc để so sánh nối tiếp
+                    if (isset($timeSlotsMap[$bookingData['time_slot_id']])) {
+                        $slot = $timeSlotsMap[$bookingData['time_slot_id']];
+                        $schedulerData[] = [
+                            'court_id' => $bookingData['court_id'],
+                            'date' => $bookingData['date'],
+                            // Lưu dạng chuỗi chuẩn yyyy-mm-dd HH:mm:ss để dễ so sánh
+                            'start_time_str' => $bookingData['date'] . ' ' . $slot->start_time,
+                            'end_time_str' => $bookingData['date'] . ' ' . $slot->end_time
+                        ];
+                    }
                 }
 
                 // --- 1.2 Xử lý Services ---
                 if (!empty($validated['services'])) {
                     foreach ($validated['services'] as $srvItem) {
-                        // Tìm trong bảng venue_services
                         $venueService = VenueService::with('service')
                             ->where('id', $srvItem['venue_service_id'])
                             ->lockForUpdate()
                             ->first();
 
+                        if ($venueService->stock < $srvItem['quantity']) {
+                            throw ValidationException::withMessages(['services' => "Dịch vụ {$venueService->name} không đủ tồn kho."]);
+                        }
+
                         $qty = $srvItem['quantity'];
                         $venueService->decrement('stock', $qty);
-
-
-                        // Check tồn kho
-                        // if ($venueService->service->type === 'consumable') {
-                        //     if ($venueService->stock < $qty) {
-                        //         throw ValidationException::withMessages([
-                        //             'services' => "Sản phẩm {$venueService->service->name} chỉ còn {$venueService->stock}."
-                        //         ]);
-                        //     }
-                        //     $venueService->decrement('stock', $qty);
-                        // }
-
                         $itemTotal = $venueService->price * $qty;
                         $serviceTotal += $itemTotal;
 
@@ -199,9 +213,9 @@ class TicketApiController extends Controller
                     'total_amount' => $totalAmount,
                     'status' => 'pending',
                     'payment_status' => 'unpaid',
+                    'booking_code' => 'BK-' . now()->format('Ymd') . '-' . rand(1000, 9999)
                 ]);
 
-                // Trừ lượt khuyến mãi
                 if (!empty($validated['promotion_id'])) {
                     Promotion::where('id', $validated['promotion_id'])->decrement('usage_limit');
                 }
@@ -209,7 +223,6 @@ class TicketApiController extends Controller
                 // 2.2 Lưu Item Booking
                 foreach ($bookingItemsPayload as $payload) {
                     $bData = $payload['data'];
-
                     $booking = Booking::create([
                         'user_id' => $validated['user_id'],
                         'court_id' => $bData['court_id'],
@@ -218,18 +231,16 @@ class TicketApiController extends Controller
                         'status' => 'pending',
                     ]);
 
-                    // Đóng lịch
                     Availability::where('court_id', $bData['court_id'])
                         ->where('slot_id', $bData['time_slot_id'])
                         ->where('date', $bData['date'])
                         ->update(['status' => 'closed', 'note' => 'Ticket #' . $ticket->id]);
 
-                    // Tạo Item Booking
                     Item::create([
                         'ticket_id'        => $ticket->id,
-                        'item_type'        => 'booking', // Quan trọng để phân loại
+                        'item_type'        => 'booking',
                         'booking_id'       => $booking->id,
-                        'venue_service_id' => null, // Booking thì không có service
+                        'venue_service_id' => null,
                         'unit_price'       => $bData['unit_price'],
                         'quantity'         => 1,
                         'discount_amount'  => $bData['unit_price'] - $payload['final_price'],
@@ -237,16 +248,13 @@ class TicketApiController extends Controller
                     ]);
                 }
 
-                // 2.3 Lưu Item Services (ĐÃ SỬA CHỖ NÀY)
+                // 2.3 Lưu Item Services
                 foreach ($serviceItemsPayload as $payload) {
                     Item::create([
                         'ticket_id'        => $ticket->id,
-                        'item_type'        => 'service', // Quan trọng để phân loại
-                        'booking_id'       => null,      // Service thì không có booking
-
-                        // LƯU Ý: Đây là cột bạn vừa sửa trong DB
+                        'item_type'        => 'service',
+                        'booking_id'       => null,
                         'venue_service_id' => $payload['venue_service']->id,
-
                         'unit_price'       => $payload['unit_price'],
                         'quantity'         => $payload['quantity'],
                         'discount_amount'  => 0,
@@ -254,12 +262,96 @@ class TicketApiController extends Controller
                     ]);
                 }
 
-                return $ticket;
+                return [
+                    'ticket' => $ticket,
+                    'scheduler_data' => $schedulerData
+                ];
             });
+
+            // ====================================================
+            // GIAI ĐOẠN 3: LÊN LỊCH JOB (SCHEDULING) - ĐÃ SỬA LOGIC
+            // ====================================================
+
+            $ticket = $result['ticket'];
+            $rawSchedulerData = $result['scheduler_data'];
+
+            if (!empty($rawSchedulerData)) {
+
+                // BƯỚC 1: Sắp xếp dữ liệu theo thứ tự thời gian
+                // Sắp xếp theo Sân -> Ngày -> Giờ Bắt Đầu
+                $sortedData = collect($rawSchedulerData)->sort(function ($a, $b) {
+                    if ($a['court_id'] != $b['court_id']) return $a['court_id'] <=> $b['court_id'];
+                    return strcmp($a['start_time_str'], $b['start_time_str']);
+                })->values();
+
+                $groups = [];
+                $currentGroup = null;
+
+                // BƯỚC 2: Duyệt và Gom nhóm (Chỉ gộp nếu thời gian NỐI TIẾP nhau)
+                foreach ($sortedData as $item) {
+                    if (!$currentGroup) {
+                        $currentGroup = $item;
+                        continue;
+                    }
+
+                    // Điều kiện gộp:
+                    // 1. Cùng Sân
+                    // 2. Giờ Kết Thúc slot trước == Giờ Bắt Đầu slot này (Liên tục)
+                    $isSameCourt = ($currentGroup['court_id'] == $item['court_id']);
+                    $isContinuous = ($currentGroup['end_time_str'] == $item['start_time_str']);
+
+                    if ($isSameCourt && $isContinuous) {
+                        // Nối tiếp -> Cập nhật giờ kết thúc mới cho nhóm
+                        $currentGroup['end_time_str'] = $item['end_time_str'];
+                    } else {
+                        // Ngắt quãng (hoặc khác sân) -> Chốt nhóm cũ, bắt đầu nhóm mới
+                        $groups[] = $currentGroup;
+                        $currentGroup = $item;
+                    }
+                }
+                // Đẩy nhóm cuối cùng vào danh sách
+                if ($currentGroup) {
+                    $groups[] = $currentGroup;
+                }
+
+                // BƯỚC 3: Tạo Job cho từng nhóm đã gom
+                foreach ($groups as $group) {
+                    $finalEndTime = Carbon::parse($group['end_time_str']);
+                    $now = Carbon::now();
+
+                    // --- Job 1: Notify Owner (Trước 10 phút) ---
+                    $notifyAt = $finalEndTime->copy()->subMinutes(10);
+
+                    if ($notifyAt->gt($now)) {
+                        // Truyền court_id vào nếu Job của bạn hỗ trợ để thông báo rõ sân nào
+                        NotifyOwnerJob::dispatch($ticket)->delay($notifyAt);
+                        Log::info("🔔 Đã hẹn Job báo hết giờ (Sân {$group['court_id']}) lúc: " . $notifyAt->toDateTimeString());
+                    }
+
+                    // --- Job 2: Auto Complete (Sau 2 phút) ---
+                    $completeAt = $finalEndTime->copy()->addMinutes(2);
+
+                    if ($completeAt->gt($now)) {
+                        AutoCompleteTicketJob::dispatch($ticket->id)->delay($completeAt);
+                        Log::info("🏁 Đã hẹn Job hoàn thành (Sân {$group['court_id']}) lúc: " . $completeAt->toDateTimeString());
+                    }
+                }
+            }
+
+            // ====================================================
+
+            $ticket->load([
+                'user:id,name,phone',
+                'items.booking.court',
+                'items.booking.timeSlot',
+                'items.venueService.service'
+            ]);
+
+            broadcast(new DataCreated($ticket, $this->namChannel, 'ticket.created'));
 
             return response()->json([
                 'success' => true,
-                'message' => 'Tạo đơn hàng thành công!',
+                'message' => 'Tạo đơn hàng thành công! Hệ thống đã lên lịch nhắc giờ.',
                 'data' =>  $ticket->id
             ]);
         } catch (ValidationException $e) {
@@ -277,302 +369,266 @@ class TicketApiController extends Controller
         }
     }
 
+
+
+    public function destroyItem($id)
+    {
+        // 1. Lấy thông tin Item và Ticket
+        $item = Item::with(['booking.court', 'ticket.promotion', 'venueService.service'])->find($id);
+
+        if (!$item) return response()->json(['success' => false, 'message' => 'Mục này không tồn tại.'], 404);
+        if ($item->ticket->status === 'cancelled') return response()->json(['success' => false, 'message' => 'Vé này đã bị hủy toàn bộ.'], 400);
+        if ($item->status === 'refund') return response()->json(['success' => false, 'message' => 'Đã hoàn tiền rồi.'], 400);
+
+        $now = Carbon::now();
+        $refundRate = 0;
+        $logDescription = "";
+
+        // --- BƯỚC 2: XÁC ĐỊNH CHÍNH SÁCH HOÀN TIỀN (POLICY) ---
+        if ($item->venue_service_id) {
+            $refundRate = 1.0;
+            $name = $item->venueService->service->name ?? 'Dịch vụ';
+            $logDescription = "Hủy: {$name} (SL: {$item->quantity})";
+        } elseif ($item->booking) {
+            $bookingTime = Carbon::parse($item->booking->date . ' ' . $item->booking->timeSlot->start_time);
+
+            if ($bookingTime->isPast()) return response()->json(['success' => false, 'message' => 'Sân đang/đã đá, không thể hủy.'], 400);
+
+            $minutes = $now->diffInMinutes($bookingTime, false);
+            if ($minutes < 120) return response()->json(['success' => false, 'message' => 'Phải hủy trước giờ đá ít nhất 2 tiếng.'], 400);
+
+            $refundRate = ($minutes > 1440) ? 1.0 : 0.5;
+            $name = $item->booking->court->name ?? 'Sân';
+            $logDescription = "Hủy: {$name} (Hoàn " . ($refundRate * 100) . "%)";
+        }
+
+        // --- BƯỚC 3: THỰC HIỆN GIAO DỊCH (TRANSACTION) ---
+        try {
+            DB::transaction(function () use ($item, $refundRate, $logDescription) {
+                // 3.1 Trả tài nguyên (Kho / Lịch sân)
+                if ($item->venue_service_id) {
+                    $item->venueService->increment('stock', $item->quantity);
+                } elseif ($item->booking) {
+                    Availability::where([
+                        'court_id' => $item->booking->court_id,
+                        'slot_id' => $item->booking->time_slot_id,
+                        'date' => $item->booking->date
+                    ])->update(['status' => 'open', 'note' => null]);
+                    $item->booking->update(['status' => 'cancelled']);
+                }
+
+                // 3.2 Đổi trạng thái item
+                $item->update(['status' => 'refund']);
+
+                // 3.3 Tính toán lại Ticket (Số tiền và Voucher)
+                $ticket = $item->ticket;
+                $remainingItems = $ticket->items()->where('status', '!=', 'refund')->get();
+
+                // Tính Subtotal mới
+                $newSubtotal = 0;
+                foreach ($remainingItems as $remItem) {
+                    $newSubtotal += ($remItem->unit_price * $remItem->quantity);
+                }
+
+                // Tính Discount mới
+                $newDiscountAmount = 0;
+                if ($ticket->promotion) {
+                    if ($ticket->promotion->type == '%') {
+                        $newDiscountAmount = ($ticket->promotion->value / 100) * $newSubtotal;
+                    } else {
+                        $newDiscountAmount = min($ticket->promotion->value, $newSubtotal);
+                    }
+                }
+
+                // Tính tiền hoàn Ví cho khách
+                $originalItemValue = $item->unit_price * $item->quantity;
+                $refundItemAmount = $originalItemValue * $refundRate;
+
+                $oldDiscount = $ticket->discount_amount;
+                $voucherClawback = $oldDiscount - $newDiscountAmount; // Voucher bị thu hồi
+
+                $finalRefundToWallet = $refundItemAmount - $voucherClawback;
+                $newTotalAmount = max(0, $newSubtotal - $newDiscountAmount); // Tổng tiền thanh toán mới
+
+                // Cập nhật Ticket
+                $ticket->update([
+                    'subtotal' => $newSubtotal,
+                    'discount_amount' => $newDiscountAmount,
+                    'total_amount' => $newTotalAmount
+                ]);
+
+                // =========================================================
+                // 3.4 [QUAN TRỌNG] CẬP NHẬT MONEY FLOW ĐẦY ĐỦ
+                // =========================================================
+                $moneyFlow = MoneyFlow::where('booking_id', $ticket->id)->first();
+
+                if ($moneyFlow) {
+                    // Tính tỷ lệ giảm để chia lại tiền Admin/Venue
+                    // Nếu tổng cũ là 100k, tổng mới là 80k -> Tỷ lệ giữ lại là 0.8
+                    $oldTotal = $moneyFlow->total_amount;
+
+                    // Tránh chia cho 0
+                    $ratio = ($oldTotal > 0) ? ($newTotalAmount / $oldTotal) : 0;
+
+                    $newAdminAmount = $moneyFlow->admin_amount * $ratio;
+                    $newVenueAmount = $moneyFlow->venue_owner_amount * $ratio;
+
+                    // Update toàn bộ các trường tiền
+                    $moneyFlow->update([
+                        'total_amount'       => $newTotalAmount,
+                        'promotion_amount'   => $newDiscountAmount,
+                        'admin_amount'       => $newAdminAmount,
+                        'venue_owner_amount' => $newVenueAmount,
+                    ]);
+                }
+                // =========================================================
+
+                // 3.5 Cộng tiền ví & Ghi log
+                if ($finalRefundToWallet > 0 && $ticket->user_id) {
+                    $wallet = Wallet::where('user_id', $ticket->user_id)->lockForUpdate()->first();
+                    if ($wallet) {
+                        $before = $wallet->balance;
+                        $wallet->increment('balance', $finalRefundToWallet);
+
+                        $desc = $logDescription;
+                        if ($voucherClawback > 0) {
+                            $desc .= " | Thu hồi voucher: -" . number_format($voucherClawback, 0, ',', '.') . "đ";
+                        }
+
+                        WalletLog::create([
+                            'wallet_id' => $wallet->id,
+                            'ticket_id' => $ticket->id,
+                            'type' => 'refund',
+                            'amount' => $finalRefundToWallet,
+                            'before_balance' => $before,
+                            'after_balance' => $before + $finalRefundToWallet,
+                            'description' => $desc,
+                        ]);
+                    }
+                }
+
+                // 3.6 Nếu hết sạch món -> Hủy toàn bộ
+                if ($remainingItems->isEmpty()) {
+                    $ticket->update(['status' => 'cancelled']);
+
+                    // Cập nhật MoneyFlow thành cancelled
+                    if ($moneyFlow) {
+                        $moneyFlow->update(['status' => 'cancelled']);
+                    }
+                }
+            });
+
+            // Broadcast update
+            $item->ticket->load(['items.venueService', 'items.booking']);
+            broadcast(new \App\Events\DataUpdated($item->ticket, $this->namChannel, 'ticket.updated'));
+
+            return response()->json(['success' => true, 'message' => 'Hủy thành công.']);
+        } catch (\Throwable $e) {
+            Log::error("Refund Item Error: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Lỗi hệ thống.'], 500);
+        }
+    }
+
     public function destroyTicket($id)
     {
-        // 1. Thêm 'items.venue_service.service' để lấy tên dịch vụ và 'items.venue_service' để trả stock
-        $ticket = Ticket::with([
-            'items.booking.timeSlot',
-            'items.booking.court',
-            'items.venueService.service',
-            'promotion'
-        ])->findOrFail($id);
+        $ticket = Ticket::with(['items.booking.timeSlot', 'items.booking.court', 'items.venueService'])->findOrFail($id);
 
         if ($ticket->status === 'cancelled') {
-            return response()->json(['success' => false, 'message' => 'Vé này đã bị hủy trước đó.'], 400);
+            return response()->json(['success' => false, 'message' => 'Vé này đã bị hủy.'], 400);
         }
 
         $now = Carbon::now();
 
-        // --- BƯỚC 1: KIỂM TRA ĐIỀU KIỆN THỜI GIAN (CHỈ ÁP DỤNG CHO BOOKING SÂN) ---
+        // --- BƯỚC 1: CHECK ĐIỀU KIỆN (Chỉ cần 1 món vi phạm là chặn hủy cả vé) ---
         foreach ($ticket->items as $item) {
             if ($item->status === 'refund') continue;
-
-            // Chỉ kiểm tra thời gian nếu item là đặt sân
             if ($item->booking) {
-                $bookingDateTime = Carbon::parse($item->booking->date . ' ' . $item->booking->timeSlot->start_time);
-
-                // Nếu trận đấu đã qua -> Không cho hủy vé (kể cả dịch vụ đi kèm)
-                if ($bookingDateTime->isPast()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Sân {$item->booking->court->name} ({$item->booking->date}) đã diễn ra. Không thể hủy vé.",
-                    ], 400);
-                }
-
-                // Nếu còn dưới 12 tiếng -> Không cho hủy vé
-                $diffMinutes = $now->diffInMinutes($bookingDateTime, false);
-                if ($diffMinutes < 720) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Sân {$item->booking->court->name} sắp diễn ra trong vòng 12 tiếng. Không thể hủy vé.",
-                    ], 400);
-                }
+                $bookingTime = Carbon::parse($item->booking->date . ' ' . $item->booking->timeSlot->start_time);
+                if ($bookingTime->isPast()) return response()->json(['success' => false, 'message' => "Có sân đã diễn ra, không thể hủy toàn bộ vé."], 400);
+                if ($now->diffInMinutes($bookingTime, false) < 120) return response()->json(['success' => false, 'message' => "Quá trễ để hủy vé (có sân < 2 tiếng)."], 400);
             }
         }
 
+        // --- BƯỚC 2: XỬ LÝ HỦY TOÀN BỘ ---
         DB::transaction(function () use ($ticket, $now) {
-            $totalRefundRaw = 0;
+            $totalRawRefund = 0; // Tổng tiền hoàn từ các món (chưa trừ voucher)
             $refundDetails = [];
 
             foreach ($ticket->items as $item) {
                 if ($item->status === 'refund') continue;
 
-                $refundRate = 0;
-                $rateLabel = '0%';
-                $itemTotal = $item->unit_price * $item->quantity; // Tính tổng tiền item (đơn giá * số lượng)
-
-                // --- TRƯỜNG HỢP 1: ĐẶT SÂN (BOOKING) ---
+                // Xử lý hoàn trả tài nguyên & tính tiền
                 if ($item->booking) {
-                    // Mở lại lịch đặt sân
-                    Availability::where('court_id', $item->booking->court_id)
-                        ->where('slot_id', $item->booking->time_slot_id)
-                        ->where('date', $item->booking->date)
-                        ->update(['status' => 'open', 'note' => null]);
+                    // Mở lịch
+                    Availability::where([
+                        'court_id' => $item->booking->court_id,
+                        'slot_id' => $item->booking->time_slot_id,
+                        'date' => $item->booking->date
+                    ])->update(['status' => 'open', 'note' => null]);
 
                     $item->booking->update(['status' => 'cancelled']);
 
-                    // Tính thời gian để xác định % hoàn tiền
-                    $bookingDateTime = Carbon::parse($item->booking->date . ' ' . $item->booking->timeSlot->start_time);
-                    $diffMinutes = $now->diffInMinutes($bookingDateTime, false);
+                    // Tính tiền
+                    $bookingTime = Carbon::parse($item->booking->date . ' ' . $item->booking->timeSlot->start_time);
+                    $rate = ($now->diffInMinutes($bookingTime, false) > 1440) ? 1.0 : 0.5;
 
-                    if ($diffMinutes > 1440) { // > 24h
-                        $refundRate = 1.0;
-                        $rateLabel = '100%';
-                    } elseif ($diffMinutes >= 720) { // 12h - 24h
-                        $refundRate = 0.5;
-                        $rateLabel = '50%';
-                    } else {
-                        $rateLabel = '0%';
-                    }
-
-                    // Tạo ghi chú: "Sân 1 (10:00 20/12): 50%"
-                    $courtName = $item->booking->court->name ?? 'Sân';
-                    $timeSlot = substr($item->booking->timeSlot->start_time ?? '', 0, 5);
-                    $dateBooking = Carbon::parse($item->booking->date)->format('d/m');
-
-                    $refundDetails[] = "{$courtName} ({$timeSlot} {$dateBooking}): {$rateLabel}";
-                }
-
-                // --- TRƯỜNG HỢP 2: DỊCH VỤ (VENUE SERVICE) ---
-                elseif ($item->venue_service_id) {
-                    // Logic: Dịch vụ luôn hoàn 100% nếu vé được phép hủy
-                    $refundRate = 1.0;
-                    $rateLabel = '100%';
-
-                    // Hoàn trả tồn kho (Stock)
-                    if ($item->venueService) {
-                        $item->venueService->increment('stock', $item->quantity);
-                    }
-
-                    // Lấy tên dịch vụ để ghi log
-                    $serviceName = $item->venueService->service->name ?? 'Dịch vụ';
-                    $refundDetails[] = "{$serviceName} (x{$item->quantity}): {$rateLabel}";
-                }
-
-                // --- TÍNH TOÁN ---
-                $totalRefundRaw += ($itemTotal * $refundRate);
-
-                // Cập nhật trạng thái item là đã hoàn hủy
-                $item->update(['status' => 'refund']);
-            }
-
-            // --- TỔNG KẾT VÀ HOÀN TIỀN VÀO VÍ ---
-            $detailNote = implode('; ', $refundDetails);
-
-            $discountUsed = $ticket->discount_amount ?? 0;
-            // Trừ voucher (nếu có) khỏi số tiền hoàn, không âm
-            $finalRefund = max(0, $totalRefundRaw - $discountUsed);
-            // Không hoàn quá số tiền thực thu
-            $finalRefund = min($finalRefund, $ticket->total_amount);
-
-            if ($ticket->user_id && $finalRefund > 0) {
-                $wallet = Wallet::where('user_id', $ticket->user_id)->lockForUpdate()->first();
-                if ($wallet) {
-                    $beforeBalance = $wallet->balance;
-                    $afterBalance = $beforeBalance + $finalRefund;
-
-                    $wallet->update(['balance' => $afterBalance]);
-
-                    WalletLog::create([
-                        'wallet_id'      => $wallet->id,
-                        'ticket_id'      => $ticket->id,
-                        'type'           => 'refund',
-                        'amount'         => $finalRefund,
-                        'before_balance' => $beforeBalance,
-                        'after_balance'  => $afterBalance,
-                        'description'    => "Hoàn hủy vé #{$ticket->id}. CT: {$detailNote}",
-                    ]);
-                }
-            }
-
-            $ticket->update(['status' => 'cancelled']);
-        });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Hủy vé thành công. Tiền đã được hoàn lại vào ví.'
-        ]);
-    }
-    public function destroyItem($id)
-    {
-        $item = Item::with(['booking.court', 'ticket.promotion', 'venueService.service'])->find($id);
-
-        if (!$item) {
-            return response()->json(['success' => false, 'message' => 'Item không tồn tại.'], 404);
-        }
-        if ($item->status === 'refund') {
-            return response()->json(['success' => false, 'message' => 'Mục này đã hủy và hoàn tiền rồi.'], 400);
-        }
-
-        // --- 2. XÁC ĐỊNH LOẠI ITEM & TỶ LỆ HOÀN TIỀN ---
-        $refundRate = 0;
-        $now = Carbon::now();
-
-        // TRƯỜNG HỢP A: LÀ ĐẶT SÂN (BOOKING)
-        if ($item->booking) {
-            $bookingDateTime = Carbon::parse($item->booking->date . ' ' . $item->booking->timeSlot->start_time);
-
-            // Check quá khứ
-            if ($bookingDateTime->isPast()) {
-                return response()->json(['success' => false, 'message' => 'Không thể hủy lịch đã diễn ra.'], 400);
-            };
-
-            $diffMinutes = $now->diffInMinutes($bookingDateTime, false);
-
-            if ($diffMinutes < 120) {
-                return response()->json(['success' => false, 'message' => 'Chỉ được hủy trước giờ chơi tối thiểu 2 tiếng.'], 400);
-            };
-
-            // > 24h (1440p) hoàn 100%, ngược lại 50%
-            $refundRate = ($diffMinutes > 1440) ? 1.0 : 0.5;
-        }
-        // TRƯỜNG HỢP B: LÀ DỊCH VỤ (VENUE SERVICE)
-        elseif ($item->venue_service_id) {
-            // Dịch vụ luôn hoàn 100% nếu chưa sử dụng (logic đơn giản hóa)
-            $refundRate = 1.0;
-        } else {
-            return response()->json(['success' => false, 'message' => 'Lỗi dữ liệu: Item không hợp lệ.'], 500);
-        }
-
-        // --- 3. GIAO DỊCH DATABASE ---
-        DB::transaction(
-            function () use ($item, $refundRate) {
-                $descriptionLog = '';
-
-                // --- XỬ LÝ RIÊNG TỪNG LOẠI ---
-
-                if ($item->booking) {
-                    // A1. Trả lại sân trống
-                    Availability::where('court_id', $item->booking->court_id)
-                        ->where('slot_id', $item->booking->time_slot_id)
-                        ->where('date', $item->booking->date)
-                        ->update(['status' => 'open', 'note' => null]);
-
-                    // A2. Cập nhật booking
-                    $item->booking->update(['status' => 'cancelled']);
-
-                    // A3. Tạo nội dung log
-                    $courtName = $item->booking->court->name ?? 'Sân';
-                    $ratePercent = $refundRate * 100;
-                    $descriptionLog = "Hoàn tiền hủy {$courtName} (Tỷ lệ: {$ratePercent}%)";
-                } elseif ($item->venueService) {
-                    // B1. Hoàn trả tồn kho (Restock)
+                    $totalRawRefund += ($item->unit_price * $item->quantity) * $rate;
+                    $refundDetails[] = "Sân (" . ($rate * 100) . "%)";
+                } elseif ($item->venue_service_id) {
+                    // Trả kho
                     $item->venueService->increment('stock', $item->quantity);
 
-                    // B2. Tạo nội dung log
-                    $serviceName = $item->venueService->service->name ?? 'Dịch vụ';
-                    $descriptionLog = "Hoàn tiền hủy dịch vụ: {$serviceName} (SL: {$item->quantity})";
+                    $totalRawRefund += ($item->unit_price * $item->quantity); // Service hoàn 100%
+                    $refundDetails[] = "Dịch vụ (100%)";
                 }
 
-                // Cập nhật trạng thái Item
                 $item->update(['status' => 'refund']);
+            }
 
-                // --- XỬ LÝ VÍ (HOÀN TIỀN) ---
-                if ($item->ticket && $item->ticket->user_id) {
-                    $ticket = $item->ticket;
+            // Tính toán hoàn tiền ví
+            // Khi hủy cả vé: Thu hồi TOÀN BỘ voucher đã giảm
+            // Tiền hoàn = Tổng tiền các món (sau khi phạt) - Voucher đã dùng
+            $voucherAmount = $ticket->discount_amount ?? 0;
+            $finalRefundToWallet = max(0, $totalRawRefund - $voucherAmount);
 
-                    // TÍNH TIỀN: Đơn giá * Số lượng * Tỷ lệ
-                    $refundAmount = ($item->unit_price * $item->quantity) * $refundRate;
+            // Cộng ví
+            if ($ticket->user_id && $finalRefundToWallet > 0) {
+                $wallet = Wallet::where('user_id', $ticket->user_id)->lockForUpdate()->first();
+                if ($wallet) {
+                    $before = $wallet->balance;
+                    $wallet->increment('balance', $finalRefundToWallet);
 
-                    if ($refundAmount > 0) {
-                        $wallet = Wallet::where('user_id', $ticket->user_id)->lockForUpdate()->first();
-
-                        if ($wallet) {
-                            $beforeBalance = $wallet->balance;
-                            $afterBalance = $beforeBalance + $refundAmount;
-
-                            $wallet->update(['balance' => $afterBalance]);
-
-                            WalletLog::create([
-                                'wallet_id'      => $wallet->id,
-                                'ticket_id'      => $ticket->id,
-                                'booking_id'     => $item->booking_id, // Null nếu là service
-                                'type'           => 'refund',
-                                'amount'         => $refundAmount,
-                                'before_balance' => $beforeBalance,
-                                'after_balance'  => $afterBalance,
-                                'description'    => $descriptionLog,
-                            ]);
-                        }
+                    // Log mô tả
+                    $desc = "Hủy vé #{$ticket->id}. Chi tiết: " . implode(', ', array_unique($refundDetails));
+                    if ($voucherAmount > 0) {
+                        $desc .= " | Thu hồi voucher: -" . number_format($voucherAmount, 0, ',', '.') . "đ";
                     }
 
-                    // --- TÍNH LẠI TỔNG TIỀN TICKET (RE-CALCULATE) ---
-                    // Lấy các item còn active (chưa hủy)
-                    $activeItems = $ticket->items()->where('status', 'active')->get();
-
-                    // Tính tổng tiền mới: Sum(đơn giá * số lượng)
-                    $newSubtotal = $activeItems->sum(function ($i) {
-                        return $i->unit_price * $i->quantity;
-                    });
-
-                    $activeCount = $activeItems->count();
-
-                    // Tính lại voucher dựa trên subtotal mới
-                    $discountAmount = 0;
-                    $promotion = $ticket->promotion;
-
-                    if ($promotion) {
-                        // Kiểm tra điều kiện tối thiểu của Voucher (nếu có logic min_order_amount)
-                        // Ví dụ: if ($newSubtotal >= $promotion->min_order_amount) { ... }
-
-                        if ($promotion->type === 'VND') {
-                            $discountAmount = min($promotion->value, $newSubtotal);
-                        } elseif ($promotion->type === '%') {
-                            $discountAmount = ($promotion->value / 100) * $newSubtotal;
-                            // Nếu có max_discount: $discountAmount = min($discountAmount, $promotion->max_discount);
-                        }
-                    }
-
-                    // Cập nhật lại Ticket
-                    $ticket->update([
-                        'subtotal'        => $newSubtotal,
-                        'discount_amount' => $discountAmount,
-                        'total_amount'    => max(0, $newSubtotal - $discountAmount),
+                    WalletLog::create([
+                        'wallet_id' => $wallet->id,
+                        'ticket_id' => $ticket->id,
+                        'type' => 'refund',
+                        'amount' => $finalRefundToWallet,
+                        'before_balance' => $before,
+                        'after_balance' => $before + $finalRefundToWallet,
+                        'description' => $desc,
                     ]);
-
-                    // Nếu hủy hết sạch item thì hủy luôn vé
-                    if ($activeCount === 0) {
-                        $ticket->update([
-                            'status'         => 'cancelled',
-                        ]);
-                    }
                 }
             }
-        );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Hủy thành công. Tiền đã được hoàn về ví (nếu có).'
-        ]);
+            // Cập nhật Ticket: ĐƯA TẤT CẢ VỀ 0 & CANCELLED
+            $ticket->update([
+                'status' => 'cancelled',
+                'subtotal' => 0,
+                'discount_amount' => 0,
+                'total_amount' => 0
+            ]);
+
+            // Cập nhật MoneyFlow
+            MoneyFlow::where('booking_id', $ticket->id)->update(['status' => 'cancelled']);
+        });
+
+        broadcast(new \App\Events\DataUpdated($ticket, $this->namChannel, 'ticket.updated'));
+        return response()->json(['success' => true, 'message' => 'Hủy vé thành công.']);
     }
 }

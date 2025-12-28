@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\DataCreated;
 use App\Http\Controllers\Controller;
 use App\Models\Venue;
 use App\Models\Court;
@@ -259,6 +260,9 @@ class VenueApiController extends Controller
             }
 
             DB::commit();
+
+            $venue->load(['owner', 'province']);
+            broadcast(new DataCreated($venue, 'venues', 'venue.created'))->toOthers();
             return response()->json(['message' => 'Gửi đăng kí thành công', 'data' => $venue], 201);
         } catch (\Exception $e) {
             DB::rollBack();

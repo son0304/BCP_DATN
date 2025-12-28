@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Events\DataCreated;
 use App\Events\DataDeleted;
+use App\Events\DataUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Court;
 use App\Models\Venue;
@@ -700,6 +701,9 @@ class VenueController extends Controller
             }
 
             DB::commit();
+            $venueupdate = $venue->load(['owner', 'province']);
+
+            broadcast(new DataUpdated($venueupdate, $this->nameChannel, 'venue.updated'));
             return redirect()->route('owner.venues.index')->with('success', 'Cập nhật thương hiệu thành công!');
         } catch (\Exception $e) {
             DB::rollBack();

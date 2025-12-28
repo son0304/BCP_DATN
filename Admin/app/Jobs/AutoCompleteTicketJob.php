@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\MoneyFlow;
 use App\Models\Ticket;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,31 +15,36 @@ class AutoCompleteTicketJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $ticket;
+    protected int $ticketId;
 
-    /**
-     * Khởi tạo Job với đối tượng Ticket
-     */
-    public function __construct(Ticket $ticket)
+    public function __construct(int $ticketId)
     {
-        $this->ticket = $ticket;
+        $this->ticketId = $ticketId;
     }
 
-    /**
-     * Thực thi logic cập nhật trạng thái
-     */
     public function handle(): void
     {
-        // Tải lại dữ liệu mới nhất từ DB
-        $this->ticket->refresh();
+        Log::info('AUTO COMPLETE JOB START', [
+            'ticket_id' => $this->ticketId
+        ]);
 
-        // Nếu vé vẫn đang ở trạng thái 3 (Đã Check-in) thì mới tự động hoàn thành
-        if ($this->ticket->status == 3) {
-            $this->ticket->update([
-                'status' => 4 // Chuyển sang trạng thái 4: Hoàn thành
-            ]);
-
-            Log::info("HỆ THỐNG: Đơn hàng #{$this->ticket->id} đã tự động chuyển sang trạng thái HOÀN THÀNH do hết giờ.");
+        $ticket = Ticket::find($this->ticketId);
+        $money_flows = MoneyFlow::where('ticket_id', $this->ticketId)->get();
+        if (!$ticket) {
+            Log::error("Ticket {$this->ticketId} không tồn tại");
+            return;
         }
+
+        // Nếu cần điều kiện
+        // if ($ticket->status !== 'checkin') return;
+
+        $ticket->update([
+            'status' => 'completed'
+        ]);
+        $money_flows->update([
+            'status' => 'completed'
+        ]);
+
+        Log::info("Ticket {$ticket->id} COMPLETED");
     }
 }

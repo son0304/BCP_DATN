@@ -72,7 +72,7 @@ const Detail_User = () => {
                                     ? 'bg-red-50 text-red-600 border-red-100'
                                     : 'bg-green-50 text-green-600 border-green-100'
                                     }`}>
-                                    {user.role_id === 1 ? 'Quản trị viên' : 'Thành viên'}
+                                    {user.role_id === 1 ? 'Quản trị viên' : user.role_id === 2 ? 'Đối tác' : 'Thành viên'}
                                 </span>
                             </div>
                         </div>

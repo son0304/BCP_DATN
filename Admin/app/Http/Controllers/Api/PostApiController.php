@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Image;
 use App\Models\Post;
+use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Str;
@@ -43,7 +44,7 @@ class PostApiController extends Controller
 
     public function store(Request $request)
     {
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Bạn chưa đăng nhập'
@@ -67,10 +68,10 @@ class PostApiController extends Controller
                 $post = Post::create([
                     'title'     => $request->title,
                     'content'   => $request->content,
-                    'author_id'   => auth()->id(),
+                    'author_id'   => Auth::id(),
                     'tag_id'    => $request->tag_id,
                     'is_active' => 0,
-                    'note'      => $request->note ?? '',
+
                 ]);
 
                 // 2️⃣ Gắn tags (nếu có)
@@ -93,6 +94,14 @@ class PostApiController extends Controller
                         ->update(['is_primary' => true]);
                 }
 
+                $post->load([
+                    'author',
+                    'tags',
+                    'images'
+                ]);
+
+                broadcast(new \App\Events\DataCreated($post, 'post', 'post.created'))->toOthers();
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Đã đăng bài viết mới!',
@@ -108,6 +117,43 @@ class PostApiController extends Controller
                 'success' => false,
                 'message' => 'Lỗi khi tạo bài viết',
                 'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function destroy($id)
+    {
+        if (!Auth::check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bạn chưa đăng nhập'
+            ], 401);
+        }
+
+        try {
+            $post = Post::findOrFail($id);
+
+            // Chỉ chủ bài viết hoặc admin được xóa
+            if ($post->author_id !== Auth::id() && !Auth::user()->is_admin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bạn không có quyền xóa bài viết này'
+                ], 403);
+            }
+
+            $post->delete();
+
+            broadcast(new \App\Events\DataDeleted($post, 'post', 'post.deleted'))->toOthers();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã xóa bài viết thành công'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi xóa bài viết',
+                'error'   => $e->getMessage()
             ], 500);
         }
     }

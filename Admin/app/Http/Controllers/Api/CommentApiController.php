@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\DataCreated;
+use App\Events\DataDeleted;
 use App\Http\Controllers\Controller;
 use App\Models\Comment;
 use Illuminate\Http\Request;
@@ -16,9 +18,9 @@ class CommentApiController extends Controller
     public function index($postId)
     {
         $comments = Comment::with([
-                'author:id,name',
-                'replies.author:id,name'
-            ])
+            'author:id,name',
+            'replies.author:id,name'
+        ])
             ->where('post_id', $postId)
             ->whereNull('parent_id')
             ->orderBy('created_at', 'desc')
@@ -50,6 +52,8 @@ class CommentApiController extends Controller
             'content'   => $request->content,
             'parent_id' => $request->parent_id,
         ]);
+        $comment->load('author:id,name');
+        broadcast(new DataCreated($comment, 'comment', 'comment.created'))->toOthers();
 
         return response()->json([
             'status'  => true,
@@ -75,9 +79,10 @@ class CommentApiController extends Controller
                 'message' => 'Bạn không có quyền xóa comment này'
             ], 403);
         }
+        $commentId = $comment->id;
 
         $comment->delete();
-
+        broadcast(new DataDeleted($commentId, 'comment', 'comment.deleted'))->toOthers();
         return response()->json([
             'status'  => true,
             'message' => 'Comment deleted successfully'

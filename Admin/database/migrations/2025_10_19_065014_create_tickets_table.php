@@ -25,6 +25,8 @@ return new class extends Migration
 
 
             $table->text('notes')->nullable();
+            $table->string('booking_code')->unique();
+
             $table->timestamps();
             $table->softDeletes();
         });

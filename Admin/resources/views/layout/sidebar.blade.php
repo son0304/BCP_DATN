@@ -17,6 +17,7 @@
                             <a href="{{ route('admin.statistics.index') }}" class="waves-effect">
                                 <i class="remixicon-dashboard-line"></i>
                                 <span> Thống kê Sàn </span>
+                                {{--  <span class="badge bg-danger float-end">1</span>  --}}
                             </a>
                         </li>
                         <li>
@@ -84,6 +85,9 @@
                             <a href="{{ route('owner.statistics.index') }}" class="waves-effect">
                                 <i class="remixicon-dashboard-line"></i>
                                 <span> Thống kê Sàn </span>
+                                <span class="badge bg-danger float-end">1</span>
+
+
                             </a>
                         </li>
                         <li>

@@ -82,6 +82,7 @@ export interface Ticket {
   payment_status: "unpaid" | "paid" | "refunded";
 
   notes?: string | null;
+  booking_code?: string | null;
 
   // Thời gian
   created_at: ISODateTimeString;

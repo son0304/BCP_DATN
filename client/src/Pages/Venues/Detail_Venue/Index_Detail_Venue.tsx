@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useFetchDataById } from '../../../Hooks/useApi';
+import { useFetchData, useFetchDataById } from '../../../Hooks/useApi';
 import { useParams } from 'react-router-dom';
 import type { Venue } from '../../../Types/venue';
 import { fetchData } from '../../../Api/fetchApi';
 
 import Gallery_Detail_Venue from './Gallery_Detail_Venue'; // Đã chứa logic hiển thị ảnh và thông tin
-import Booking_Detail_Venue from './Booking_Detail_Venue'; // Đã chứa logic Order
-import Review_Venue from './Review'; // Component Review (nếu có)
 import { useNotification } from '../../../Components/Notification';
 import Order_Container from './Order/Order_Container';
+import Review_Venue from './Review';
+import type { Ticket } from '../../../Types/tiket';
 
 const Index_Detail_Venue: React.FC = () => {
   const rawUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
@@ -28,6 +28,9 @@ const Index_Detail_Venue: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const idVenue = Number(id);
   const { data: detail_venue, isLoading, refetch } = useFetchDataById<Venue>('venue', idVenue, { date: selectedDate });
+  const { data } = useFetchData('tickets')
+  const tickets = data?.data as Ticket[] || [];
+
 
 
   // Logic load related giữ nguyên...
@@ -52,6 +55,8 @@ const Index_Detail_Venue: React.FC = () => {
   if (isLoading || !detail_venue) return <div className="p-10 text-center">Đang tải...</div>;
 
   const venue: Venue = detail_venue.data;
+  const reviews = venue.reviews ?? [];
+
   const formatPrice = (price: number) => !price || isNaN(price) ? '0₫' : price.toLocaleString('vi-VN') + '₫';
 
   return (
@@ -73,13 +78,6 @@ const Index_Detail_Venue: React.FC = () => {
 
         {/* Booking component sẽ tự giãn ra 100% chiều rộng của cha */}
         <Order_Container id={venue.id} />
-        {/* <Booking_Detail_Venue
-          venue={venue}
-          user={user}
-          refetch={refetch}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-        /> */}
       </section>
 
       {/* 3. BOTTOM: REVIEWS & RELATED (Chia cột ở dưới cùng) */}
@@ -93,7 +91,7 @@ const Index_Detail_Venue: React.FC = () => {
           {/* Placeholder nếu chưa import Review */}
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
             <h3 className="font-bold text-lg mb-4">Đánh giá từ khách hàng</h3>
-            {/* Reviews content... */}
+            <Review_Venue venue={venue} reviews={reviews} tickets={tickets} user={user} refetch={refetch} />
             <p className="text-gray-500">Danh sách đánh giá sẽ hiện ở đây...</p>
           </div>
         </div>

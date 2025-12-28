@@ -160,9 +160,10 @@ const Ticket_Detail = () => {
             </h2>
           )}
 
+    
           <div className="flex items-center justify-center gap-2 mt-2 text-sm text-gray-500">
-            <span>Mã vé:</span>
-            <span className="font-mono font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">#{ticket.id}</span>
+            <span>Mã vé - Checkin:</span>
+            <span className="font-mono font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded">#{ticket.booking_code}</span>
           </div>
 
           <div className="mt-5 flex justify-center">

@@ -31,7 +31,8 @@
                         </thead>
                         <tbody class="text-center">
                             @forelse($venues as $venue)
-                                <tr>
+                                <tr id="venue-row-{{ $venue->id }}">
+
                                     <td class="fw-semibold">{{ $venue->id }}</td>
                                     <td>
                                         <strong class="text-dark d-block">{{ $venue->name }}</strong>
@@ -110,46 +111,47 @@
 @push('scripts')
     <script>
         // --- HÀM HỖ TRỢ: Tạo nội dung bên trong dòng TR ---
-        // Dùng chung cho cả Create và Update để không phải viết lại HTML
         function getVenueRowContent(venue) {
-            const ownerName = venue.owner ? venue.owner.name : 'N/A';
-            const provinceName = venue.province ? venue.province.name : 'N/A';
+            // Dùng Optional Chaining (?.) hoặc kiểm tra để tránh lỗi JS nếu owner/province null
+            const ownerName = (venue.owner && venue.owner.name) ? venue.owner.name : 'N/A';
+            const provinceName = (venue.province && venue.province.name) ? venue.province.name : 'N/A';
             const phone = venue.phone ? venue.phone : 'Chưa có SĐT';
 
-            const startTimeDisplay = venue.start_time ?
-                `<span class="badge bg-primary-subtle border border-primary-subtle text-primary-emphasis rounded-pill px-3 py-2">${venue.start_time.slice(0, 5)}</span>` :
+            // Format giờ (lấy 5 ký tự đầu HH:mm)
+            const start = venue.start_time ? venue.start_time.substring(0, 5) : null;
+            const end = venue.end_time ? venue.end_time.substring(0, 5) : null;
+
+            const startTimeDisplay = start ?
+                `<span class="badge bg-primary-subtle border border-primary-subtle text-primary-emphasis rounded-pill px-3 py-2">${start}</span>` :
                 '<span class="text-muted">—</span>';
 
-            const endTimeDisplay = venue.end_time ?
-                `<span class="badge bg-warning-subtle border border-warning-subtle text-warning-emphasis rounded-pill px-3 py-2">${venue.end_time.slice(0, 5)}</span>` :
+            const endTimeDisplay = end ?
+                `<span class="badge bg-warning-subtle border border-warning-subtle text-warning-emphasis rounded-pill px-3 py-2">${end}</span>` :
                 '<span class="text-muted">—</span>';
 
             const statusBadge = venue.is_active == 1 ?
                 `<span class="badge bg-success-subtle border border-success-subtle text-success-emphasis rounded-pill px-3 py-2">Hoạt động</span>` :
                 `<span class="badge bg-danger-subtle border border-danger-subtle text-danger-emphasis rounded-pill px-3 py-2">Đã khóa</span>`;
 
-            const detailUrl = `/admin/venues/${venue.id}`;
-
             return `
-                <td class="fw-semibold">${venue.id}</td>
-                <td>
-                    <strong class="text-dark d-block">${venue.name}</strong>
-                    <small class="text-muted">${phone}</small>
-                </td>
-                <td>${ownerName}</td>
-                <td>${provinceName}</td>
-                <td>${startTimeDisplay}</td>
-                <td>${endTimeDisplay}</td>
-                <td>${statusBadge}</td>
-                <td>
-                    <a href="${detailUrl}" class="btn btn-outline-primary btn-sm me-2">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                </td>
-            `;
+            <td class="fw-semibold">${venue.id}</td>
+            <td>
+                <strong class="text-dark d-block">${venue.name}</strong>
+                <small class="text-muted">${phone}</small>
+            </td>
+            <td>${ownerName}</td>
+            <td>${provinceName}</td>
+            <td>${startTimeDisplay}</td>
+            <td>${endTimeDisplay}</td>
+            <td>${statusBadge}</td>
+            <td>
+                <a href="/admin/venues/${venue.id}" class="btn btn-outline-primary btn-sm me-2">
+                    <i class="fas fa-eye"></i>
+                </a>
+            </td>
+        `;
         }
 
-        // --- KẾT NỐI ECHO ---
         const venueChannel = Echo.channel('venues');
 
         // 1. LẮNG NGHE TẠO MỚI (CREATED)
@@ -157,57 +159,56 @@
             const venue = e.data;
             const tbody = document.querySelector('table tbody');
 
-            // Xóa dòng "Không tìm thấy dữ liệu" nếu có
             const emptyRow = tbody.querySelector('td[colspan]');
             if (emptyRow) emptyRow.parentElement.remove();
 
-            // Tạo dòng TR mới
             const newRowHtml = `
-                <tr id="venue-row-${venue.id}" class="animate__animated animate__fadeIn">
-                    ${getVenueRowContent(venue)}
-                </tr>`;
+            <tr id="venue-row-${venue.id}" class="animate__animated animate__fadeIn">
+                ${getVenueRowContent(venue)}
+            </tr>`;
 
             tbody.insertAdjacentHTML('afterbegin', newRowHtml);
 
-            // Hiệu ứng highlight
             const row = document.getElementById(`venue-row-${venue.id}`);
             row.style.backgroundColor = '#e8f5e9';
             setTimeout(() => row.style.backgroundColor = '', 2000);
         });
 
-        // 2. LẮNG NGHE CẬP NHẬT (UPDATED)
+        // 2. LẮNG NGHE CẬP NHẬT (UPDATED) - ĐÃ SỬA LẠI CHUẨN
         venueChannel.listen('.venue.updated', (e) => {
+            console.log("Dữ liệu nhận được:", e);
             const venue = e.data;
+
+            // Tìm dòng TR dựa vào ID mà ta đã thêm ở Blade
             const row = document.getElementById(`venue-row-${venue.id}`);
 
             if (row) {
-                // Cập nhật lại nội dung bên trong dòng
+                // Thay thế nội dung bên trong dòng TR bằng dữ liệu mới
                 row.innerHTML = getVenueRowContent(venue);
 
-                // Hiệu ứng highlight màu vàng nhạt khi cập nhật
+                // Hiệu ứng highlight màu vàng nhạt
+                row.style.transition = "background-color 0.5s ease";
                 row.style.backgroundColor = '#fff9c4';
                 setTimeout(() => row.style.backgroundColor = '', 2000);
+
+                console.log("Đã cập nhật giao diện dòng số: " + venue.id);
+            } else {
+                console.warn("Không tìm thấy dòng HTML để cập nhật: venue-row-" + venue.id);
             }
         });
 
         // 3. LẮNG NGHE XÓA (DELETED)
         venueChannel.listen('.venue.deleted', (e) => {
-            // Sự kiện xóa thường chỉ truyền ID: { id: 10 }
             const venueId = e.id;
             const row = document.getElementById(`venue-row-${venueId}`);
 
             if (row) {
-                // Thêm hiệu ứng mờ dần trước khi xóa hẳn
                 row.classList.add('animate__animated', 'animate__fadeOutRight');
-
                 setTimeout(() => {
                     row.remove();
-
-                    // Nếu sau khi xóa mà bảng trống, hiển thị lại thông báo "Trống"
                     const tbody = document.querySelector('table tbody');
                     if (tbody.children.length === 0) {
-                        tbody.innerHTML =
-                            '<tr><td colspan="8" class="text-center">Không tìm thấy dữ liệu nào.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5">Trống.</td></tr>';
                     }
                 }, 800);
             }

@@ -212,7 +212,9 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
 
     // --- REVIEWS MANAGE BY OWNER ---
     Route::prefix('reviews')->name('reviews.')->group(function () {
-        Route::get('/', [ReviewController::class, 'indexByOwner'])->name('index');
+        Route::get('/', [ReviewController::class, 'index'])->name('index');
+        Route::delete('{id}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+
     });
 
     // --- BOOKINGS MANAGE BY OWNER ---
@@ -220,6 +222,7 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
         Route::get('/', [BookingController::class, 'booking_venue'])->name('index');
         Route::get('create', [BookingController::class, 'create'])->name('create');
         Route::post('/', [BookingController::class, 'store'])->name('store');
+        Route::post('{id}/check-in', [BookingController::class, 'checkin'])->name('checkin');
         Route::put('{booking}', [BookingController::class, 'update'])->name('update');
         Route::delete('{booking}', [BookingController::class, 'destroy'])->name('destroy');
         Route::post('/generate-temp-qr', [BookingController::class, 'generateTempQR'])->name('generate-temp-qr');

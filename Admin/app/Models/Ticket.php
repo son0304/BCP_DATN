@@ -15,7 +15,7 @@ class Ticket extends Model
     /** @use HasFactory<\Database\Factories\TicketFactory> */
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['user_id', 'promotion_id', 'subtotal', 'discount_amount', 'total_amount', 'status', 'payment_status', 'process_status', 'notes'];
+    protected $fillable = ['user_id', 'promotion_id', 'subtotal', 'discount_amount', 'total_amount', 'status', 'payment_status', 'process_status', 'notes','booking_code'];
 
     public function user()
     {

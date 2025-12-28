@@ -129,8 +129,6 @@ const Header = () => {
           <NavLink to="/" className={getNavLinkClass}>Trang chủ</NavLink>
           <NavLink to="/partner" className={getNavLinkClass}>Đối tác</NavLink>
           <NavLink to="/map" className={getNavLinkClass}>Bản Đồ</NavLink>
-          <NavLink to="/blog" className={getNavLinkClass}>Bảng tin</NavLink>
-          <NavLink to="/contacts" className={getNavLinkClass}>Liên hệ</NavLink>
           <NavLink to="/posts" className={getNavLinkClass}>Cộng đồng BCP</NavLink>
         </nav>
 

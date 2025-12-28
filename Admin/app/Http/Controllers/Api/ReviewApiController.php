@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\DataCreated;
+use App\Events\DataDeleted;
+use App\Events\DataUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Review;
 use Exception;
@@ -120,7 +123,7 @@ class ReviewApiController extends Controller
 
             // Load lại quan hệ để trả về
             $review->load(['user:id,name,avt', 'images']);
-
+            broadcast(new DataCreated($review, 'reviews', 'review.created'))->toOthers();
             return response()->json([
                 'success' => true,
                 'message' => 'Tạo đánh giá thành công',
@@ -217,7 +220,7 @@ class ReviewApiController extends Controller
 
             DB::commit();
             $review->load(['user:id,name,avt', 'images']);
-
+            broadcast(new DataUpdated($review, 'reviews', 'review.updated'))->toOthers();
             return response()->json([
                 'success' => true,
                 'message' => 'Cập nhật đánh giá thành công',
@@ -244,9 +247,10 @@ class ReviewApiController extends Controller
                 'message' => 'Bạn không có quyền xóa đánh giá này',
             ], 403);
         }
+        $reviewId = $review->id;
 
         $review->delete();
-
+        broadcast(new DataDeleted($reviewId, 'reviews', 'review.deleted'))->toOthers();
         return response()->json([
             'success' => true,
             'message' => 'Xóa đánh giá thành công',

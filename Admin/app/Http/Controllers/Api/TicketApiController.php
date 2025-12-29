@@ -332,6 +332,8 @@ class TicketApiController extends Controller
                     $completeAt = $finalEndTime->copy()->addMinutes(2);
 
                     if ($completeAt->gt($now)) {
+                        // AutoCompleteTicketJob::dispatch($ticket->id)
+                        //     ->delay(now()->addMinute());
                         AutoCompleteTicketJob::dispatch($ticket->id)->delay($completeAt);
                         Log::info("🏁 Đã hẹn Job hoàn thành (Sân {$group['court_id']}) lúc: " . $completeAt->toDateTimeString());
                     }

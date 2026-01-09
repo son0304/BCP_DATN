@@ -37,7 +37,6 @@ apiClient.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       // 1. Xóa token khỏi localStorage
       localStorage.removeItem("token");
-
     }
     return Promise.reject(error);
   }

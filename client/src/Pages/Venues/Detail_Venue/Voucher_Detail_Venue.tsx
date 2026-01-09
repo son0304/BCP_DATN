@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useFetchData } from "../../../Hooks/useApi";
-import type { Voucher } from "./Booking_Detail_Venue";
 import type { AxiosError } from "axios";
+import type { Voucher } from "../../../Types/type";
 
 interface VoucherProps {
   onVoucherApply: (v: Voucher | null) => void;

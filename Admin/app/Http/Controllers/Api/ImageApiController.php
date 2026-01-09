@@ -41,7 +41,7 @@ class ImageApiController extends Controller
         $request->validate([
             'type' => 'required|string|in:venue,court,review,post',
             'id'   => 'required|integer',
-            'files.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120'
+            'files.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:10240'
         ]);
 
         $modelClass = $this->getModelClass($request->type);

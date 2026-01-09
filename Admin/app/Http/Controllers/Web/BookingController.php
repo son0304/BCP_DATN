@@ -72,57 +72,42 @@ class BookingController extends Controller
     public function booking_venue(Request $request)
     {
         $user = Auth::user();
-
-        // 1. Lấy tham số
         $search  = $request->input('search');
         $status  = $request->input('status');
         $venueId = $request->input('venue');
 
-        // 2. Khởi tạo Query
-        $query = Ticket::with([
-            'user',
-            'items.booking.court.venue',
-            'items.booking.timeSlot',
-        ]);
+        $query = Ticket::with(['user', 'items.booking.court.venue', 'items.booking.timeSlot']);
 
-        // 3. Lọc Booking: Chỉ lấy vé thuộc sân của owner này
+        // Lọc theo chủ sân
         $query->whereHas('items.booking.court.venue', function ($q) use ($user, $venueId) {
             $q->where('owner_id', $user->id);
-
-            if ($venueId) {
-                $q->where('id', $venueId);
-            }
+            if ($venueId) $q->where('id', $venueId);
         });
 
-        // 4. XỬ LÝ TÌM KIẾM ĐA NĂNG (Tên, SĐT, Mã Booking)
+        // Tìm kiếm
         if ($search) {
             $query->where(function ($subQuery) use ($search) {
-                // a. Tìm theo Mã Booking (giả sử cột tên là booking_code trong bảng tickets)
                 $subQuery->where('booking_code', 'like', "%{$search}%")
-
-                    // b. Hoặc tìm trong bảng User (Tên hoặc SĐT)
                     ->orWhereHas('user', function ($q) use ($search) {
                         $q->where('name', 'like', "%{$search}%")
                             ->orWhere('phone', 'like', "%{$search}%");
-                        // LƯU Ý: Kiểm tra lại tên cột SĐT trong DB của bạn là 'phone' hay 'phone_number'
                     });
             });
         }
 
-        // Lọc theo trạng thái
-        if ($status) {
-            $query->where('status', $status);
-        }
+        if ($status) $query->where('status', $status);
 
-        // 5. Lấy dữ liệu
         $tickets = $query->orderBy('created_at', 'desc')->paginate(10);
-
-        // 6. Lọc Dropdown Venue
         $venues = Venue::where('owner_id', $user->id)->get();
 
-        return view('venue_owner.bookings.index', compact('tickets', 'search', 'status', 'venues', 'venueId'));
+        // CHỖ QUAN TRỌNG: Nếu là AJAX, chỉ trả về phần HTML của các dòng bảng
+        if ($request->ajax()) {
+            return view('venue_owner.bookings.index', compact('tickets'))->fragment('table-rows');
+        }
+
+        return view('venue_owner.bookings.index', compact('tickets', 'venues', 'search', 'status', 'venueId'));
     }
-   
+
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -142,6 +127,10 @@ class BookingController extends Controller
                 'status' => $request->status,
                 'payment_status' => $request->payment_status,
             ]);
+
+            if ($ticket->payment_status === 'paid') {
+                return back()->with('error', 'Đơn hàng đã thanh toán, không thể thay đổi.');
+            }
 
             // Kiểm tra logic: Nếu trước đó chưa hoàn thành -> nay chuyển thành hoàn thành
             if ($oldStatus !== 'completed' && $request->status === 'completed') {

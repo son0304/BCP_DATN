@@ -203,6 +203,54 @@ class TicketApiController extends Controller
                 // ====================================================
                 // GIAI ĐOẠN 2: LƯU DATABASE
                 // ====================================================
+                if (!empty($validated['promotion_id'])) {
+                    $promotion = Promotion::lockForUpdate()->find($validated['promotion_id']);
+
+                    if (!$promotion) {
+                        throw ValidationException::withMessages([
+                            'promotion' => 'Voucher không tồn tại trong hệ thống.'
+                        ]);
+                    }
+
+                    // Sử dụng method isActive() thay vì thuộc tính is_active
+                    if (!$promotion->isActive()) {
+                        throw ValidationException::withMessages([
+                            'promotion' => 'Voucher không hợp lệ, đã hết hạn hoặc đã hết lượt sử dụng.'
+                        ]);
+                    }
+
+                    // Kiểm tra giá trị đơn hàng tối thiểu (nếu có)
+                    if (isset($promotion->min_order_value) && $subtotal < $promotion->min_order_value) {
+                        throw ValidationException::withMessages([
+                            'promotion' => "Đơn hàng tối thiểu " . number_format($promotion->min_order_value, 0, ',', '.') . "đ để sử dụng voucher này."
+                        ]);
+                    }
+                }
+
+                if ($promotion->used_count >= $promotion->usage_limit) {
+                    throw ValidationException::withMessages([
+                        'promotion' => 'Voucher đã hết lượt sử dụng.'
+                    ]);
+                }
+
+                $now = Carbon::now();
+                if ($promotion->start_date && $now->lt(Carbon::parse($promotion->start_date))) {
+                    throw ValidationException::withMessages([
+                        'promotion' => 'Voucher chưa đến thời gian sử dụng.'
+                    ]);
+                }
+
+                if ($promotion->end_date && $now->gt(Carbon::parse($promotion->end_date))) {
+                    throw ValidationException::withMessages([
+                        'promotion' => 'Voucher đã hết hạn sử dụng.'
+                    ]);
+                }
+
+                if ($promotion->min_order_value && $subtotal < $promotion->min_order_value) {
+                    throw ValidationException::withMessages([
+                        'promotion' => "Đơn hàng tối thiểu " . number_format($promotion->min_order_value, 0, ',', '.') . "đ để sử dụng voucher này."
+                    ]);
+                }
 
                 // 2.1 Tạo Ticket
                 $ticket = Ticket::create([
@@ -217,7 +265,8 @@ class TicketApiController extends Controller
                 ]);
 
                 if (!empty($validated['promotion_id'])) {
-                    Promotion::where('id', $validated['promotion_id'])->decrement('usage_limit');
+                    Promotion::where('id', $validated['promotion_id'])
+                        ->increment('used_count');
                 }
 
                 // 2.2 Lưu Item Booking
@@ -513,6 +562,12 @@ class TicketApiController extends Controller
                 if ($remainingItems->isEmpty()) {
                     $ticket->update(['status' => 'cancelled']);
 
+                    if ($ticket->promotion_id) {
+                        Promotion::where('id', $ticket->promotion_id)
+                            ->where('used_count', '>', 0)
+                            ->decrement('used_count');
+                    }
+
                     // Cập nhật MoneyFlow thành cancelled
                     if ($moneyFlow) {
                         $moneyFlow->update(['status' => 'cancelled']);
@@ -625,6 +680,12 @@ class TicketApiController extends Controller
                 'discount_amount' => 0,
                 'total_amount' => 0
             ]);
+
+            if ($ticket->promotion_id) {
+                Promotion::where('id', $ticket->promotion_id)
+                    ->where('used_count', '>', 0)
+                    ->decrement('used_count');
+            }
 
             // Cập nhật MoneyFlow
             MoneyFlow::where('booking_id', $ticket->id)->update(['status' => 'cancelled']);

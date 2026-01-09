@@ -11,6 +11,8 @@ import {
     message,
     Select,
     Upload,
+    Dropdown,
+    Popconfirm,
 } from "antd";
 import {
     UserOutlined,
@@ -19,8 +21,10 @@ import {
     ShareAltOutlined,
     EllipsisOutlined,
     PictureOutlined,
+    EditOutlined,
+    DeleteOutlined,
 } from "@ant-design/icons";
-import { useFetchData, usePostData } from "../../Hooks/useApi";
+import { useFetchData, usePostData, usePutData, useDeleteData } from "../../Hooks/useApi";
 import { useState } from "react";
 import dayjs from "dayjs";
 
@@ -136,7 +140,6 @@ function CommentSection({ postId }: { postId: number }) {
                 <Button onClick={submit}>Gửi</Button>
             </div>
 
-
             {comments.map((c: any) => (
                 <CommentItem
                     key={c.id}
@@ -148,7 +151,6 @@ function CommentSection({ postId }: { postId: number }) {
         </div>
     );
 }
-
 
 export default function Home_Post() {
     const [currentPage, setCurrentPage] = useState(1);
@@ -163,15 +165,21 @@ export default function Home_Post() {
     const meta = response?.data;
 
     const [openCreatePost, setOpenCreatePost] = useState(false);
+    const [openEditPost, setOpenEditPost] = useState(false);
+    const [editingPost, setEditingPost] = useState<any>(null);
+
     const [content, setContent] = useState("");
+    const [selectedTagId, setSelectedTagId] = useState<number | null>(null);
     const [selectedTags, setSelectedTags] = useState<number[]>([]);
     const [uploadedImages, setUploadedImages] = useState<any[]>([]);
     const [uploading, setUploading] = useState(false);
 
     const [openCommentPostId, setOpenCommentPostId] = useState<number | null>(null);
 
-    // Hook tạo post
+    // Hooks
     const createPostMutation = usePostData<any, any>("posts");
+    const updatePostMutation = usePutData<any, any>("posts");
+    const deletePostMutation = useDeleteData("posts");
 
     /* ================= UPLOAD IMAGE ================= */
     const handleUploadImage = async (file: File) => {
@@ -186,7 +194,6 @@ export default function Home_Post() {
             const res = await fetch("http://localhost:8000/api/upload", {
                 method: "POST",
                 headers: {
-                    // Chỉ để Authorization, KHÔNG thêm Content-Type
                     Authorization: `Bearer ${localStorage.getItem("token")}`,
                     Accept: "application/json",
                 },
@@ -218,25 +225,199 @@ export default function Home_Post() {
 
     /* ================= CREATE POST ================= */
     const handleCreatePost = async () => {
-        if (!content.trim()) return;
+        if (!content.trim()) {
+            message.error("Vui lòng nhập nội dung");
+            return;
+        }
+        if (!selectedTagId) {
+            message.error("Vui lòng chọn ít nhất 1 tag");
+            return;
+        }
 
         try {
             await createPostMutation.mutateAsync({
                 title: "Bài viết mới",
                 content,
                 image_ids: uploadedImages.map((img) => img.id),
-                tag_id: Array.isArray(selectedTags) ? selectedTags[0] : selectedTags,
+                tag_id: selectedTagId,
+                tags: selectedTags,
             });
 
             message.success("Đã đăng bài viết 🎉");
             setOpenCreatePost(false);
             setContent("");
+            setSelectedTagId(null);
             setSelectedTags([]);
             setUploadedImages([]);
             setCurrentPage(1);
             refetch?.();
         } catch (error: any) {
             message.error(error?.response?.data?.message || "Không thể đăng bài");
+        }
+    };
+
+    /* ================= EDIT POST ================= */
+    const handleOpenEdit = (post: any) => {
+        setEditingPost(post);
+        setContent(post.content);
+
+        // Set tag_id chính (tag đầu tiên hoặc từ post.tag_id)
+        const mainTagId = post.tag_id || post.tags?.[0]?.id || null;
+        setSelectedTagId(mainTagId);
+
+        // Set các tags phụ
+        setSelectedTags(post.tags?.map((tag: any) => tag.id) || []);
+        setUploadedImages(post.images || []);
+        setOpenEditPost(true);
+    };
+
+    const handleUpdatePost = async () => {
+        if (!content.trim()) {
+            message.error("Vui lòng nhập nội dung");
+            return;
+        }
+        if (!selectedTagId) {
+            message.error("Vui lòng chọn ít nhất 1 tag");
+            return;
+        }
+        if (!editingPost) return;
+
+        try {
+            await updatePostMutation.mutateAsync({
+                id: editingPost.id,
+                data: {
+                    title: editingPost.title || "Bài viết",
+                    content,
+                    image_ids: uploadedImages.map((img) => img.id),
+                    tag_id: selectedTagId,
+                    tags: selectedTags,
+                }
+            });
+
+            message.success("Đã cập nhật bài viết 🎉");
+            setOpenEditPost(false);
+            setEditingPost(null);
+            setContent("");
+            setSelectedTagId(null);
+            setSelectedTags([]);
+            setUploadedImages([]);
+            refetch?.();
+        } catch (error: any) {
+            console.error("Update error:", error);
+            message.error(error?.response?.data?.message || "Không thể cập nhật bài");
+        }
+    };
+
+    /* ================= DELETE POST ================= */
+    const handleDeletePost = async (postId: number) => {
+        try {
+            await deletePostMutation.mutateAsync(postId);
+            message.success("Đã xóa bài viết");
+            refetch?.();
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || "Không thể xóa bài");
+        }
+    };
+
+    /* ================= DROPDOWN MENU ================= */
+    const getPostMenuItems = (post: any) => [
+        {
+            key: 'edit',
+            label: 'Chỉnh sửa',
+            icon: <EditOutlined />,
+            onClick: () => handleOpenEdit(post),
+        },
+        {
+            key: 'delete',
+            label: (
+                <Popconfirm
+                    title="Xóa bài viết"
+                    description="Bạn có chắc muốn xóa bài viết này?"
+                    onConfirm={() => handleDeletePost(post.id)}
+                    okText="Xóa"
+                    cancelText="Hủy"
+                    okButtonProps={{ danger: true }}
+                >
+                    <span className="text-red-500">Gỡ</span>
+                </Popconfirm>
+            ),
+            icon: <DeleteOutlined className="text-red-500" />,
+        },
+    ];
+
+    const PostImages = ({ images }: { images: any[] }) => {
+    const [visible, setVisible] = useState(false);
+    const [current, setCurrent] = useState(0);
+
+    if (!images || images.length === 0) return null;
+
+    const displayImages = images.slice(0, 2);
+    const remain = images.length - 2;
+
+    return (
+        <div className="mx-[-16px] mt-3 border-y border-gray-100 bg-white overflow-hidden">
+            <Image.PreviewGroup
+                items={images.map((img) => ({
+                    src: img.url,
+                }))}
+                preview={{
+                    visible,
+                    current,
+                    onVisibleChange: (v) => setVisible(v),
+                    onChange: (index) => setCurrent(index),
+                }}
+            >
+                <div
+                    className="grid grid-cols-2 gap-[2px] w-full"
+                    style={{ height: 400 }}
+                >
+                    {displayImages.map((img, index) => (
+                        <div
+                            key={img.id}
+                            className="relative w-full h-full overflow-hidden cursor-pointer"
+                            onClick={() => {
+                                setCurrent(index);
+                                setVisible(true);
+                            }}
+                        >
+                            <Image
+                                src={img.url}
+                                preview={false} // 👈 RẤT QUAN TRỌNG
+                                className="w-full h-full"
+                                style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                }}
+                            />
+
+                            {/* Overlay +n */}
+                            {index === 1 && remain > 0 && (
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                                    <span className="text-white text-3xl font-bold">
+                                        +{remain}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </Image.PreviewGroup>
+        </div>
+    );
+};
+
+
+
+
+    /* ================= HANDLE TAG SELECTION ================= */
+    const handleTagChange = (values: number[]) => {
+        setSelectedTags(values);
+        // Tag đầu tiên sẽ là tag_id chính
+        if (values.length > 0) {
+            setSelectedTagId(values[0]);
+        } else {
+            setSelectedTagId(null);
         }
     };
 
@@ -302,29 +483,45 @@ export default function Home_Post() {
                                             }
                                         >
                                             <MessageOutlined /> Bình luận
-                                        </Space>
-                                        ,
+                                        </Space>,
                                         <Space key="share"><ShareAltOutlined /> Chia sẻ</Space>,
                                     ]}
                                 >
-
                                     <div className="flex justify-between items-start mb-3">
-                                        <Space size={12}>
+                                        <Space size={12} align="start">
                                             <Avatar
                                                 size={40}
                                                 icon={<UserOutlined />}
                                                 src={item.author?.avatar}
                                             />
+
                                             <div>
-                                                <Text strong>
-                                                    {item.author?.name || "Người dùng"}
-                                                </Text>
+                                                <Space size={6}>
+                                                    <Text strong>
+                                                        {item.author?.name || "Người dùng"}
+                                                    </Text>
+
+                                                    {item.is_active === 0 && (
+                                                        <span className="text-xs px-2 py-[2px] rounded-full 
+                                                            bg-yellow-100 text-yellow-700 border border-yellow-300">
+                                                            Chờ duyệt
+                                                        </span>
+                                                    )}
+                                                </Space>
+
                                                 <div className="text-xs text-gray-500">
                                                     {dayjs(item.created_at).format("DD/MM/YYYY HH:mm")} · 🌍
                                                 </div>
                                             </div>
                                         </Space>
-                                        <EllipsisOutlined className="text-lg cursor-pointer text-gray-500" />
+
+                                        <Dropdown
+                                            menu={{ items: getPostMenuItems(item) }}
+                                            trigger={['click']}
+                                            placement="bottomRight"
+                                        >
+                                            <EllipsisOutlined className="text-lg cursor-pointer text-gray-500 hover:bg-gray-100 rounded-full p-2" />
+                                        </Dropdown>
                                     </div>
 
                                     <Paragraph
@@ -334,21 +531,9 @@ export default function Home_Post() {
                                         {item.content}
                                     </Paragraph>
 
-                                    {item.images?.length > 0 && (
-                                        <div className="mx-[-16px] border-y bg-black flex justify-center">
-                                            <Image
-                                                src={
-                                                    item.images.find((img: any) => img.is_primary)?.url
-                                                    || item.images[0].url
-                                                }
-                                                style={{
-                                                    width: "100%",
-                                                    maxHeight: 500,
-                                                    objectFit: "contain",
-                                                }}
-                                            />
-                                        </div>
-                                    )}
+                                    {item.images?.length > 0 && <PostImages images={item.images} />}
+
+
                                     {openCommentPostId === item.id && (
                                         <CommentSection postId={item.id} />
                                     )}
@@ -375,6 +560,7 @@ export default function Home_Post() {
                 onCancel={() => {
                     setOpenCreatePost(false);
                     setContent("");
+                    setSelectedTagId(null);
                     setSelectedTags([]);
                     setUploadedImages([]);
                 }}
@@ -388,7 +574,6 @@ export default function Home_Post() {
                     </div>
                 }
             >
-
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                         <Avatar size={40} icon={<UserOutlined />} />
@@ -403,7 +588,7 @@ export default function Home_Post() {
                         placeholder="Chọn tag"
                         className="min-w-[180px]"
                         value={selectedTags}
-                        onChange={(values) => setSelectedTags(values)}
+                        onChange={handleTagChange}
                         options={tags.map((tag: any) => ({
                             label: tag.name,
                             value: tag.id,
@@ -411,7 +596,6 @@ export default function Home_Post() {
                     />
                 </div>
 
-                {/* ADD TO POST */}
                 <div className="relative">
                     <Input.TextArea
                         autoFocus
@@ -435,6 +619,7 @@ export default function Home_Post() {
                         />
                     </Upload>
                 </div>
+
                 {uploadedImages.length > 0 && (
                     <div className="mt-3 grid grid-cols-3 gap-2">
                         {uploadedImages.map((img) => (
@@ -465,10 +650,114 @@ export default function Home_Post() {
                     size="large"
                     className="mt-4"
                     loading={createPostMutation.isPending}
-                    disabled={!content.trim()}
+                    disabled={!content.trim() || !selectedTagId}
                     onClick={handleCreatePost}
                 >
                     Đăng
+                </Button>
+            </Modal>
+
+            {/* ================= MODAL EDIT POST ================= */}
+            <Modal
+                open={openEditPost}
+                onCancel={() => {
+                    setOpenEditPost(false);
+                    setEditingPost(null);
+                    setContent("");
+                    setSelectedTagId(null);
+                    setSelectedTags([]);
+                    setUploadedImages([]);
+                }}
+                footer={null}
+                centered
+                width={500}
+                destroyOnClose
+                title={
+                    <div className="text-center font-semibold text-lg border-b pb-2">
+                        Chỉnh sửa bài viết
+                    </div>
+                }
+            >
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                        <Avatar size={40} icon={<UserOutlined />} />
+                        <Text strong>{editingPost?.author?.name || "Thanh Tung"}</Text>
+                    </div>
+
+                    <Select
+                        mode="multiple"
+                        allowClear
+                        showSearch={false}
+                        size="small"
+                        placeholder="Chọn tag"
+                        className="min-w-[180px]"
+                        value={selectedTags}
+                        onChange={handleTagChange}
+                        options={tags.map((tag: any) => ({
+                            label: tag.name,
+                            value: tag.id,
+                        }))}
+                    />
+                </div>
+
+                <div className="relative">
+                    <Input.TextArea
+                        autoFocus
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="Bạn đang nghĩ gì thế?"
+                        bordered={false}
+                        autoSize={{ minRows: 4, maxRows: 8 }}
+                        className="text-lg pr-10"
+                    />
+
+                    <Upload
+                        beforeUpload={handleUploadImage}
+                        showUploadList={false}
+                        multiple
+                        disabled={uploading}
+                    >
+                        <PictureOutlined
+                            className={`absolute bottom-2 right-2 text-2xl cursor-pointer ${uploading ? "text-gray-400" : "text-green-500"
+                                }`}
+                        />
+                    </Upload>
+                </div>
+
+                {uploadedImages.length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                        {uploadedImages.map((img) => (
+                            <div key={img.id} className="relative group">
+                                <Image
+                                    src={img.url}
+                                    className="rounded w-full h-28 object-cover"
+                                    preview
+                                />
+                                <Button
+                                    type="primary"
+                                    danger
+                                    size="small"
+                                    shape="circle"
+                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition"
+                                    onClick={() => removeImage(img.id)}
+                                >
+                                    ✕
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <Button
+                    type="primary"
+                    block
+                    size="large"
+                    className="mt-4"
+                    loading={updatePostMutation.isPending}
+                    disabled={!content.trim() || !selectedTagId}
+                    onClick={handleUpdatePost}
+                >
+                    Cập nhật
                 </Button>
             </Modal>
         </div>

@@ -66,7 +66,6 @@ Route::get('/user', [AuthApiController::class, 'index']);
 Route::get('/payment/check-status/{id}', [PaymentApiController::class, 'checkTransactionStatus']);
 // Route::get('/merchant', [MerchantApiController::class, 'index']);
 
-Route::get('/posts', [PostApiController::class, 'index']);
 Route::get('/tags', [TagApiController::class, 'index']);
 
 Route::get('/promotions', [PromotionApiController::class, 'index']);
@@ -123,5 +122,9 @@ Route::middleware(['jwt.auth'])->group(function () {
 
     Route::post('/payment/wallet', [PaymentApiController::class, 'paymentWallet']);
 
+    //Posts 
+    Route::get('/posts', [PostApiController::class, 'index']);
     Route::post('/posts', [PostApiController::class, 'store']);
+    Route::put('/posts/{id}', [PostApiController::class, 'update']);
+    Route::delete('/posts/{id}', [PostApiController::class, 'destroy']);
 });

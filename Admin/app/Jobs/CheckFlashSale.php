@@ -32,9 +32,11 @@ class CheckFlashSale implements ShouldQueue
         if ($campaign) {
             $campaign->status = $this->status;
             $campaign->save();
+            if ($this->status == 'inactive') {
+                $campaign->flashSaleItems()->update(['status' => 'inactive']);
+            }
             Log::info("QUEUE SUCCESS: Đã cập nhật chiến dịch ID {$this->campaignId} sang trạng thái: {$this->status}");
-        }
-        else{
+        } else {
             Log::error("QUEUE FAILED: Không tìm thấy chiến dịch ID {$this->campaignId}");
         }
     }

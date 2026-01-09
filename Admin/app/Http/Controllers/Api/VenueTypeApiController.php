@@ -28,4 +28,22 @@ class VenueTypeApiController extends Controller
             ], 500);
         }
     }
+
+    public function getVenueType()
+    {
+        try {
+            $types = VenueType::all();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Lấy danh sách loại hình sân thành công",
+                'data' => $types
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể tải danh sách loại sân'
+            ], 500);
+        }
+    }
 }

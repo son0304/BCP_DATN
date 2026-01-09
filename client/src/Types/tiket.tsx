@@ -78,7 +78,7 @@ export interface Ticket {
   total_amount: string | number;
 
   // Trạng thái
-  status: "pending" | "confirmed" | "cancelled" | "completed";
+  status: "pending" | "confirmed" | "cancelled" | "completed"| "checkin";
   payment_status: "unpaid" | "paid" | "refunded";
 
   notes?: string | null;

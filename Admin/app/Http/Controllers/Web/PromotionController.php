@@ -4,219 +4,177 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Promotion;
+use App\Models\Venue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 
 class PromotionController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Hàm helper để lấy prefix dựa trên role nhằm tránh lặp lại code
      */
+    private function getRoleData()
+    {
+        $user = Auth::user();
+        // Giả sử role là relationship. Nếu role là string, hãy sửa thành: $role = $user->role;
+        $role = $user->role->name;
+
+        return [
+            'user' => $user,
+            'role' => $role,
+            'view_prefix' => ($role === 'admin') ? 'admin' : 'venue_owner',
+            'route_prefix' => ($role === 'admin') ? 'admin' : 'owner'
+        ];
+    }
+
     public function index(Request $request)
     {
-        $query = Promotion::with('creator');
+        $data = $this->getRoleData();
+        $query = Promotion::with(['creator', 'venue']);
 
-        // Search functionality
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('code', 'like', "%{$search}%");
+        if ($data['role'] === 'venue_owner') {
+            $query->where('creator_user_id', $data['user']->id);
+        } else if ($data['role'] === 'admin') {
+            $query->whereHas('creator', function ($q) {
+                $q->whereHas('role', function ($sq) {
+                    $sq->where('name', 'admin');
+                });
             });
         }
 
-        // Filter by type
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
-        // Filter by status (active/expired)
-        // Chỉ filter theo thời gian (bỏ check usage_limit)
-        if ($request->filled('status')) {
-            $now = now();
-            if ($request->status === 'active') {
-                // Voucher đang hoạt động: đã bắt đầu và chưa hết hạn
-                $query->where('start_at', '<=', $now)
-                    ->where('end_at', '>=', $now);
-            } elseif ($request->status === 'expired') {
-                // Voucher đã hết hạn: đã qua ngày kết thúc HOẶC chưa đến ngày bắt đầu
-                $query->where(function ($q) use ($now) {
-                    $q->where('end_at', '<', $now)
-                        ->orWhere('start_at', '>', $now);
-                });
-            }
-        }
-
-        $promotions = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
-
-        return view('admin.promotions.index', compact('promotions'));
+        $promotions = $query->latest()->paginate(15)->withQueryString();
+        return view("{$data['view_prefix']}.promotions.index", compact('promotions'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        return view('admin.promotions.create');
+        $data = $this->getRoleData();
+
+        $venues = Venue::when($data['role'] === 'venue_owner', function ($q) use ($data) {
+            return $q->where('owner_id', $data['user']->id);
+        })->select('id', 'name')->get();
+
+        return view("{$data['view_prefix']}.promotions.create", compact('venues'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        // 2. Validate dữ liệu Tạo mới
-        $request->validate([
-            'code'                => 'required|string|max:50|unique:promotions,code',
-            'value'               => 'required|numeric|min:0',
-            'type'                => 'required|in:money,%', // Chấp nhận 'money' (giảm tiền) hoặc '%' (phần trăm)
-            // after_or_equal:now => Phải từ thời điểm hiện tại trở đi
-            'start_at' => 'required|date|after_or_equal:now',
-            // after:start_at => Phải sau ngày bắt đầu
-            'end_at'   => 'required|date|after:start_at', // Ngày kết thúc phải sau ngày bắt đầu
-            'usage_limit'         => 'required|integer|min:1',
-            'max_discount_amount' => 'nullable|numeric|min:0',
-        ], [
-            'code.required'          => 'Mã khuyến mãi không được bỏ trống.',
-            'code.unique'            => 'Mã khuyến mãi này đã tồn tại.',
-            'value.required'         => 'Giá trị giảm không được bỏ trống.',
-            'type.required'          => 'Loại giảm giá không hợp lệ.',
-            'start_at.required'      => 'Thời gian bắt đầu là bắt buộc.',
-            'start_at.after_or_equal' => 'Thời gian bắt đầu không được nhỏ hơn thời điểm hiện tại.',
-            'end_at.required'        => 'Thời gian kết thúc là bắt buộc.',
-            'end_at.after'           => 'Thời gian kết thúc phải sau thời gian bắt đầu.',
-            'usage_limit.required'   => 'Giới hạn sử dụng là bắt buộc.',
-            'usage_limit.min'        => 'Giới hạn sử dụng phải ít nhất là 1.',
+        $data = $this->getRoleData();
+
+        $rules = [
+            'code' => 'required|string|max:50|unique:promotions,code',
+            'value' => 'required|numeric|min:0',
+            'type' => 'required|in:percentage,fixed',
+            'start_at' => 'required|date',
+            'end_at' => 'required|date|after:start_at',
+            'usage_limit' => 'required|integer|min:0',
+            'venue_id' => 'nullable|exists:venues,id',
+            'process_status' => 'required|in:active,disabled',
+            'target_user_type' => 'required|in:all,new_user',
+            'description' => 'nullable|string'
+        ];
+
+        $request->validate($rules);
+
+        // Bảo mật: Kiểm tra quyền sở hữu sân
+        if ($data['role'] === 'venue_owner' && $request->filled('venue_id')) {
+            $isMine = Venue::where('id', $request->venue_id)->where('owner_id', $data['user']->id)->exists();
+            if (!$isMine) abort(403, 'Bạn không có quyền áp dụng mã cho sân này.');
+        }
+
+        Promotion::create([
+            'code'                => strtoupper($request->code),
+            'value'               => $request->value,
+            'type'                => $request->type,
+            'start_at'            => Carbon::parse($request->start_at, 'Asia/Ho_Chi_Minh')->utc(),
+            'end_at'              => Carbon::parse($request->end_at, 'Asia/Ho_Chi_Minh')->utc(),
+            'usage_limit'         => $request->usage_limit,
+            'used_count'          => 0,
+            'min_order_value'     => $request->min_order_value ?? 0,
+            'max_discount_amount' => $request->type === 'percentage' ? $request->max_discount_amount : null,
+            'venue_id'            => $request->venue_id,
+            'target_user_type'    => $request->target_user_type,
+            'process_status'      => $request->process_status,
+            'description'         => $request->description,
+            'creator_user_id'     => $data['user']->id,
         ]);
 
-        // Validate logic bổ sung: Nếu là % thì giá trị không quá 100
-        if ($request->type === '%' && $request->value > 100) {
-            return back()->withErrors(['value' => 'Giá trị phần trăm giảm giá không được vượt quá 100.'])->withInput();
-        }
-
-        DB::beginTransaction();
-        try {
-            // Convert datetime-local (VN timezone) về UTC để lưu vào database
-            $startAt = \Carbon\Carbon::parse($request->start_at, 'Asia/Ho_Chi_Minh')->utc();
-            $endAt = \Carbon\Carbon::parse($request->end_at, 'Asia/Ho_Chi_Minh')->utc();
-
-            Promotion::create([
-                'code'                => strtoupper($request->code),
-                'value'               => $request->value,
-                'type'                => $request->type,
-                'start_at'            => $startAt->format('Y-m-d H:i:s'),
-                'end_at'              => $endAt->format('Y-m-d H:i:s'),
-                'usage_limit'         => $request->usage_limit,
-                'used_count'          => 0,
-                'created_by'          => auth()->id(),
-                'max_discount_amount' => $request->type === '%' ? ($request->max_discount_amount ?? 0) : null,
-            ]);
-
-            DB::commit();
-            return redirect()->route('admin.promotions.index')
-                ->with('success', 'Voucher đã được tạo thành công!');
-        } catch (\Exception $e) {
-            DB::rollback();
-            Log::error('Lỗi khi tạo voucher: ' . $e->getMessage());
-            return back()->withInput()
-                ->with('error', 'Có lỗi xảy ra khi tạo voucher: ' . $e->getMessage());
-        }
+        return redirect()->route("{$data['route_prefix']}.promotions.index")->with('success', 'Tạo mã thành công!');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Promotion $promotion)
-    {
-        $promotion->load('tickets.user', 'creator');
-        return view('admin.promotions.show', compact('promotion'));
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Promotion $promotion)
     {
-        return view('admin.promotions.edit', compact('promotion'));
+        $data = $this->getRoleData();
+
+        // Kiểm tra quyền sở hữu bản ghi
+        if ($data['role'] === 'venue_owner' && $promotion->creator_user_id !== $data['user']->id) {
+            abort(403);
+        }
+
+        $venues = Venue::when($data['role'] === 'venue_owner', function ($q) use ($data) {
+            return $q->where('owner_id', $data['user']->id);
+        })->select('id', 'name')->get();
+
+        return view("{$data['view_prefix']}.promotions.edit", compact('promotion', 'venues'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Promotion $promotion)
     {
-        // 3. Validate dữ liệu Cập nhật
+        $data = $this->getRoleData();
+
+        if ($data['role'] === 'venue_owner' && $promotion->creator_user_id !== $data['user']->id) {
+            abort(403);
+        }
+
+        // BẮT BUỘC PHẢI CÓ VALIDATE
         $request->validate([
-            // Mã code là duy nhất nhưng trừ chính nó ra
-            'code'                => ['required', 'string', 'max:50', Rule::unique('promotions')->ignore($promotion->id)],
-            'value'               => 'required|numeric|min:0',
-            'type'                => 'required|in:money,%',
-            'start_at'            => 'required|date', // Khi update có thể giữ nguyên ngày cũ, không bắt buộc after_or_equal today
-            'end_at'              => 'required|date|after:start_at',
-            // Giới hạn sử dụng mới không được nhỏ hơn số lượng đã dùng
-            'usage_limit'         => 'required|integer|min:' . $promotion->used_count,
-            'max_discount_amount' => 'nullable|numeric|min:0',
-        ], [
-            'code.required'        => 'Mã khuyến mãi không được bỏ trống.',
-            'code.unique'          => 'Mã khuyến mãi này đã tồn tại.',
-            'value.required'       => 'Giá trị giảm không được bỏ trống.',
-            'end_at.after'         => 'Thời gian kết thúc phải sau thời gian bắt đầu.',
-            'usage_limit.min'      => "Giới hạn sử dụng không được thấp hơn số lượng đã dùng ({$promotion->used_count}).",
+            'value' => 'required|numeric|min:0',
+            'type' => 'required|in:percentage,fixed',
+            'start_at' => 'required|date',
+            'end_at' => 'required|date|after:start_at',
+            'usage_limit' => 'required|integer|min:' . $promotion->used_count,
+            'venue_id' => 'nullable|exists:venues,id',
+            'process_status' => 'required|in:active,disabled',
+            'target_user_type' => 'required|in:all,new_user',
         ]);
 
-        if ($request->type === '%' && $request->value > 100) {
-            return back()->withErrors(['value' => 'Giá trị phần trăm giảm giá không được vượt quá 100.'])->withInput();
+        // Bảo mật: Kiểm tra quyền sở hữu sân khi update
+        if ($data['role'] === 'venue_owner' && $request->filled('venue_id')) {
+            $isMine = Venue::where('id', $request->venue_id)->where('owner_id', $data['user']->id)->exists();
+            if (!$isMine) abort(403);
         }
 
-        DB::beginTransaction();
-        try {
-            $startAt = \Carbon\Carbon::parse($request->start_at, 'Asia/Ho_Chi_Minh')->utc();
-            $endAt = \Carbon\Carbon::parse($request->end_at, 'Asia/Ho_Chi_Minh')->utc();
+        $promotion->update([
+            'value'               => $request->value,
+            'type'                => $request->type,
+            'start_at'            => Carbon::parse($request->start_at, 'Asia/Ho_Chi_Minh')->utc(),
+            'end_at'              => Carbon::parse($request->end_at, 'Asia/Ho_Chi_Minh')->utc(),
+            'usage_limit'         => $request->usage_limit,
+            'min_order_value'     => $request->min_order_value ?? 0,
+            'max_discount_amount' => $request->type === 'percentage' ? $request->max_discount_amount : null,
+            'venue_id'            => $request->venue_id,
+            'target_user_type'    => $request->target_user_type,
+            'process_status'      => $request->process_status,
+            'description'         => $request->description,
+        ]);
 
-            $promotion->update([
-                'code'                => strtoupper($request->code),
-                'value'               => $request->value,
-                'type'                => $request->type,
-                'start_at'            => $startAt->format('Y-m-d H:i:s'),
-                'end_at'              => $endAt->format('Y-m-d H:i:s'),
-                'usage_limit'         => $request->usage_limit,
-                'max_discount_amount' => $request->type === '%' ? ($request->max_discount_amount ?? $promotion->max_discount_amount) : null,
-            ]);
-
-            DB::commit();
-            return redirect()->route('admin.promotions.index')
-                ->with('success', 'Voucher đã được cập nhật thành công!');
-        } catch (\Exception $e) {
-            DB::rollback();
-            Log::error('Lỗi khi cập nhật voucher: ' . $e->getMessage());
-            return back()->withInput()
-                ->with('error', 'Có lỗi xảy ra khi cập nhật voucher: ' . $e->getMessage());
-        }
+        return redirect()->route("{$data['route_prefix']}.promotions.index")->with('success', 'Cập nhật thành công!');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Promotion $promotion)
     {
-        DB::beginTransaction();
-        try {
-            // Kiểm tra xem voucher đã được sử dụng chưa
-            if ($promotion->used_count > 0) {
-                return back()->with('error', 'Không thể xóa voucher đã được sử dụng.');
-            }
+        $data = $this->getRoleData();
 
-            $promotion->delete();
-
-            DB::commit();
-            return redirect()->route('admin.promotions.index')
-                ->with('success', 'Voucher đã được xóa thành công!');
-        } catch (\Exception $e) {
-            DB::rollback();
-            Log::error('Lỗi khi xóa voucher: ' . $e->getMessage());
-            return back()->with('error', 'Có lỗi xảy ra khi xóa voucher: ' . $e->getMessage());
+        if ($data['role'] === 'venue_owner' && $promotion->creator_user_id !== $data['user']->id) {
+            abort(403);
         }
+
+        if ($promotion->used_count > 0) {
+            return back()->with('error', 'Mã đã được sử dụng, không thể xóa. Hãy chuyển sang trạng thái Tạm tắt.');
+        }
+
+        $promotion->delete();
+        return back()->with('success', 'Đã xóa mã khuyến mãi.');
     }
 }

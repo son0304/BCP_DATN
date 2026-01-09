@@ -322,33 +322,80 @@
                     </div>
                 </div>
 
-                {{-- 2. HÌNH ẢNH VENUE --}}
+
+
+                {{-- 2. THƯ VIỆN HÌNH ẢNH (ĐÃ SỬA: NHÓM THEO TYPE) --}}
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white py-3 border-bottom">
-                        <h6 class="mb-0 text-secondary">Hình ảnh Venue</h6>
+                        <h6 class="mb-0 text-secondary fw-bold"><i class="fas fa-images me-2"></i>Thư viện hình ảnh</h6>
                     </div>
                     <div class="card-body">
-                        @if ($venue->images->count())
-                            @php
-                                $primary = $venue->images->firstWhere('is_primary', 1) ?? $venue->images->first();
-                                $others = $venue->images->where('id', '!=', $primary->id);
-                            @endphp
-                            <div class="mb-2 rounded overflow-hidden">
-                                <img src="{{ $primary->url }}" class="w-100" style="height: 180px; object-fit: cover;">
-                            </div>
-                            <div class="row g-2">
-                                @foreach ($others as $img)
-                                    <div class="col-4">
-                                        <img src="{{ $img->url }}" class="w-100 rounded"
-                                            style="height: 60px; object-fit: cover;">
-                                    </div>
-                                @endforeach
-                            </div>
-                        @else
-                            <p class="text-muted small mb-0">Chưa có hình ảnh.</p>
-                        @endif
+                        @php
+                            // Tách ảnh sân và ảnh giấy tờ từ quan hệ images
+                            $venuePhotos = $venue->images->where('type', 'venue');
+                            $docPhotos = $venue->images->where('type', 'document');
+                        @endphp
+
+                        {{-- Nhóm 1: Hình ảnh sân bóng --}}
+                        <div class="mb-4">
+                            <p class="small text-muted text-uppercase fw-bold mb-2">Hình ảnh sân bóng</p>
+                            @if ($venuePhotos->count())
+                                @php
+                                    $primary = $venuePhotos->firstWhere('is_primary', 1) ?? $venuePhotos->first();
+                                    $others = $venuePhotos->where('id', '!=', $primary->id);
+                                @endphp
+                                <div class="mb-2 rounded overflow-hidden border shadow-sm">
+                                    <a href="{{ asset($primary->url) }}" target="_blank">
+                                        <img src="{{ asset($primary->url) }}" class="w-100"
+                                            style="height: 160px; object-fit: cover;">
+                                    </a>
+                                </div>
+                                <div class="row g-2">
+                                    @foreach ($others as $img)
+                                        <div class="col-4">
+                                            <a href="{{ asset($img->url) }}" target="_blank">
+                                                <img src="{{ asset($img->url) }}" class="w-100 rounded border"
+                                                    style="height: 60px; object-fit: cover;">
+                                            </a>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="py-3 text-center border rounded bg-light">
+                                    <small class="text-muted fst-italic">Chưa có ảnh sân.</small>
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- Nhóm 2: Giấy tờ pháp lý --}}
+                        <div>
+                            <p class="small text-muted text-uppercase fw-bold mb-2">Giấy tờ pháp lý</p>
+                            @if ($docPhotos->count())
+                                <div class="row g-2">
+                                    @foreach ($docPhotos as $doc)
+                                        <div class="col-4">
+                                            <a href="{{ asset($doc->url) }}" target="_blank"
+                                                class="d-block position-relative group-hover">
+                                                <img src="{{ asset($doc->url) }}"
+                                                    class="w-100 rounded border border-info border-opacity-50"
+                                                    style="height: 65px; object-fit: cover; filter: brightness(0.85);">
+                                                <div
+                                                    class="position-absolute top-50 start-50 translate-middle text-white small">
+                                                    <i class="fas fa-search-plus"></i>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="py-3 text-center border rounded bg-light">
+                                    <small class="text-muted fst-italic">Chưa có ảnh giấy tờ.</small>
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
+
 
                 {{-- 3. DỊCH VỤ --}}
                 <div class="card shadow-sm border-0 mb-4">

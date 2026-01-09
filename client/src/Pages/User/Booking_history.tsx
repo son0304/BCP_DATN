@@ -44,8 +44,8 @@ const BookingHistory = ({ user }: { user: User }) => {
     pending: { label: "Chờ xác nhận", color: "text-yellow-600 bg-yellow-50 border-yellow-200", icon: "fa-hourglass-half" },
     confirmed: { label: "Đã xác nhận", color: "text-blue-600 bg-blue-50 border-blue-200", icon: "fa-check" },
     completed: { label: "Hoàn thành", color: "text-emerald-600 bg-emerald-50 border-emerald-200", icon: "fa-check-double" },
-    cancelled: { label: "Đã hủy", color: "text-red-600 bg-red-50 border-red-200", icon: "fa-xmark" },
-    canceled: { label: "Đã hủy", color: "text-red-600 bg-red-50 border-red-200", icon: "fa-xmark" },
+    checkin: { label: "Đang sử dụng", color: "bg-purple-50 text-purple-700 border-purple-200", icon: "fa-street-view" },
+    cancelled: { label: "Đã hủy", color: "text-red-600 bg-red-50 border-red-200", icon: "fa-xmark" }, // Đã sửa ở đây
   };
 
   const transactionConfig: Record<string, any> = {
@@ -75,7 +75,7 @@ const BookingHistory = ({ user }: { user: User }) => {
 
   return (
     <div className="space-y-6 font-sans">
-      
+
       {/* === 1. WALLET CARD (Redesign) === */}
       <div className="bg-gradient-to-br from-[#10B981] to-[#059669] rounded-2xl shadow-xl p-6 text-white relative overflow-hidden group">
         <div className="absolute -top-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
@@ -84,12 +84,12 @@ const BookingHistory = ({ user }: { user: User }) => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center relative z-10 gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2 opacity-90">
-               <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center text-xs backdrop-blur-sm">
-                  <i className="fa-solid fa-wallet"></i>
-               </div>
-               <span className="text-xs font-bold uppercase tracking-widest">Ví cá nhân</span>
+              <div className="w-6 h-6 rounded bg-white/20 flex items-center justify-center text-xs backdrop-blur-sm">
+                <i className="fa-solid fa-wallet"></i>
+              </div>
+              <span className="text-xs font-bold uppercase tracking-widest">Ví cá nhân</span>
             </div>
-            
+
             <div className="text-3xl md:text-4xl font-extrabold tracking-tight">
               {isLoadingWallet ? (
                 <div className="h-9 w-32 bg-white/20 animate-pulse rounded"></div>
@@ -97,7 +97,7 @@ const BookingHistory = ({ user }: { user: User }) => {
                 formatCurrency(wallet?.balance)
               )}
             </div>
-            
+
             <p className="text-[10px] md:text-xs mt-1 opacity-70 font-mono">
               ID: {wallet?.id ? String(wallet.id).padStart(6, '0') : '---'}
             </p>
@@ -111,7 +111,7 @@ const BookingHistory = ({ user }: { user: User }) => {
 
       {/* === 2. TABS & CONTENT === */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px] flex flex-col">
-        
+
         {/* Navigation Tabs */}
         <div className="flex border-b border-gray-100 bg-gray-50/30">
           {[
@@ -186,7 +186,7 @@ const BookingHistory = ({ user }: { user: User }) => {
                           </td>
                           <td className="px-4 py-3 text-center">
                             <Link to={`/booking/${ticket.id}`} className="w-6 h-6 rounded-full flex items-center justify-center text-gray-300 hover:text-[#10B981] hover:bg-green-50 transition-all">
-                               <i className="fa-solid fa-angle-right"></i>
+                              <i className="fa-solid fa-angle-right"></i>
                             </Link>
                           </td>
                         </tr>
@@ -237,14 +237,14 @@ const BookingHistory = ({ user }: { user: User }) => {
                         </td>
 
                         <td className="px-4 py-3">
-                            <div className="max-w-[200px] md:max-w-xs text-xs text-gray-500 leading-snug break-words">
-                                {log.description || "Không có nội dung"}
-                            </div>
-                            {log.ticket_id && (
-                                <Link to={`/booking/${log.ticket_id}`} className="inline-block mt-1 text-[10px] font-bold text-[#10B981] hover:underline bg-green-50 px-1.5 py-0.5 rounded border border-green-100">
-                                <i className="fa-solid fa-ticket mr-1"></i>Vé #{log.ticket_id}
-                                </Link>
-                            )}
+                          <div className="max-w-[200px] md:max-w-xs text-xs text-gray-500 leading-snug break-words">
+                            {log.description || "Không có nội dung"}
+                          </div>
+                          {log.ticket_id && (
+                            <Link to={`/booking/${log.ticket_id}`} className="inline-block mt-1 text-[10px] font-bold text-[#10B981] hover:underline bg-green-50 px-1.5 py-0.5 rounded border border-green-100">
+                              <i className="fa-solid fa-ticket mr-1"></i>Vé #{log.ticket_id}
+                            </Link>
+                          )}
                         </td>
 
                         <td className="px-4 py-3 text-right">

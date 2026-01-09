@@ -1,207 +1,172 @@
 @extends('app')
 @section('content')
+    <style>
+        .bg-soft-success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
 
-<div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-12">
+        .bg-soft-danger {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
 
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title mb-0">Quản lý Voucher</h3>
-                    <a href="{{ route('admin.promotions.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i> Tạo voucher mới
-                    </a>
-                </div>
+        .bg-soft-warning {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
 
-                <!-- Search & Filter -->
-                <div class="card-body">
-                    <!-- Filter container -->
-                    <div class="p-3 mb-4 rounded-3" style="background-color: #f8f9fa;">
-                        <form method="GET" action="{{ route('admin.promotions.index') }}">
-                            <div class="row g-3">
+        .bg-soft-primary {
+            background-color: #e0e7ff;
+            color: #3730a3;
+        }
 
-                                <!-- Search -->
-                                <div class="col-md-3">
-                                    <label for="search" class="form-label fw-semibold">Tìm kiếm</label>
-                                    <input type="text" id="search" name="search" value="{{ request('search') }}"
-                                        class="form-control" placeholder="Mã voucher...">
-                                </div>
+        .voucher-code {
+            font-family: 'Monaco', monospace;
+            background: #f8fafc;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            border: 1px dashed #cbd5e1;
+            color: #2563eb;
+        }
+    </style>
 
-                                <!-- Type -->
-                                <div class="col-md-3">
-                                    <label class="form-label fw-semibold d-block mb-1">Loại</label>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="type[]" id="type_percent" value="%"
-                                            {{ collect(request('type'))->contains('%') ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="type_percent">Phần trăm (%)</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="type[]" id="type_vnd" value="VND"
-                                            {{ collect(request('type'))->contains('VND') ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="type_vnd">Tiền mặt (VND)</label>
-                                    </div>
-                                </div>
-
-                                <!-- Status -->
-                                <div class="col-md-3">
-                                    <label class="form-label fw-semibold d-block mb-1">Trạng thái</label>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="status[]" id="status_active" value="active"
-                                            {{ collect(request('status'))->contains('active') ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="status_active">Đang hoạt động</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="status[]" id="status_expired" value="expired"
-                                            {{ collect(request('status'))->contains('expired') ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="status_expired">Đã hết hạn</label>
-                                    </div>
-                                </div>
-
-                                <!-- Buttons -->
-                                <div class="col-md-3 d-flex align-items-end">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-search me-1"></i> Tìm kiếm
-                                    </button>
-                                </div>
-
-                            </div>
-                        </form>
+    <div class="container-fluid py-4">
+        <!-- Bộ lọc nhanh -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 1rem;">
+            <div class="card-body">
+                <form action="{{ route('admin.promotions.index') }}" method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <input type="text" name="search" class="form-control" placeholder="Mã voucher hoặc tên sân..."
+                            value="{{ request('search') }}">
                     </div>
-
-                    <!-- Alerts -->
-                    @if (session('success'))
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <div class="col-md-2">
+                        <select name="status" class="form-select">
+                            <option value="">-- Trạng thái --</option>
+                            <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Đang chạy</option>
+                            <option value="disabled" {{ request('status') == 'disabled' ? 'selected' : '' }}>Tạm tắt
+                            </option>
+                            <option value="expired" {{ request('status') == 'expired' ? 'selected' : '' }}>Hết hạn</option>
+                        </select>
                     </div>
-                    @endif
-
-                    @if (session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <div class="col-md-2">
+                        <select name="target_user_type" class="form-select">
+                            <option value="">-- Đối tượng --</option>
+                            <option value="all" {{ request('target_user_type') == 'all' ? 'selected' : '' }}>Tất cả khách
+                            </option>
+                            <option value="new_user" {{ request('target_user_type') == 'new_user' ? 'selected' : '' }}>Người
+                                mới</option>
+                        </select>
                     </div>
-                    @endif
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary px-4">Lọc dữ liệu</button>
+                        <a href="{{ route('admin.promotions.index') }}" class="btn btn-light border">Xóa lọc</a>
+                    </div>
+                </form>
+            </div>
+        </div>
 
-                    <!-- Promotions Table -->
-                    <div class="table-responsive">
-                        <table class="table table-hover table-bordered align-middle mb-0">
-                            <thead class="table-light">
-                                <tr class="text-center">
-                                    <th>ID</th>
-                                    <th>Mã voucher</th>
-                                    <th>Giá trị</th>
-                                    <th>Loại</th>
-                                    <th>Ngày bắt đầu</th>
-                                    <th>Ngày kết thúc</th>
-                                    <th>Sử dụng</th>
-                                    <th>Trạng thái</th>
-                                    <th>Người tạo</th>
-                                    <th>Ngày tạo</th>
-                                    <th>Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($promotions as $promotion)
-                                <tr class="text-center">
-                                    <td>{{ $promotion->id }}</td>
-                                    <td>
-                                        <span class="voucher-code">{{ $promotion->code }}</span>
+        <div class="card border-0 shadow-sm" style="border-radius: 1rem;">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
+                <h5 class="fw-bold mb-0 text-primary"><i class="fas fa-ticket-alt me-2"></i>Quản lý Voucher Hệ Thống</h5>
+                <a href="{{ route('admin.promotions.create') }}" class="btn btn-primary px-4 shadow-sm rounded-pill"><i
+                        class="fas fa-plus me-2"></i>Tạo mới</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-muted uppercase small font-weight-bold">
+                            <tr>
+                                <th class="ps-4">Mã Voucher</th>
+                                <th>Mức Giảm</th>
+                                <th>Lượt Dùng</th>
+                                <th>Hiệu Lực</th>
+                                <th>Phạm Vi / Người Tạo</th>
+                                <th>Trạng Thái</th>
+                                <th class="text-end pe-4">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($promotions as $p)
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="voucher-code mb-1">{{ $p->code }}</div>
+                                        <div class="small text-muted">{{ Str::limit($p->description, 25) }}</div>
                                     </td>
                                     <td>
-                                        <strong>
-                                            @if($promotion->type == '%')
-                                            {{ number_format($promotion->value, 0) }}%
-                                            @if($promotion->max_discount_amount)
-                                            <div class="text-muted small">Tối đa {{ number_format($promotion->max_discount_amount, 0) }}₫</div>
-                                            @endif
-                                            @else
-                                            {{ number_format($promotion->value, 0) }}₫
-                                            @endif
-                                        </strong>
-                                    </td>
-                                    <td>
-                                        @if($promotion->type == '%')
-                                        <span class="badge bg-info">Phần trăm</span>
-                                        @else
-                                        <span class="badge bg-warning">Tiền mặt</span>
+                                        <div class="fw-bold text-dark">
+                                            {{ $p->type == 'percentage' ? $p->value . '%' : number_format($p->value) . '₫' }}
+                                        </div>
+                                        <div class="small text-muted">Đơn từ {{ number_format($p->min_order_value) }}₫
+                                        </div>
+                                        @if ($p->type == 'percentage' && $p->max_discount_amount)
+                                            <div class="small text-danger" style="font-size: 0.75rem;">Giam tối đa:
+                                                {{ number_format($p->max_discount_amount) }}₫</div>
                                         @endif
                                     </td>
-                                    <td>{{ \Carbon\Carbon::parse($promotion->start_at, 'UTC')->setTimezone('Asia/Ho_Chi_Minh')->format('d/m/Y H:i') }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($promotion->end_at, 'UTC')->setTimezone('Asia/Ho_Chi_Minh')->format('d/m/Y H:i') }}</td>
                                     <td>
-                                        {{ $promotion->used_count }} / {{ $promotion->usage_limit }}
+                                        <div class="small mb-1">{{ $p->used_count }} / {{ $p->usage_limit ?: '∞' }}</div>
+                                        <div class="progress" style="height: 5px; width: 80px;">
+                                            @php $percent = $p->usage_limit > 0 ? ($p->used_count / $p->usage_limit) * 100 : 0; @endphp
+                                            <div class="progress-bar bg-primary" style="width: {{ min($percent, 100) }}%">
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
-                                        @php
-                                        // So sánh trực tiếp với datetime từ database
-                                        $now = now();
-                                        $startAt = \Carbon\Carbon::parse($promotion->start_at);
-                                        $endAt = \Carbon\Carbon::parse($promotion->end_at);
-
-                                        // Logic kiểm tra trạng thái
-                                        $isNotStarted = $startAt->gt($now); // start_at > now
-                                        $isExpired = $endAt->lt($now); // end_at < now
-                                            $isOutOfUsage=$promotion->usage_limit > 0 && $promotion->used_count >= $promotion->usage_limit;
-                                            @endphp
-                                            @if($isNotStarted)
-                                            <span class="badge bg-info">Chưa hoạt động</span>
-                                            @elseif($isExpired)
-                                            <span class="badge bg-danger">Hết hạn</span>
-                                            @elseif($isOutOfUsage)
-                                            <span class="badge bg-warning">Hết lượt sử dụng</span>
+                                        <div class="small fw-bold">{{ $p->start_at->format('d/m/Y') }}</div>
+                                        <div class="small text-muted">{{ $p->end_at->format('d/m/Y') }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="mb-1">
+                                            @if ($p->venue)
+                                                <span class="badge bg-light text-dark border"><i
+                                                        class="fas fa-map-marker-alt"></i> {{ $p->venue->name }}</span>
                                             @else
-                                            <span class="badge bg-success">Đang hoạt động</span>
+                                                <span class="badge bg-soft-primary"><i class="fas fa-globe"></i> Toàn hệ
+                                                    thống</span>
                                             @endif
+                                        </div>
+                                        <div class="small text-muted">Tạo bởi: <strong>{{ $p->creator->name }}</strong>
+                                            ({{ $p->creator->role->name }})
+                                        </div>
                                     </td>
                                     <td>
-                                        @if($promotion->creator)
-                                        <span class="badge bg-secondary">{{ $promotion->creator->name }}</span>
+                                        @if ($p->process_status == 'disabled')
+                                            <span class="badge bg-soft-danger rounded-pill px-3">Tạm tắt</span>
+                                        @elseif($p->isExpired())
+                                            <span class="badge bg-soft-warning rounded-pill px-3">Hết hạn</span>
+                                        @elseif($p->isActive())
+                                            <span class="badge bg-soft-success rounded-pill px-3">Đang chạy</span>
                                         @else
-                                        <span class="text-muted">-</span>
+                                            <span class="badge bg-light text-muted rounded-pill px-3">Sắp tới</span>
                                         @endif
                                     </td>
-                                    <td>{{ $promotion->created_at->format('d/m/Y H:i') }}</td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="{{ route('admin.promotions.show', $promotion) }}"
-                                                class="btn btn-outline-primary btn-sm me-2" title="Xem chi tiết">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a href="{{ route('admin.promotions.edit', $promotion) }}"
-                                                class="btn btn-outline-warning btn-sm me-2" title="Sửa">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <form method="POST" action="{{ route('admin.promotions.destroy', $promotion) }}"
-                                                class="d-inline"
-                                                onsubmit="return confirm('Bạn có chắc chắn muốn xóa voucher này?')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Xóa">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group">
+                                            <a href="{{ route('admin.promotions.edit', $p) }}"
+                                                class="btn btn-sm btn-light border text-warning"><i
+                                                    class="fas fa-edit"></i></a>
+                                            <form action="{{ route('admin.promotions.destroy', $p) }}" method="POST"
+                                                class="d-inline">
+                                                @csrf @method('DELETE')
+                                                <button class="btn btn-sm btn-light border text-danger"
+                                                    onclick="return confirm('Xác nhận xóa?')"><i
+                                                        class="fas fa-trash"></i></button>
                                             </form>
                                         </div>
                                     </td>
                                 </tr>
-                                @empty
+                            @empty
                                 <tr>
-                                    <td colspan="11" class="text-center py-3">Không có voucher nào</td>
+                                    <td colspan="7" class="text-center py-5 text-muted">Chưa có mã giảm giá nào.</td>
                                 </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Pagination -->
-                    <div class="d-flex justify-content-center mt-3">
-                        {{ $promotions->appends(request()->query())->links() }}
-                    </div>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
-
+                <div class="p-3">{{ $promotions->links() }}</div>
             </div>
         </div>
     </div>
-</div>
-
 @endsection

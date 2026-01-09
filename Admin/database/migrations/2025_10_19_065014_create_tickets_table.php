@@ -22,9 +22,12 @@ return new class extends Migration
             $table->enum('process_status', ['new', 'processing', 'done'])->default('new');
 
             $table->enum('payment_status', ['unpaid', 'paid', 'refunded'])->default('unpaid');
+            $table->enum('payment_method', ['cash','momo','vnpay'])->default('momo');
 
 
             $table->text('notes')->nullable();
+            $table->text('guest')->nullable();
+
             $table->string('booking_code')->unique();
 
             $table->timestamps();

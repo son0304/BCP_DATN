@@ -3,13 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Transaction extends Model
 {
     protected $table = 'transactions';
 
     protected $fillable = [
-        'booking_id',
+        'transactionable_id', // ID của Booking hoặc SponsoredVenue
+        'transactionable_type', // Class của Booking hoặc SponsoredVenue
         'user_id',
         'payment_source',
         'amount',
@@ -22,11 +24,12 @@ class Transaction extends Model
         'amount' => 'decimal:2',
     ];
 
-    // ---- Relationships ----
-
-    public function booking()
+    /**
+     * Lấy model sở hữu giao dịch này (Booking hoặc SponsoredVenue)
+     */
+    public function transactionable(): MorphTo
     {
-        return $this->belongsTo(Booking::class);
+        return $this->morphTo();
     }
 
     public function user()

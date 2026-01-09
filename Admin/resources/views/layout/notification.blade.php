@@ -1,120 +1,214 @@
-<!-- resources/views/partials/notification.blade.php -->
-
-<!-- 1. CSS RIÊNG CHO THÔNG BÁO -->
+<!-- ========================================== -->
+<!-- 1. CSS (Giữ nguyên hiệu ứng rung & màu)    -->
+<!-- ========================================== -->
 <style>
-    /* Hiệu ứng rung */
+    /* Hiệu ứng rung chuông */
     @keyframes pulse-ring {
-        0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); }
-        100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+        0% {
+            transform: scale(0.8);
+            box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7);
+        }
+
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 10px rgba(255, 59, 48, 0);
+        }
+
+        100% {
+            transform: scale(0.8);
+            box-shadow: 0 0 0 0 rgba(255, 59, 48, 0);
+        }
     }
+
     .pulse-ring {
         display: none;
-        position: absolute; top: 8px; right: 8px; width: 15px; height: 15px;
-        border-radius: 50%; animation: pulse-ring 2s infinite; z-index: 0;
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        animation: pulse-ring 2s infinite;
+        z-index: 0;
     }
-    .has-urgent .pulse-ring { display: block; }
 
-    /* Giao diện thẻ */
-    .border-left-danger { border-left: 5px solid #ff3b30 !important; }
-    .border-left-warning { border-left: 5px solid #ffcc00 !important; }
-    .card-hover:hover { transform: translateY(-2px); transition: all 0.2s; box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
+    .has-urgent .pulse-ring {
+        display: block;
+    }
+
+    /* Màu nền & Animation */
+    .bg-soft-danger {
+        background-color: rgba(255, 59, 48, 0.1);
+        border-left: 4px solid #ff3b30;
+    }
+
+    .bg-soft-warning {
+        background-color: rgba(255, 204, 0, 0.1);
+        border-left: 4px solid #ffcc00;
+    }
+
+    .bg-soft-info {
+        background-color: rgba(58, 87, 232, 0.1);
+        border-left: 4px solid #3a57e8;
+    }
+
+    .bg-soft-success {
+        background-color: rgba(40, 167, 69, 0.1);
+        border-left: 4px solid #28a745;
+    }
+
+    .new-noti-item {
+        animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 
-<!-- 2. MODAL HIỂN THỊ (Giao diện to) -->
+<!-- ========================================== -->
+<!-- 2. HTML MODAL                              -->
+<!-- ========================================== -->
 <div class="modal fade" id="notificationModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content bg-light">
-            <div class="modal-header bg-white border-bottom py-3">
-                <h4 class="modal-title d-flex align-items-center text-dark">
-                    <i class="fe-bell text-warning mr-2" style="font-size: 1.5rem;"></i>
-                    Trung tâm thông báo
-                    <span class="badge badge-danger ml-2" id="modalCountBadge">0</span>
-                </h4>
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-bottom py-3 bg-light">
+                <h5 class="modal-title d-flex align-items-center text-dark font-weight-bold">
+                    <i class="fe-bell text-primary mr-2"></i> Thông báo
+                    <span id="modalBadgeCount" class="badge badge-danger ml-2 shadow-sm">{{ $unreadCount ?? 0 }}</span>
+                </h5>
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
             </div>
-            <div class="modal-body p-4">
-                <!-- Khu vực render JS -->
-                <h5 class="text-uppercase text-danger font-weight-bold mb-3"><i class="fe-alert-circle mr-1"></i> Cần xử lý ngay</h5>
-                <div class="row" id="urgentList">
-                    <div class="col-12 text-center py-5 text-muted">Đang tải dữ liệu...</div>
+
+            <div class="modal-body p-0">
+                <div id="notificationList" class="list-group list-group-flush">
+                    @forelse($notifications ?? [] as $item)
+                        <!-- Link được lấy trực tiếp từ controller -->
+                        <a href="{{ $item->link }}"
+                            class="list-group-item list-group-item-action {{ $item->style->bg }} py-3">
+                            <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                                <h6 class="mb-0 font-weight-bold text-dark">
+                                    <i class="{{ $item->style->icon }} {{ $item->style->text }} mr-1"></i>
+                                    {{ $item->title }}
+                                </h6>
+                                <small class="text-muted" style="font-size: 0.75rem">{{ $item->time }}</small>
+                            </div>
+                            <p class="mb-0 text-secondary small pl-4">{{ $item->message }}</p>
+                        </a>
+                    @empty
+                        <div class="text-center py-5 empty-state">
+                            <i class="fe-bell-off text-muted opacity-50" style="font-size: 3rem;"></i>
+                            <p class="mt-3 text-muted">Hiện tại không có thông báo nào.</p>
+                        </div>
+                    @endforelse
                 </div>
             </div>
-            <div class="modal-footer bg-white">
-                <button type="button" class="btn btn-light" data-dismiss="modal">Đóng</button>
+
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-sm btn-light text-muted" data-dismiss="modal">Đóng</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 3. JAVASCRIPT XỬ LÝ (Realtime / API) -->
+<!-- ========================================== -->
+<!-- 3. JAVASCRIPT REALTIME                     -->
+<!-- ========================================== -->
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Dữ liệu giả lập (Sau này thay bằng API gọi server)
-        const mockData = [
-            { id: 101, court: 'Sân 1', user: 'Nguyễn Văn A', time: 'Quá 5 phút', type: 'expired', price: '200.000đ', status: 'Chưa TT' },
-            { id: 102, court: 'Sân VIP', user: 'Trần Thị B', time: 'Còn 10 phút', type: 'expiring', price: '350.000đ', status: 'Đang đá' },
-            { id: 104, court: 'Sân 5', user: 'Phạm D', time: 'Còn 5 phút', type: 'expiring', price: '180.000đ', status: 'Đang đá' }
-        ];
+        const elements = {
+            navBadge: document.getElementById('lblNotificationCount'),
+            modalBadge: document.getElementById('modalBadgeCount'),
+            navIconLi: document.getElementById('notificationLi'),
+            list: document.getElementById('notificationList')
+        };
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
-        // Gọi hàm render
-        renderNotifications(mockData);
+        function handleNotification(eventData) {
+            // 1. Lấy dữ liệu
+            const noti = eventData.data; // Đây là model Notification
+            console.log('🔔 New Notification:', noti);
 
-        function renderNotifications(data) {
-            // Cập nhật số lượng Badge ở Navbar (thông qua ID)
-            const count = data.length;
+            // Phát âm thanh
+            audio.play().catch(() => {});
 
-            // Cập nhật DOM ở Nav (Lưu ý: ID này nằm ở file Nav)
-            const lblCount = document.getElementById('lblNotificationCount');
-            const liElement = document.getElementById('notificationLi');
-            const modalBadge = document.getElementById('modalCountBadge');
-
-            if(lblCount) lblCount.innerText = count;
-            if(modalBadge) modalBadge.innerText = count;
-
-            if (count > 0 && liElement) {
-                liElement.classList.add('has-urgent');
-            } else if (liElement) {
-                liElement.classList.remove('has-urgent');
-            }
-
-            // Render HTML
-            let html = '';
-            if (count === 0) {
-                html = '<div class="col-12 text-center text-muted">Không có thông báo nào.</div>';
+            // 2. Parse dữ liệu cột 'data' (JSON)
+            let extraData = {};
+            if (typeof noti.data === 'string') {
+                try {
+                    extraData = JSON.parse(noti.data);
+                } catch (e) {}
             } else {
-                data.forEach(item => {
-                    let isExpired = item.type === 'expired';
-                    let borderClass = isExpired ? 'border-left-danger' : 'border-left-warning';
-                    let badgeClass = isExpired ? 'badge-soft-danger' : 'badge-soft-warning';
-
-                    // Nút bấm hành động
-                    let btnAction = isExpired
-                        ? `<button class="btn btn-danger btn-sm flex-grow-1" onclick="alert('Xử lý trả sân: ${item.court}')">Checkout</button>`
-                        : `<button class="btn btn-warning text-white btn-sm flex-grow-1">Nhắc nhở</button>`;
-
-                    html += `
-                    <div class="col-md-6 col-lg-4 mb-3">
-                        <div class="card shadow-sm h-100 card-hover ${borderClass}">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h5 class="card-title font-weight-bold m-0 text-dark">${item.court}</h5>
-                                    <span class="badge ${badgeClass} p-2">${item.time}</span>
-                                </div>
-                                <div class="media mb-3">
-                                    <div class="media-body">
-                                        <h6 class="mt-0 mb-1 font-weight-bold">${item.user}</h6>
-                                        <p class="text-muted mb-0 font-13">${item.status}: <b class="text-danger">${item.price}</b></p>
-                                    </div>
-                                </div>
-                                <div class="d-flex gap-2">${btnAction}</div>
-                            </div>
-                        </div>
-                    </div>`;
-                });
+                extraData = noti.data || {};
             }
-            const listContainer = document.getElementById('urgentList');
-            if(listContainer) listContainer.innerHTML = html;
+
+            // 3. Cập nhật Badge số lượng
+            let currentCount = parseInt(elements.navBadge?.innerText || '0');
+            let newCount = currentCount + 1;
+            if (elements.navBadge) {
+                elements.navBadge.innerText = newCount;
+                elements.navBadge.style.display = 'inline-block';
+            }
+            if (elements.modalBadge) elements.modalBadge.innerText = newCount;
+            if (elements.navIconLi) elements.navIconLi.classList.add('has-urgent');
+
+            // 4. Xác định Link & Style (Logic JS tương tự PHP để đồng bộ)
+            const link = extraData.link || '#';
+            const title = noti.title || 'Thông báo mới';
+            const message = noti.message || '';
+
+            // Map màu sắc theo type
+            let bgClass = 'bg-soft-info';
+            let iconClass = 'fe-bell text-primary';
+
+            switch (noti.type) {
+                case 'danger':
+                    bgClass = 'bg-soft-danger';
+                    iconClass = 'fe-alert-circle text-danger';
+                    break;
+                case 'warning':
+                    bgClass = 'bg-soft-warning';
+                    iconClass = 'fe-alert-triangle text-warning';
+                    break;
+                case 'success':
+                    bgClass = 'bg-soft-success';
+                    iconClass = 'fe-check-circle text-success';
+                    break;
+            }
+
+            // 5. Tạo HTML
+            const htmlItem = `
+                <a href="${link}" class="list-group-item list-group-item-action ${bgClass} new-noti-item py-3">
+                    <div class="d-flex w-100 justify-content-between align-items-center mb-1">
+                        <h6 class="mb-0 font-weight-bold text-dark">
+                            <i class="${iconClass} mr-1"></i> ${title}
+                        </h6>
+                        <small class="text-success font-weight-bold" style="font-size: 0.75rem">Vừa xong</small>
+                    </div>
+                    <p class="mb-0 text-secondary small pl-4">${message}</p>
+                </a>
+            `;
+
+            // 6. Chèn vào danh sách
+            if (elements.list) {
+                const emptyState = elements.list.querySelector('.empty-state');
+                if (emptyState) emptyState.remove();
+                elements.list.insertAdjacentHTML('afterbegin', htmlItem);
+            }
+        }
+
+        // --- SOCKET LISTENER ---
+        if (typeof Echo !== 'undefined') {
+            Echo.channel('notification')
+                .listen('.notification.created', (e) => handleNotification(e));
         }
     });
 </script>

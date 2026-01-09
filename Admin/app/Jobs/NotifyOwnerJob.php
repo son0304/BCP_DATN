@@ -3,12 +3,14 @@
 namespace App\Jobs;
 
 use App\Models\Ticket;
+use App\Models\Notification; // Nhớ import Model Notification
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str; // Nhớ import Str để tạo UUID
 
 class NotifyOwnerJob implements ShouldQueue
 {
@@ -16,37 +18,37 @@ class NotifyOwnerJob implements ShouldQueue
 
     public $ticket;
 
-    /**
-     * Khởi tạo Job với đối tượng Ticket
-     */
     public function __construct(Ticket $ticket)
     {
-        $this->ticket = $ticket;
+        // Load user để lấy tên khách hàng
+        $this->ticket = $ticket->load('user');
     }
 
-    /**
-     * Thực thi logic thông báo
-     */
     public function handle(): void
     {
-        // Tải lại dữ liệu mới nhất từ DB để kiểm tra trạng thái thực tế
-        $this->ticket->refresh();
+        try {
+            $customerName = $this->ticket->user->name ?? 'Khách';
+            $msg = "Đơn hàng #{$this->ticket->id} của khách {$customerName} sắp hết thời gian chơi (còn 10 phút).";
 
-        // Chỉ thông báo nếu vé vẫn đang ở trạng thái 3 (Đã Check-in)
-        // Nếu khách đã hủy hoặc hoàn thành sớm thì không thông báo nữa
-        if ($this->ticket->status == 3) {
-            
-            // Ở đây bạn có thể viết logic gửi thông báo:
-            // 1. Gửi qua Firebase (cho App)
-            // 2. Gửi qua Pusher/Socket (để hiện thông báo real-time trên Web)
-            // 3. Gửi Mail hoặc Zalo
-            
-            // Ví dụ ghi log để kiểm tra:
-            Log::info("THÔNG BÁO HẾT GIỜ: Đơn hàng #{$this->ticket->id} của khách {$this->ticket->user->name} sắp hết thời gian chơi (còn 10 phút).");
-            
-            // Nếu bạn dùng hệ thống Notification của Laravel:
-            // $owner = $this->ticket->items->first()->booking->court->venue->owner;
-            // $owner->notify(new \App\Notifications\TicketExpiringNotification($this->ticket));
+            Log::info("THÔNG BÁO HẾT GIỜ: " . $msg);
+            $ownerId = $this->ticket->getOwnerId();
+
+            if ($ownerId && $this->ticket->status !== 'canceled') {
+                Notification::create([
+                    'id' => Str::uuid(),
+                    'user_id' => $ownerId,
+                    'type' => 'warning',
+                    'title' => 'Sắp hết giờ',
+                    'message' => $msg,
+                    'data' => [
+                        'booking_id' => $this->ticket->id,
+                        'link' => '/owner/bookings?search=' . $this->ticket->booking_code,
+                    ],
+                    'read_at' => null,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error("Lỗi Job NotifyOwner: " . $e->getMessage());
         }
     }
 }

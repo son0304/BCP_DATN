@@ -33,20 +33,14 @@
                     <div class="dropdown-header noti-title">
                         <h6 class="text-overflow m-0">Welcome!</h6>
                     </div>
-                    <a href="#" class="dropdown-item notify-item">
-                        <i class="remixicon-account-circle-line"></i><span>My Account</span>
+                    <a href="{{ route('owner.user.index') }}" class="dropdown-item notify-item">
+                        <i class="remixicon-account-circle-line"></i><span>Tài Khoản của tôi</span>
                     </a>
-                    <a href="#" class="dropdown-item notify-item">
-                        <i class="remixicon-settings-3-line"></i><span>Settings</span>
-                    </a>
-                    <a href="#" class="dropdown-item notify-item">
-                        <i class="remixicon-wallet-line"></i>
-                        <span>My Wallet <span class="badge badge-success float-right">3</span></span>
-                    </a>
+
                     <div class="dropdown-divider"></div>
                     <a href="#" class="dropdown-item notify-item"
                         onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                        <i class="remixicon-logout-box-line"></i><span>Logout</span>
+                        <i class="remixicon-logout-box-line"></i><span>Đăng Xuất</span>
                     </a>
                 </div>
             </li>

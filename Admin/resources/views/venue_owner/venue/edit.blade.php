@@ -22,17 +22,27 @@
             position: relative;
         }
 
-        .btn-delete-image {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            z-index: 10;
-        }
-
         .custom-error-msg {
             color: #dc3545;
             font-size: 0.875em;
             margin-top: 0.25rem;
+        }
+
+        .preview-box {
+            height: 100px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+
+        .preview-box img {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: cover;
         }
     </style>
 
@@ -50,19 +60,6 @@
             </div>
         </div>
 
-        {{-- ERROR ALERT --}}
-        @if ($errors->any())
-            <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-                <i class="fas fa-exclamation-triangle me-2"></i> <strong>Vui lòng kiểm tra lại dữ liệu!</strong>
-                <ul class="mb-0 mt-1 ps-3 small">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
-
         <form action="{{ route('owner.venues.update', $venue->id) }}" method="POST" enctype="multipart/form-data"
             id="venue-edit-form" novalidate>
             @csrf
@@ -71,13 +68,12 @@
             <div class="row g-4">
                 {{-- CỘT TRÁI: THÔNG TIN CƠ BẢN & MAP --}}
                 <div class="col-lg-8">
-                    <div class="card shadow-sm border-0 h-100">
+                    <div class="card shadow-sm border-0 mb-4">
                         <div class="card-header bg-white py-3 border-bottom">
                             <h6 class="mb-0 fw-bold text-uppercase text-muted"><i class="fas fa-info-circle me-1"></i> Thông
                                 tin cơ bản</h6>
                         </div>
                         <div class="card-body">
-                            {{-- Tên & Owner --}}
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Tên thương hiệu <span class="text-danger">*</span></label>
                                 <input type="text" name="name"
@@ -90,7 +86,6 @@
                                     <label class="form-label fw-bold">Chủ sở hữu <span class="text-danger">*</span></label>
                                     <select name="owner_id" class="form-select @error('owner_id') is-invalid @enderror"
                                         required>
-                                        <option value="">-- Chọn --</option>
                                         @foreach ($owners as $owner)
                                             <option value="{{ $owner->id }}"
                                                 {{ old('owner_id', $venue->owner_id) == $owner->id ? 'selected' : '' }}>
@@ -105,150 +100,122 @@
 
                             <hr class="text-muted opacity-25">
 
-                            {{-- Địa chỉ & Map --}}
                             <h6 class="fw-bold small text-muted text-uppercase mb-3">Vị trí & Bản đồ</h6>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Tỉnh/Thành <span class="text-danger">*</span></label>
-                                    <select name="province_id" id="province_id"
-                                        class="form-select @error('province_id') is-invalid @enderror"
-                                        data-old="{{ old('province_id', $venue->province_id) }}" required>
-                                        <option value="">-- Đang tải... --</option>
-                                    </select>
+                                    <select name="province_id" id="province_id" class="form-select"
+                                        data-old="{{ old('province_id', $venue->province_id) }}" required></select>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Quận/Huyện <span class="text-danger">*</span></label>
-                                    <select name="district_id" id="district_id"
-                                        class="form-select @error('district_id') is-invalid @enderror"
-                                        data-old="{{ old('district_id', $venue->district_id) }}" required disabled>
-                                        <option value="">-- Chọn Tỉnh/Thành trước --</option>
-                                    </select>
+                                    <select name="district_id" id="district_id" class="form-select"
+                                        data-old="{{ old('district_id', $venue->district_id) }}" required
+                                        disabled></select>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Địa chỉ chi tiết <span class="text-danger">*</span></label>
-                                <input type="text" name="address_detail"
-                                    class="form-control @error('address_detail') is-invalid @enderror"
+                                <input type="text" name="address_detail" class="form-control"
                                     value="{{ old('address_detail', $venue->address_detail) }}" required>
                             </div>
 
-                            {{-- MAP CONTAINER --}}
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Cập nhật vị trí trên bản đồ <span
-                                        class="text-danger">*</span></label>
-                                <div id="map"></div>
-                                <input type="hidden" name="lat" id="lat" value="{{ old('lat', $venue->lat) }}">
-                                <input type="hidden" name="lng" id="lng" value="{{ old('lng', $venue->lng) }}">
-                                <div class="form-text text-muted">Kéo thả ghim đỏ để điều chỉnh vị trí chính xác.</div>
-                            </div>
+                            <div id="map"></div>
+                            <input type="hidden" name="lat" id="lat" value="{{ old('lat', $venue->lat) }}">
+                            <input type="hidden" name="lng" id="lng" value="{{ old('lng', $venue->lng) }}">
                         </div>
                     </div>
                 </div>
 
                 {{-- CỘT PHẢI: CẤU HÌNH & ẢNH --}}
                 <div class="col-lg-4">
-                    {{-- Thông tin bổ sung --}}
+                    {{-- CẤU HÌNH --}}
                     <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-header bg-white py-3 border-bottom">
-                            <h6 class="mb-0 fw-bold text-uppercase text-muted"><i class="fas fa-cog me-1"></i> Cấu hình</h6>
-                        </div>
                         <div class="card-body">
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Số điện thoại</label>
-                                <input type="tel" name="phone"
-                                    class="form-control @error('phone') is-invalid @enderror"
-                                    value="{{ old('phone', $venue->phone) }}" placeholder="09xxxxxxxx">
+                                <input type="tel" name="phone" class="form-control"
+                                    value="{{ old('phone', $venue->phone) }}">
                             </div>
-
                             <div class="row">
                                 <div class="col-6 mb-3">
-                                    <label class="form-label fw-bold">Mở cửa</label>
+                                    <label class="form-label fw-bold small">Mở cửa</label>
                                     <input type="text" name="start_time" class="form-control time-picker"
-                                        value="{{ old('start_time', \Carbon\Carbon::parse($venue->start_time)->format('H:i')) }}"
-                                        required>
+                                        value="{{ old('start_time', substr($venue->start_time, 0, 5)) }}">
                                 </div>
                                 <div class="col-6 mb-3">
-                                    <label class="form-label fw-bold">Đóng cửa</label>
+                                    <label class="form-label fw-bold small">Đóng cửa</label>
                                     <input type="text" name="end_time" class="form-control time-picker"
-                                        value="{{ old('end_time', $venue->end_time == '23:59:59' ? '24:00' : \Carbon\Carbon::parse($venue->end_time)->format('H:i')) }}"
-                                        required>
+                                        value="{{ old('end_time', $venue->end_time == '23:59:59' ? '24:00' : substr($venue->end_time, 0, 5)) }}">
                                 </div>
                             </div>
-
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Loại hình sân <span class="text-danger">*</span></label>
-                                <div class="border rounded p-2 bg-light check-group @error('venue_types') border-danger @enderror"
-                                    style="max-height: 150px; overflow-y: auto;">
+                                <label class="form-label fw-bold small">Loại hình sân</label>
+                                <div class="border rounded p-2 bg-light" style="max-height: 120px; overflow-y: auto;">
                                     @foreach ($venue_types as $type)
                                         <div class="form-check">
-                                            <input class="form-check-input venue-type-checkbox" type="checkbox"
-                                                name="venue_types[]" value="{{ $type->id }}"
-                                                id="vtype_{{ $type->id }}"
+                                            <input class="form-check-input" type="checkbox" name="venue_types[]"
+                                                value="{{ $type->id }}" id="vtype_{{ $type->id }}"
                                                 {{ in_array($type->id, old('venue_types', $venue->venueTypes->pluck('id')->toArray())) ? 'checked' : '' }}>
-                                            <label class="form-check-label"
+                                            <label class="form-check-label small"
                                                 for="vtype_{{ $type->id }}">{{ $type->name }}</label>
                                         </div>
                                     @endforeach
                                 </div>
                             </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Trạng thái</label>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" name="is_active" value="1"
-                                        id="is_active" {{ old('is_active', $venue->is_active) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="is_active">Hiển thị trên hệ thống</label>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
-                    {{-- Quản lý Hình ảnh --}}
-                    <div class="card shadow-sm border-0">
+                    {{-- ẢNH THƯƠNG HIỆU (VENUE) --}}
+                    <div class="card shadow-sm border-0 mb-4">
                         <div class="card-header bg-white py-3 border-bottom">
-                            <h6 class="mb-0 fw-bold text-uppercase text-muted"><i class="fas fa-images me-1"></i> Hình ảnh
-                            </h6>
+                            <h6 class="mb-0 fw-bold text-uppercase text-muted small"><i class="fas fa-camera me-1"></i>
+                                Ảnh thương hiệu (Max 5)</h6>
                         </div>
                         <div class="card-body">
-                            {{-- Tab thêm ảnh --}}
-                            <ul class="nav nav-tabs nav-fill" id="imgTabs">
-                                <li class="nav-item">
-                                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-file"
-                                        type="button">File</button>
-                                </li>
-                                <li class="nav-item">
-                                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-link"
-                                        type="button">Link</button>
-                                </li>
+                            <ul class="nav nav-tabs nav-fill small mb-2" id="venueImgTabs">
+                                <li class="nav-item"><button class="nav-link active py-1" data-bs-toggle="tab"
+                                        data-bs-target="#v-file" type="button">File</button></li>
+                                <li class="nav-item"><button class="nav-link py-1" data-bs-toggle="tab"
+                                        data-bs-target="#v-link" type="button">Link</button></li>
                             </ul>
-                            <div class="tab-content border border-top-0 p-3 mb-3 bg-light rounded-bottom">
-                                <div class="tab-pane fade show active" id="tab-file">
-                                    <input type="file" id="file_input" class="form-control" accept="image/*"
-                                        multiple>
+                            <div class="tab-content border p-2 mb-3 bg-light rounded">
+                                <div class="tab-pane fade show active" id="v-file">
+                                    <input type="file" id="venue_file_input" class="form-control form-control-sm"
+                                        accept="image/*" multiple>
                                 </div>
-                                <div class="tab-pane fade" id="tab-link">
-                                    <div class="input-group">
-                                        <input type="url" id="link_input" class="form-control"
+                                <div class="tab-pane fade" id="v-link">
+                                    <div class="input-group input-group-sm">
+                                        <input type="url" id="venue_link_input" class="form-control"
                                             placeholder="https://...">
-                                        <button type="button" class="btn btn-primary" id="btn-add-link"><i
-                                                class="fas fa-plus"></i></button>
+                                        <button type="button" class="btn btn-primary" id="btn-add-venue-link">+</button>
                                     </div>
                                 </div>
                             </div>
+                            <div id="venue-preview-container" class="row g-2"></div>
+                        </div>
+                    </div>
 
-                            {{-- Khu vực Preview --}}
-                            <div id="image-preview-container" class="row g-2"></div>
-
-                            {{-- Hidden Inputs để submit --}}
-                            <div id="hidden-inputs-container">
-                                <input type="hidden" name="primary_image_index" id="primary_image_index">
-                                <input type="hidden" name="deleted_image_ids" id="deleted_image_ids"
-                                    value="{{ old('deleted_image_ids') }}">
-                                {{-- Input file thật sẽ được JS append vào đây trước khi submit --}}
-                            </div>
+                    {{-- GIẤY TỜ PHÁP LÝ (DOCUMENT) --}}
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white py-3 border-bottom">
+                            <h6 class="mb-0 fw-bold text-uppercase text-primary small"><i
+                                    class="fas fa-file-invoice me-1"></i> Giấy tờ pháp lý</h6>
+                        </div>
+                        <div class="card-body">
+                            <input type="file" id="doc_file_input" class="form-control form-control-sm mb-3"
+                                accept="image/*" multiple>
+                            <div id="doc-preview-container" class="row g-2"></div>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {{-- Hidden Inputs để submit --}}
+            <div id="hidden-inputs">
+                <input type="hidden" name="primary_image_index" id="primary_image_index">
+                <input type="hidden" name="deleted_image_ids" id="deleted_image_ids">
+                <input type="hidden" name="deleted_document_ids" id="deleted_document_ids">
             </div>
 
             <div class="text-end mt-4 pb-5">
@@ -258,17 +225,15 @@
         </form>
     </div>
 
-    {{-- DỮ LIỆU JSON ĐỂ JS KHÔI PHỤC TRẠNG THÁI --}}
-    <script id="venue-images-data" type="application/json">{!! json_encode($venue->images) !!}</script>
-    <script id="old-links-data" type="application/json">{!! json_encode(old('image_links', [])) !!}</script>
+    {{-- DỮ LIỆU JSON ĐỂ JS KHÔI PHỤC --}}
+    <script id="venue-images-json" type="application/json">{!! json_encode($venue->images) !!}</script>
 
-    {{-- SCRIPTS --}}
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <script>
-        // --- 1. SETUP MAP & FLATPICKR ---
+        // --- 1. MAP & TIME ---
         flatpickr(".time-picker", {
             enableTime: true,
             noCalendar: true,
@@ -276,247 +241,174 @@
             time_24hr: true
         });
 
-        // Map setup
-        let lat = parseFloat($('#lat').val()) || 21.028511;
-        let lng = parseFloat($('#lng').val()) || 105.854444;
+        let lat = parseFloat($('#lat').val()) || 21.028511,
+            lng = parseFloat($('#lng').val()) || 105.854444;
         var map = L.map('map').setView([lat, lng], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         var marker = L.marker([lat, lng], {
             draggable: true
         }).addTo(map);
-
-        function updateMarker(l, n) {
-            $('#lat').val(l.toFixed(6));
-            $('#lng').val(n.toFixed(6));
-        }
         marker.on('dragend', function(e) {
-            var c = e.target.getLatLng();
-            updateMarker(c.lat, c.lng);
-        });
-        map.on('click', function(e) {
-            marker.setLatLng(e.latlng);
-            updateMarker(e.latlng.lat, e.latlng.lng);
+            let c = e.target.getLatLng();
+            $('#lat').val(c.lat.toFixed(6));
+            $('#lng').val(c.lng.toFixed(6));
         });
 
-        // --- 2. SETUP ADDRESS ---
-        const apiHost = '/api-proxy/provinces'; // Đảm bảo route này tồn tại
+        // --- 2. ADDRESS API ---
         const $province = $('#province_id'),
             $district = $('#district_id');
 
-        function loadOptions($el, url, ph, sel = null) {
-            $.get(url, function(data) {
-                let h = `<option value="">${ph}</option>`;
-                data.forEach(i => h +=
-                    `<option value="${i.code}" ${sel == i.code ? 'selected' : ''}>${i.name}</option>`);
-                $el.html(h).prop('disabled', false);
+        function loadLoc(el, url, sel = null) {
+            $.get(url, (data) => {
+                let h = '<option value="">-- Chọn --</option>';
+                data.forEach(d => h +=
+                    `<option value="${d.code}" ${sel == d.code ? 'selected' : ''}>${d.name}</option>`);
+                el.html(h).prop('disabled', false);
             });
         }
-
-        // Load initial
-        loadOptions($province, apiHost, '-- Chọn Tỉnh/Thành --', $province.data('old'));
-        if ($province.data('old')) loadOptions($district, `/api-proxy/districts/${$province.data('old')}`,
-            '-- Chọn Quận/Huyện --', $district.data('old'));
+        loadLoc($province, '/api-proxy/provinces', $province.data('old'));
+        if ($province.data('old')) loadLoc($district, '/api-proxy/districts/' + $province.data('old'), $district.data(
+            'old'));
 
         $province.change(function() {
-            const code = $(this).val();
-            if (code) {
-                // Update map view based on province (Optional hardcoded coords)
-                const cityCoords = {
-                    '01': [21.0285, 105.8542],
-                    '79': [10.8231, 106.6297]
-                };
-                if (cityCoords[code]) {
-                    map.setView(cityCoords[code], 12);
-                    marker.setLatLng(cityCoords[code]);
-                    updateMarker(cityCoords[code][0], cityCoords[code][1]);
-                }
-                loadOptions($district, `/api-proxy/districts/${code}`, '-- Chọn Quận/Huyện --');
-            } else {
-                $district.html('<option>-- Chọn Tỉnh trước --</option>').prop('disabled', true);
-            }
+            if ($(this).val()) loadLoc($district, '/api-proxy/districts/' + $(this).val());
+            else $district.prop('disabled', true).html('');
         });
 
-        // --- 3. IMAGE MANAGEMENT ---
+        // --- 3. QUẢN LÝ ẢNH (LOGIC CHÍNH) ---
         $(document).ready(function() {
-            const MAX_FILES = 5;
-            const $preview = $('#image-preview-container');
-            const $deletedInput = $('#deleted_image_ids');
-            const $primaryInput = $('#primary_image_index');
-            const $fileInput = $('#file_input');
-            const $hiddenContainer = $('#hidden-inputs-container');
+            const allImgs = JSON.parse($('#venue-images-json').text() || '[]');
 
+            // State quản lý riêng 2 nhóm
             let state = {
-                existing: JSON.parse($('#venue-images-data').text() || '[]').map(i => ({
-                    ...i,
-                    type: 'existing',
-                    uniqueKey: `existing_${i.id}`
-                })),
-                newFiles: [], // {file: File, uniqueKey: string}
-                newLinks: JSON.parse($('#old-links-data').text() || '[]').map((u, i) => ({
-                    url: u,
-                    type: 'link',
-                    uniqueKey: `new_link_${i}`
-                })),
-                deletedIds: $deletedInput.val() ? $deletedInput.val().split(',') : []
+                venue: {
+                    existing: allImgs.filter(i => i.type === 'venue').map(i => ({
+                        ...i,
+                        key: `existing_${i.id}`
+                    })),
+                    newFiles: [],
+                    newLinks: [],
+                    deleted: []
+                },
+                doc: {
+                    existing: allImgs.filter(i => i.type === 'document').map(i => ({
+                        ...i,
+                        key: `doc_existing_${i.id}`
+                    })),
+                    newFiles: [],
+                    deleted: []
+                }
             };
 
             function render() {
-                $preview.empty();
-                $hiddenContainer.find('.dynamic-link').remove();
-
-                // Merge & Filter
-                const displayImages = [
-                    ...state.existing.filter(i => !state.deletedIds.includes(String(i.id))),
-                    ...state.newFiles,
-                    ...state.newLinks
+                // RENDER VENUE
+                const $vBox = $('#venue-preview-container');
+                $vBox.empty();
+                const vList = [...state.venue.existing.filter(i => !state.venue.deleted.includes(String(i.id))), ...
+                    state.venue.newFiles, ...state.venue.newLinks
                 ];
 
-                // Auto select primary if invalid
-                let currentPrimary = $primaryInput.val();
-                if (!displayImages.some(i => i.uniqueKey === currentPrimary)) {
-                    // Try to find old primary
-                    const oldPrimary = state.existing.find(i => i.is_primary == 1 && !state.deletedIds.includes(
-                        String(i.id)));
-                    currentPrimary = oldPrimary ? oldPrimary.uniqueKey : (displayImages.length ? displayImages[0]
-                        .uniqueKey : '');
-                    $primaryInput.val(currentPrimary);
+                let curP = $('#primary_image_index').val();
+                if (!vList.some(i => i.key === curP)) {
+                    let def = vList.find(i => i.is_primary == 1) || vList[0];
+                    curP = def ? def.key : '';
+                    $('#primary_image_index').val(curP);
                 }
 
-                // Render UI
-                displayImages.forEach(img => {
-                    let src = img.type === 'file' ? URL.createObjectURL(img.file) : img.url;
-                    let isChecked = img.uniqueKey === currentPrimary ? 'checked' : '';
-
-                    const html = `
-                        <div class="col-6 col-md-4">
-                            <div class="border rounded p-2 position-relative bg-white text-center h-100 shadow-sm">
-                                <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
-                                    onclick="removeImg('${img.uniqueKey}')" style="z-index:5;">&times;</button>
-                                <div style="height: 100px; overflow: hidden;" class="d-flex align-items-center justify-content-center mb-2 bg-light">
-                                    <img src="${src}" class="img-fluid" style="max-height: 100%;" onerror="this.src='https://via.placeholder.com/150'">
-                                </div>
-                                <div class="form-check d-flex justify-content-center">
-                                    <input class="form-check-input me-1" type="radio" name="primary_ui"
-                                        ${isChecked} onchange="setPrimary('${img.uniqueKey}')">
-                                    <label class="form-check-label small">Ảnh chính</label>
-                                </div>
+                vList.forEach(img => {
+                    let src = img.file ? URL.createObjectURL(img.file) : (img.url.startsWith('http') ? img
+                        .url : '/' + img.url);
+                    $vBox.append(`
+                        <div class="col-4"><div class="preview-box position-relative">
+                            <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 p-0 px-1" onclick="removeImg('venue', '${img.key}')">&times;</button>
+                            <img src="${src}">
+                            <div class="position-absolute bottom-0 start-0 w-100 bg-white bg-opacity-75 text-center small">
+                                <input type="radio" name="p_radio" ${img.key === curP ? 'checked' : ''} onchange="setPrimary('${img.key}')"> Chính
                             </div>
-                        </div>`;
-                    $preview.append(html);
-
-                    if (img.type === 'link') {
-                        $hiddenContainer.append(
-                            `<input type="hidden" name="image_links[]" value="${img.url}" class="dynamic-link">`
-                            );
-                    }
+                        </div></div>`);
                 });
-                $deletedInput.val(state.deletedIds.join(','));
+
+                // RENDER DOC
+                const $dBox = $('#doc-preview-container');
+                $dBox.empty();
+                const dList = [...state.doc.existing.filter(i => !state.doc.deleted.includes(String(i.id))), ...
+                    state.doc.newFiles
+                ];
+
+                dList.forEach(img => {
+                    let src = img.file ? URL.createObjectURL(img.file) : '/' + img.url;
+                    $dBox.append(`
+                        <div class="col-4"><div class="preview-box position-relative">
+                            <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 p-0 px-1" onclick="removeImg('doc', '${img.key}')">&times;</button>
+                            <img src="${src}">
+                        </div></div>`);
+                });
+
+                $('#deleted_image_ids').val(state.venue.deleted.join(','));
+                $('#deleted_document_ids').val(state.doc.deleted.join(','));
             }
 
-            // Helpers global for inline onclick
-            window.removeImg = function(key) {
-                if (key.startsWith('existing_')) state.deletedIds.push(key.replace('existing_', ''));
-                else if (key.startsWith('new_file_')) state.newFiles = state.newFiles.filter(i => i
-                    .uniqueKey !== key);
-                else if (key.startsWith('new_link_')) state.newLinks = state.newLinks.filter(i => i
-                    .uniqueKey !== key);
-                render();
-            };
-            window.setPrimary = function(key) {
-                $primaryInput.val(key);
-            };
-
-            // Add File
-            $fileInput.change(function(e) {
-                const files = Array.from(e.target.files);
-                const currentTotal = (state.existing.length - state.deletedIds.length) + state.newFiles
-                    .length + state.newLinks.length;
-                if (currentTotal + files.length > MAX_FILES) return alert(`Tối đa ${MAX_FILES} ảnh.`);
-
-                files.forEach(f => {
-                    state.newFiles.push({
-                        type: 'file',
-                        file: f,
-                        uniqueKey: `new_file_${Date.now()}_${Math.random()}`
-                    });
-                });
-                $fileInput.val('');
-                render();
-            });
-
-            // Add Link
-            $('#btn-add-link').click(function() {
-                const url = $('#link_input').val().trim();
-                if (!url) return;
-                const currentTotal = (state.existing.length - state.deletedIds.length) + state.newFiles
-                    .length + state.newLinks.length;
-                if (currentTotal >= MAX_FILES) return alert(`Tối đa ${MAX_FILES} ảnh.`);
-
-                state.newLinks.push({
-                    type: 'link',
-                    url: url,
-                    uniqueKey: `new_link_${Date.now()}`
-                });
-                $('#link_input').val('');
-                render();
-            });
-
-            // --- 4. FORM SUBMIT VALIDATION & PREP ---
-            $('#venue-edit-form').on('submit', function(e) {
-                // Clear old errors
-                $('.is-invalid').removeClass('is-invalid');
-                $('.custom-error-msg').remove();
-                let isValid = true;
-                let firstErr = null;
-
-                function err(sel, msg) {
-                    const el = $(sel);
-                    el.addClass('is-invalid');
-                    if (!el.next('.custom-error-msg').length) el.after(
-                        `<div class="custom-error-msg">${msg}</div>`);
-                    isValid = false;
-                    if (!firstErr) firstErr = el;
-                }
-
-                // Logic checks
-                if (!$('input[name="name"]').val().trim()) err('input[name="name"]',
-                'Nhập tên thương hiệu');
-                if (!$('#province_id').val()) err('#province_id', 'Chọn Tỉnh/Thành');
-                if (!$('.venue-type-checkbox:checked').length) err('.check-group',
-                    'Chọn ít nhất 1 loại hình');
-
-                // Image check
-                const activeCount = (state.existing.length - state.deletedIds.length) + state.newFiles
-                    .length + state.newLinks.length;
-                if (activeCount === 0) {
-                    alert('Vui lòng chọn ít nhất 1 ảnh.');
-                    isValid = false;
-                }
-
-                if (!isValid) {
-                    e.preventDefault();
-                    if (firstErr) $('html, body').animate({
-                        scrollTop: $(firstErr).offset().top - 100
-                    }, 500);
+            window.setPrimary = (k) => $('#primary_image_index').val(k);
+            window.removeImg = (type, k) => {
+                if (type === 'venue') {
+                    if (k.startsWith('existing_')) state.venue.deleted.push(k.replace('existing_', ''));
+                    else state.venue.newFiles = state.venue.newFiles.filter(i => i.key !== k);
+                    state.venue.newLinks = state.venue.newLinks.filter(i => i.key !== k);
                 } else {
-                    // PREPARE FILES FOR SUBMIT
-                    // Create a hidden file input with accumulated files using DataTransfer
-                    const dt = new DataTransfer();
-                    state.newFiles.forEach(f => dt.items.add(f.file));
-
-                    // Remove old input to avoid duplicates if any, create new one
-                    $('#real_file_input').remove();
-                    const hiddenFile = $(
-                        '<input type="file" name="new_files[]" id="real_file_input" multiple class="d-none">'
-                        );
-                    $hiddenContainer.append(hiddenFile);
-                    hiddenFile[0].files = dt.files;
+                    if (k.startsWith('doc_existing_')) state.doc.deleted.push(k.replace('doc_existing_', ''));
+                    else state.doc.newFiles = state.doc.newFiles.filter(i => i.key !== k);
                 }
+                render();
+            };
+
+            $('#venue_file_input').change(function() {
+                Array.from(this.files).forEach(f => state.venue.newFiles.push({
+                    key: 'nf_' + Math.random(),
+                    file: f
+                }));
+                render();
+                $(this).val('');
+            });
+            $('#btn-add-venue-link').click(function() {
+                let u = $('#venue_link_input').val();
+                if (u) state.venue.newLinks.push({
+                    key: 'nl_' + Math.random(),
+                    url: u
+                });
+                render();
+                $('#venue_link_input').val('');
+            });
+            $('#doc_file_input').change(function() {
+                Array.from(this.files).forEach(f => state.doc.newFiles.push({
+                    key: 'nd_' + Math.random(),
+                    file: f
+                }));
+                render();
+                $(this).val('');
             });
 
-            render(); // Init
+            $('#venue-edit-form').submit(function(e) {
+                const vDT = new DataTransfer();
+                state.venue.newFiles.forEach(i => vDT.items.add(i.file));
+                const dDT = new DataTransfer();
+                state.doc.newFiles.forEach(i => dDT.items.add(i.file));
+
+                const $h = $('#hidden-inputs');
+                $h.find('.dynamic-input').remove();
+
+                const vf = $('<input type="file" name="new_files[]" class="d-none dynamic-input" multiple>')
+                    .prop('files', vDT.files);
+                const df = $(
+                    '<input type="file" name="new_document_files[]" class="d-none dynamic-input" multiple>'
+                    ).prop('files', dDT.files);
+                $h.append(vf).append(df);
+
+                state.venue.newLinks.forEach(l => $h.append(
+                    `<input type="hidden" name="image_links[]" value="${l.url}" class="dynamic-input">`
+                    ));
+            });
+
+            render();
         });
     </script>
 @endsection

@@ -4,69 +4,148 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Promotion extends Model
 {
-    /** @use HasFactory<\Database\Factories\PromotionFactory> */
-    use HasFactory;
-    protected $fillable = ['code', 'value', 'type','start_at','end_at', 'usage_limit', 'used_count', 'created_by',  'process_status', 'max_discount_amount'];
+    use HasFactory, SoftDeletes;
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
+    protected $fillable = [
+        'code',
+        'value',
+        'type',
+        'start_at',
+        'end_at',
+        'usage_limit',
+        'used_count',
+        'creator_user_id',
+        'process_status',
+        'max_discount_amount',
+        'min_order_value',
+        'target_user_type',
+        'venue_id',
+        'description',
+    ];
+
     protected function casts(): array
     {
         return [
             'start_at' => 'datetime',
             'end_at' => 'datetime',
+            'value' => 'decimal:2',
             'max_discount_amount' => 'decimal:2',
+            'min_order_value' => 'decimal:2',
+            'usage_limit' => 'integer',
+            'used_count' => 'integer',
         ];
     }
 
-    public function tickets (){
-        return $this->hasMany(Ticket::class);
-    }
+    /* ------------------------------ RELATIONSHIPS ----------------------------- */
 
-    /**
-     * Người tạo voucher
-     */
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'creator_user_id');
     }
 
-    /**
-     * Kiểm tra voucher có đang hoạt động không
-     */
+    public function venue()
+    {
+        return $this->belongsTo(Venue::class, 'venue_id');
+    }
+
+    /* ---------------------------------- LOGIC --------------------------------- */
+
     public function isActive(): bool
     {
         $now = now();
-
-        // Kiểm tra voucher đã bắt đầu chưa
-        if ($this->start_at > $now) {
-            return false; // Voucher chưa bắt đầu
-        }
-
-        // Kiểm tra voucher đã hết hạn chưa
-        if ($this->end_at < $now) {
-            return false; // Voucher đã hết hạn
-        }
-
-        // Kiểm tra giới hạn sử dụng
-        if ($this->usage_limit > 0 && $this->used_count >= $this->usage_limit) {
-            return false; // Đã hết lượt sử dụng
-        }
-
-        return true; // Voucher đang hoạt động
+        return ($this->process_status === 'active') &&
+            ($this->start_at <= $now) &&
+            ($this->end_at >= $now) &&
+            ($this->usage_limit === 0 || $this->used_count < $this->usage_limit);
     }
 
     /**
-     * Kiểm tra voucher đã hết hạn chưa
+     * Kiểm tra phạm vi áp dụng dựa trên Role của creator_user_id
      */
+    public function isValidForVenue(int $venueId, int $targetVenueOwnerId): bool
+    {
+        if (!is_null($this->venue_id)) {
+            return $this->venue_id == $venueId;
+        }
+
+        $creator = $this->creator;
+
+        if (!$creator || !$creator->role) {
+            return false;
+        }
+
+        $roleName = $creator->role->name; // Lấy 'admin' hoặc 'venue_owner' từ bảng roles
+
+        if ($roleName === 'admin') {
+            return true; // Admin tạo trống = Toàn hệ thống
+        }
+
+        if ($roleName === 'venue_owner' || $roleName === 'owner') {
+            // Chủ sân tạo trống = Chỉ áp dụng cho các sân của chính họ
+            return $this->creator_user_id == $targetVenueOwnerId;
+        }
+
+        return false;
+    }
+
+    public function isEligible($orderTotal = null, $venueId, $ownerId, $user = null): bool
+    {
+        if (!$this->isActive()) return false;
+        if (!$this->isValidForVenue($venueId, $ownerId)) return false;
+
+        // SỬA: Chỉ check giá tiền nếu orderTotal được truyền vào (khác null)
+        if (!is_null($orderTotal) && $this->min_order_value > 0 && $orderTotal < $this->min_order_value) {
+            return false;
+        }
+
+        if ($user && !$this->canUserUse($user)) return false;
+
+        return true;
+    }
+
     public function isExpired(): bool
     {
-        return !$this->isActive();
+        return $this->end_at < now() || ($this->usage_limit > 0 && $this->used_count >= $this->usage_limit);
+    }
+
+    public function calculateDiscount($orderTotal): float
+    {
+        $discount = ($this->type === 'percentage')
+            ? ($orderTotal * $this->value) / 100
+            : $this->value;
+
+        if ($this->type === 'percentage' && $this->max_discount_amount > 0) {
+            $discount = min($discount, $this->max_discount_amount);
+        }
+
+        return (float) min($discount, $orderTotal);
+    }
+
+    public function canUserUse($user): bool
+    {
+        if (!$user) return false;
+
+        if ($this->target_user_type === 'new_user') {
+            $hasOrdered = $user->tickets()
+                ->whereIn('status', ['paid', 'completed'])
+                ->exists();
+            if ($hasOrdered) return false;
+        }
+
+
+        $alreadyUsed = $user->tickets()
+            ->where('promotion_id', $this->id)
+            ->whereIn('status', ['paid', 'completed', 'pending'])
+            ->exists();
+
+        if ($alreadyUsed) {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -8,43 +8,31 @@ import { useNotification } from '../../../../Components/Notification';
 import { usePostData } from '../../../../Hooks/useApi';
 import type { ApiResponse } from '../../../../Types/api';
 import type { User } from '../../../../Types/user';
-import Voucher_Detail_Venue from '../Voucher_Detail_Venue';
+import Voucher_Detail_Venue, { type Voucher } from '../Voucher_Detail_Venue'; // Import Type từ file con
 
-// --- TYPES ---
-export type Voucher = {
-    id: number;
-    code: string;
-    value: number;
-    type: '%' | 'VND';
-    start_at: string;
-    expires_at: string | null;
-    max_discount_amount: number | null;
-};
-
-const Order_Container = ({ id }: { id: any }) => {
+const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] }) => {
     const navigate = useNavigate();
     const { showNotification } = useNotification();
     const { mutate } = usePostData<ApiResponse<number>, any>('tickets');
 
-    // Lấy user an toàn hơn
     const userRaw = localStorage.getItem('user');
     const user = userRaw ? JSON.parse(userRaw) as User : null;
 
-    // --- STATE ---
     const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
     const [selectedServices, setSelectedServices] = useState<ServiceItem[]>([]);
     const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [refreshTrigger, setRefreshTrigger] = useState(0); 
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-
-    // --- LOGIC TÍNH TIỀN ---
+    // --- LOGIC TÍNH TIỀN (CHUẨN HÓA LOGIC MIN/MAX) ---
     const { rawTotalPrice, finalPrice, discountAmount } = useMemo(() => {
+        // 1. Tổng tiền Booking
         const bookingTotal = selectedItems.reduce((sum, item) => {
             const effectivePrice = (item.sale_price && item.sale_price > 0) ? item.sale_price : item.price;
             return sum + Number(effectivePrice);
         }, 0);
 
+        // 2. Tổng tiền Dịch vụ
         const serviceTotal = selectedServices.reduce((sum, item) => {
             return sum + (Number(item.price) * item.quantity);
         }, 0);
@@ -52,19 +40,42 @@ const Order_Container = ({ id }: { id: any }) => {
         const total = bookingTotal + serviceTotal;
         let discount = 0;
 
+        // 3. Tính giảm giá
         if (selectedVoucher) {
             const now = new Date();
-            if (!selectedVoucher.expires_at || new Date(selectedVoucher.expires_at) >= now) {
-                if (selectedVoucher.type === '%') {
-                    discount = (total * selectedVoucher.value) / 100;
-                    if (selectedVoucher.max_discount_amount && discount > selectedVoucher.max_discount_amount) {
+            const start = new Date(selectedVoucher.start_at);
+            const end = new Date(selectedVoucher.end_at);
+
+            // 3.1 Check lại điều kiện cơ bản (Status, Date, Min Order)
+            const isValid = 
+                selectedVoucher.process_status === 'active' &&
+                now >= start &&
+                now <= end &&
+                (selectedVoucher.min_order_value === 0 || total >= selectedVoucher.min_order_value);
+
+            if (isValid) {
+                const voucherVal = parseFloat(selectedVoucher.value); // Parse string value
+
+                if (selectedVoucher.type === 'percentage') {
+                    // Tính %
+                    discount = (total * voucherVal) / 100;
+                    
+                    // Check Max Discount Amount (chỉ check nếu setting > 0)
+                    if (selectedVoucher.max_discount_amount > 0 && discount > selectedVoucher.max_discount_amount) {
                         discount = selectedVoucher.max_discount_amount;
                     }
                 } else {
-                    discount = selectedVoucher.value;
+                    // Fixed Amount
+                    discount = voucherVal;
                 }
+            } else {
+                // Nếu đang chọn voucher mà tổng tiền tụt xuống dưới Min Order -> Tự động hủy giảm giá
+                // (Optional: Có thể set SelectedVoucher = null ở đây nhưng trong useMemo không nên setState)
+                discount = 0; 
             }
         }
+
+        // 4. Final Safety: Không giảm quá tổng đơn
         const validDiscount = Math.min(discount, total);
 
         return {
@@ -83,18 +94,17 @@ const Order_Container = ({ id }: { id: any }) => {
         if (!user || !user.id) return showNotification('Vui lòng đăng nhập để đặt sân.', 'error');
         if (selectedItems.length === 0) return showNotification('Vui lòng chọn ít nhất 1 khung giờ.', 'error');
 
-        const hasPastItem = selectedItems.some(item => {
-            const slotDate = new Date(`${item.date}T${item.start_time}`);
-            return slotDate < new Date();
-        });
-        if (hasPastItem) return showNotification('Có khung giờ đã quá hạn.', 'error');
+        // Check lại lần cuối trước khi submit xem voucher còn valid không (trường hợp user xóa bớt item)
+        if (selectedVoucher && rawTotalPrice < selectedVoucher.min_order_value) {
+             return showNotification(`Đơn hàng không đủ điều kiện áp dụng mã giảm giá (Tối thiểu ${formatPrice(selectedVoucher.min_order_value)})`, 'error');
+        }
 
         setIsSubmitting(true);
 
         const payload = {
             user_id: user.id,
             venue_id: id,
-            promotion_id: selectedVoucher?.id || null,
+            promotion_id: (selectedVoucher && discountAmount > 0) ? selectedVoucher.id : null, // Chỉ gửi ID nếu có giảm giá thực
             discount_amount: discountAmount,
             total_amount: finalPrice,
             bookings: selectedItems.map((item) => ({
@@ -111,15 +121,14 @@ const Order_Container = ({ id }: { id: any }) => {
             }))
         };
 
-        console.log('Payload đặt sân:', payload);
-
-
         mutate(payload, {
             onSuccess: (res) => {
                 if (res.success) {
                     showNotification('Đặt sân thành công!', 'success');
-                    setRefreshTrigger(prev => prev + 1); 
-                    setSelectedItems([]); 
+                    setRefreshTrigger(prev => prev + 1);
+                    setSelectedItems([]);
+                    setSelectedServices([]);
+                    setSelectedVoucher(null);
                     navigate(`/booking/${res.data}`);
                 } else {
                     showNotification(res.message || 'Đặt sân thất bại.', 'error');
@@ -130,11 +139,9 @@ const Order_Container = ({ id }: { id: any }) => {
         });
     };
 
-    // --- UI RENDER (LÀM LẠI LAYOUT) ---
     return (
         <div className="bg-gray-50 min-h-screen py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
                 {/* PAGE HEADER */}
                 <div className="mb-8">
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -143,42 +150,33 @@ const Order_Container = ({ id }: { id: any }) => {
                         </span>
                         Đặt Sân Trực Tuyến
                     </h1>
-                    <p className="text-gray-500 text-sm mt-1 ml-11">Chọn lịch và dịch vụ mong muốn</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-                    {/* --- CỘT TRÁI (CHIẾM 8 PHẦN): BOOKING & SERVICE --- */}
+                    {/* --- CỘT TRÁI --- */}
                     <div className="lg:col-span-8 space-y-8">
-
-                        {/* 1. SECTION BOOKING */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                             <Order_Booking
                                 id={id}
                                 selectedItems={selectedItems}
                                 onChange={setSelectedItems}
-                                refreshTrigger={refreshTrigger} // 4. Truyền xuống cho con
-
+                                refreshTrigger={refreshTrigger}
                             />
                         </div>
-
-                        {/* 2. SECTION SERVICE */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                             <Order_Service
                                 venueId={id}
                                 selectedServices={selectedServices}
                                 onChange={setSelectedServices}
-                                refreshTrigger={refreshTrigger} 
-
+                                refreshTrigger={refreshTrigger}
                             />
                         </div>
                     </div>
 
-                    {/* --- CỘT PHẢI (CHIẾM 4 PHẦN): CHECKOUT (STICKY) --- */}
+                    {/* --- CỘT PHẢI: CHECKOUT --- */}
                     <div className="lg:col-span-4 sticky top-24 self-start">
                         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-
-                            {/* Header Checkout */}
+                            {/* Header */}
                             <div className="bg-gray-900 px-5 py-4 flex justify-between items-center">
                                 <h3 className="text-white font-bold text-base flex items-center gap-2">
                                     <i className="fa-solid fa-receipt text-[#10B981]"></i> Thông tin thanh toán
@@ -189,59 +187,41 @@ const Order_Container = ({ id }: { id: any }) => {
                             </div>
 
                             <div className="p-5">
-                                {/* LIST BOOKINGS */}
+                                {/* List Booking */}
                                 {selectedItems.length > 0 ? (
                                     <div className="mb-4">
-                                        <div className="text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Lịch đặt sân</div>
                                         <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
-                                            {selectedItems.map((item, idx) => {
-                                                const effectivePrice = (item.sale_price && item.sale_price > 0) ? item.sale_price : item.price;
-                                                return (
-                                                    <div key={idx} className="flex justify-between items-center text-sm p-2 rounded-lg bg-gray-50 border border-gray-100 group hover:border-[#10B981] transition-all">
-                                                        <div>
-                                                            <div className="font-semibold text-gray-800">{item.court_name}</div>
-                                                            <div className="text-xs text-gray-500">{item.date} | {item.start_time.slice(0, 5)} - {item.end_time.slice(0, 5)}</div>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            {Number(item.sale_price) > 0 && (
-                                                                <div className="text-[10px] text-gray-400 line-through">{formatPrice(item.price)}</div>
-                                                            )}
-                                                            <div className={`font-bold ${Number(item.sale_price) > 0 ? 'text-red-500' : 'text-gray-800'}`}>
-                                                                {formatPrice(effectivePrice)}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-6 border-2 border-dashed border-gray-100 rounded-lg mb-4">
-                                        <p className="text-gray-400 text-sm">Chưa chọn lịch nào</p>
-                                    </div>
-                                )}
-
-                                {/* LIST SERVICES */}
-                                {selectedServices.length > 0 && (
-                                    <div className="mb-4 pt-4 border-t border-gray-100">
-                                        <div className="text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Dịch vụ đi kèm</div>
-                                        <div className="space-y-2">
-                                            {selectedServices.map((item, idx) => (
-                                                <div key={`s-${idx}`} className="flex justify-between items-center text-sm p-2 rounded-lg bg-green-50 border border-green-100 text-green-800">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-medium">{item.name}</span>
-                                                        <span className="text-xs bg-white px-1.5 rounded border border-green-200">x{item.quantity}</span>
-                                                    </div>
-                                                    <div className="font-bold">{formatPrice(item.price * item.quantity)}</div>
+                                            {selectedItems.map((item, idx) => (
+                                                <div key={idx} className="flex justify-between text-sm">
+                                                    <span>{item.court_name} ({item.start_time.slice(0, 5)})</span>
+                                                    <span className="font-bold">{formatPrice(item.sale_price || item.price)}</span>
                                                 </div>
                                             ))}
                                         </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-center text-gray-400 text-sm py-4">Chưa chọn lịch</p>
+                                )}
+                                
+                                {/* List Services (nếu có) */}
+                                {selectedServices.length > 0 && (
+                                    <div className="border-t pt-2 mb-2">
+                                         {selectedServices.map((s, idx) => (
+                                             <div key={idx} className="flex justify-between text-sm text-gray-600">
+                                                 <span>{s.name} (x{s.quantity})</span>
+                                                 <span>{formatPrice(s.price * s.quantity)}</span>
+                                             </div>
+                                         ))}
                                     </div>
                                 )}
 
                                 {/* VOUCHER */}
                                 <div className="pt-4 border-t border-gray-100">
-                                    <Voucher_Detail_Venue onVoucherApply={setSelectedVoucher} totalPrice={rawTotalPrice} />
+                                    <Voucher_Detail_Venue
+                                        availableVouchers={promotions}
+                                        onVoucherApply={setSelectedVoucher}
+                                        totalPrice={rawTotalPrice}
+                                    />
                                 </div>
 
                                 {/* TOTAL SUMMARY */}
@@ -251,7 +231,7 @@ const Order_Container = ({ id }: { id: any }) => {
                                         <span className="font-medium">{formatPrice(rawTotalPrice)}</span>
                                     </div>
 
-                                    {selectedVoucher && (
+                                    {selectedVoucher && discountAmount > 0 && (
                                         <div className="flex justify-between text-sm text-[#10B981]">
                                             <span className="flex items-center gap-1"><i className="fa-solid fa-ticket"></i> Voucher giảm</span>
                                             <span className="font-medium">-{formatPrice(discountAmount)}</span>
@@ -268,22 +248,16 @@ const Order_Container = ({ id }: { id: any }) => {
                                 <button
                                     onClick={handleSubmit}
                                     disabled={selectedItems.length === 0 || isSubmitting}
-                                    className={`w-full mt-4 py-3.5 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all transform active:scale-95 ${selectedItems.length === 0 || isSubmitting
+                                    className={`w-full mt-4 py-3.5 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all ${selectedItems.length === 0 || isSubmitting
                                         ? 'bg-gray-300 cursor-not-allowed shadow-none'
-                                        : 'bg-[#10B981] hover:bg-[#059669] hover:shadow-green-200'
+                                        : 'bg-[#10B981] hover:bg-[#059669]'
                                         }`}
                                 >
-                                    {isSubmitting ? (
-                                        <><i className="fa-solid fa-circle-notch fa-spin"></i> Đang xử lý...</>
-                                    ) : (
-                                        <>Xác nhận đặt sân <i className="fa-solid fa-arrow-right"></i></>
-                                    )}
+                                    {isSubmitting ? 'Đang xử lý...' : 'Xác nhận đặt sân'}
                                 </button>
-
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>

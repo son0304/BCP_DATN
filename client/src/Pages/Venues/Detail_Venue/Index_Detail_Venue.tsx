@@ -28,9 +28,12 @@ const Index_Detail_Venue: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const idVenue = Number(id);
   const { data: detail_venue, isLoading, refetch } = useFetchDataById<Venue>('venue', idVenue, { date: selectedDate });
+  console.log('detail_venue', detail_venue);
+
   const { data } = useFetchData('tickets')
   const tickets = data?.data as Ticket[] || [];
-
+  const promotions = detail_venue?.data?.promotions || [];
+  console.log('promotions', promotions);
 
 
   // Logic load related giữ nguyên...
@@ -77,7 +80,7 @@ const Index_Detail_Venue: React.FC = () => {
         </div>
 
         {/* Booking component sẽ tự giãn ra 100% chiều rộng của cha */}
-        <Order_Container id={venue.id} />
+        <Order_Container id={venue.id} promotions={promotions} />
       </section>
 
       {/* 3. BOTTOM: REVIEWS & RELATED (Chia cột ở dưới cùng) */}

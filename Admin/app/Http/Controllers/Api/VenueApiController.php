@@ -5,18 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Events\DataCreated;
 use App\Http\Controllers\Controller;
 use App\Models\Venue;
-use App\Models\Court;
-use App\Models\TimeSlot;
 use App\Models\Availability;
 use App\Models\MerchantProfile;
-use App\Models\User;
+use App\Models\Promotion;
+use App\Models\SponsoredVenue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Throwable;
 
 class VenueApiController extends Controller
 {
@@ -25,48 +21,97 @@ class VenueApiController extends Controller
      */
     public function index(Request $request)
     {
-        $validated = $request->validate([
-            'type_id' => 'nullable|integer|exists:venue_types,id',
-            'province_id' => 'nullable|integer|exists:provinces,id',
-            'district_id' => 'nullable|integer|exists:districts,id',
-            'sort' => 'nullable|in:rating_desc,rating_asc',
-        ]);
+        $now = now();
 
-        $query = Venue::with([
-            'images:id,imageable_id,imageable_type,url,is_primary,description',
-            'courts:id,venue_id',
-            'reviews:id,venue_id,rating',
+        // 1. Khởi tạo Query với Select và xác định các Flag (Featured, Promoted, Sale)
+        $query = Venue::query()
+            ->select('venues.*')
+            // Lấy dấu hiệu quảng cáo
+            ->addSelect(DB::raw('MAX(ad_featured_venues.id) as featured_id'))
+            ->addSelect(DB::raw('MAX(ad_top_searches.priority_point) as top_search_point'))
+
+            // --- LOGIC CHECK SALE (THÊM MỚI) ---
+            // Nếu tìm thấy ID của flash_sale_items thỏa mãn điều kiện, sân này sẽ có is_on_sale = true
+            ->addSelect(DB::raw('MAX(flash_sale_items.id) as sale_item_id'))
+
+            // --- JOIN QUẢNG CÁO (GIỮ NGUYÊN) ---
+            ->leftJoin('ad_featured_venues', function ($join) use ($now) {
+                $join->on('venues.id', '=', 'ad_featured_venues.venue_id')
+                    ->where('ad_featured_venues.end_at', '>', $now);
+            })
+            ->leftJoin('ad_top_searches', function ($join) use ($now) {
+                $join->on('venues.id', '=', 'ad_top_searches.venue_id')
+                    ->where('ad_top_searches.end_at', '>', $now);
+            })
+
+            // --- JOIN CHUỖI FLASH SALE (THÊM MỚI) ---
+            // Venue -> Courts -> Availabilities -> FlashSaleItems -> FlashSaleCampaigns
+            ->leftJoin('courts', 'venues.id', '=', 'courts.venue_id')
+            ->leftJoin('availabilities', 'courts.id', '=', 'availabilities.court_id')
+            ->leftJoin('flash_sale_items', function ($join) {
+                $join->on('availabilities.id', '=', 'flash_sale_items.availability_id')
+                    ->where('flash_sale_items.status', '=', 'active') // Item đang mở bán
+                    ->whereColumn('flash_sale_items.quantity', '>', 'flash_sale_items.sold_count'); // Còn hàng
+            })
+            ->leftJoin('flash_sale_campaigns', function ($join) use ($now) {
+                $join->on('flash_sale_items.campaign_id', '=', 'flash_sale_campaigns.id')
+                    ->where('flash_sale_campaigns.status', '=', 'active') // Chiến dịch đang chạy
+                    ->where('flash_sale_campaigns.start_datetime', '<=', $now) // Đã bắt đầu
+                    ->where('flash_sale_campaigns.end_datetime', '>=', $now);  // Chưa kết thúc
+            })
+
+            ->where('venues.is_active', 1)
+            ->groupBy('venues.id'); // Đảm bảo không bị lặp sân khi join nhiều bảng con
+
+        // 2. Các quan hệ bổ trợ
+        $query->with([
+            'images:id,imageable_id,imageable_type,url,is_primary',
             'venueTypes:id,name',
         ])->withAvg('reviews', 'rating');
 
-        $query->where('is_active', 1);
-
+        // 3. Bộ lọc tìm kiếm
+        if ($request->filled('name')) {
+            $query->where('venues.name', 'like', '%' . $request->name . '%');
+        }
         if ($request->filled('type_id')) {
             $query->whereHas('venueTypes', fn($q) => $q->where('venue_types.id', $request->type_id));
         }
-
         if ($request->filled('province_id')) {
-            $query->where('province_id', $request->province_id);
+            $query->where('venues.province_id', $request->province_id);
         }
-
         if ($request->filled('district_id')) {
-            $query->where('district_id', $request->district_id);
+            $query->where('venues.district_id', $request->district_id);
         }
 
-        if ($request->sort === 'rating_desc') {
-            $query->orderByDesc('reviews_avg_rating');
-        } elseif ($request->sort === 'rating_asc') {
-            $query->orderBy('reviews_avg_rating');
-        }
+        // 4. Sắp xếp ưu tiên:
+        // Ưu tiên 1: Sân Nổi bật (Ads)
+        // Ưu tiên 2: Sân đang SALE (Để kích thích người dùng)
+        // Ưu tiên 3: Điểm ưu tiên (Ads Search)
+        $query->orderByRaw('CASE WHEN MAX(ad_featured_venues.id) IS NOT NULL THEN 1 ELSE 2 END ASC')
+            ->orderByRaw('CASE WHEN MAX(flash_sale_items.id) IS NOT NULL THEN 1 ELSE 2 END ASC')
+            ->orderByRaw('MAX(ad_top_searches.priority_point) DESC')
+            ->orderByDesc('venues.created_at');
 
-        $venues = $query->get();
+        $venues = $query->paginate(12);
+
+        // 5. Transform dữ liệu trả về cho JSON
+        $venues->getCollection()->transform(function ($venue) {
+            $venue->is_featured = !is_null($venue->featured_id);
+            $venue->is_promoted = !is_null($venue->top_search_point);
+
+            // TẠO TRƯỜNG is_on_sale (Dùng cái này để hiện Badge SALE ở React)
+            $venue->is_on_sale = !is_null($venue->sale_item_id);
+
+            return $venue;
+        });
 
         return response()->json([
             'success' => true,
-            'message' => 'Lấy danh sách địa điểm thành công',
             'data' => $venues,
         ]);
     }
+
+
 
     /**
      * Lấy chi tiết venue
@@ -78,7 +123,7 @@ class VenueApiController extends Controller
 
         // 1. Lấy Venue và các quan hệ cơ bản
         $venue = Venue::with([
-            'images:id,imageable_id,imageable_type,url,is_primary,description',
+            'images:id,imageable_id,imageable_type,url,is_primary,type,description',
             'venueTypes:id,name',
             'courts:id,venue_id,name,surface,is_indoor',
             'courts.timeSlots:id,court_id,label,start_time,end_time',
@@ -142,6 +187,41 @@ class VenueApiController extends Controller
                 if ($availability) unset($availability->flashSaleItem);
             }
         }
+
+        $currentUser = auth('api')->user();
+        $user = Auth::user();
+        Log::info('Current User in Venue Detail', ['user_id' => $currentUser ? $currentUser->id : null]);
+        Log::info(' User in Venue Detail', ['user_id' => $user ? $user->id : null]);
+
+        // 2. Lấy ID chủ sân (để check logic voucher do chủ sân tạo)
+        // Lưu ý: $venue->owner được load từ relationship, nếu null thì gán tạm 0
+        $venueOwnerId = $venue->owner_id;
+
+        // 3. Query DB: Lọc các điều kiện cơ bản (Date, Status, Limit) bằng SQL cho nhanh
+        $promotions = Promotion::query()
+            ->with(['creator.role']) // Eager load để tránh lỗi N+1 khi gọi isValidForVenue
+            ->where('process_status', 'active') // Chỉ lấy active
+            ->where('start_at', '<=', now())   // Đã bắt đầu
+            ->where('end_at', '>=', now())     // Chưa kết thúc
+            ->where(function ($query) {
+                // Check giới hạn sử dụng: Limit = 0 (vô hạn) HOẶC Used < Limit
+                $query->where('usage_limit', 0)
+                    ->orWhereColumn('used_count', '<', 'usage_limit');
+            })
+            ->get() // Thực hiện query lấy Collection
+            // 4. Filter PHP: Dùng hàm logic trong Model để lọc kỹ (Phạm vi sân, User)
+            ->filter(function ($promotion) use ($venue, $venueOwnerId, $currentUser) {
+
+                // Gọi hàm isEligible trong Model Promotion
+                return $promotion->isEligible(
+                    null,           // $orderTotal: Chưa đặt sân nên chưa có tổng tiền -> Truyền null để bỏ qua check giá
+                    $venue->id,     // $venueId: ID sân hiện tại
+                    $venueOwnerId,  // $ownerId: ID chủ sân
+                    $currentUser    // $user: User đang xem (để check new_user hoặc đã dùng chưa)
+                );
+            })
+            ->values();
+        $venue->promotions = $promotions;
 
         return response()->json([
             'success' => true,

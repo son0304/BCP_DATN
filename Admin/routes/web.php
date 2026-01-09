@@ -14,18 +14,25 @@ use App\Http\Controllers\Web\{
     ChatController,
     FlashSaleCampaignController,
     FlashSaleItemController,
+    NotificationController,
     OwnerStatisticController,
+    PaymentController,
     PostController,
     VenueController,
     PromotionController,
     ServiceCategoryController,
     ServicesCategorieController,
     ServicesController,
+    SponsoredVenueController,
+    SponsorshipController,
+    SponsorshipPackageController,
     TransactionController,
     TagController,
-
+    WebSettingController,
+    WithdrawalRequestController,
 };
 use App\Models\FlashSaleCampaign;
+use App\Models\WithdrawalRequest;
 
 // ==============================
 // ====== AUTH & PUBLIC ROUTES ======
@@ -57,10 +64,15 @@ Route::get('/', [HomeController::class, 'index'])->name('home.index');
 Route::get('/courts', [CourtController::class, 'index'])->name('courts.index');
 Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 
-Route::post('/momo/ipn', [BookingController::class, 'ipn'])->name('momo.ipn');
-Route::post('/payment-momo', [BookingController::class, 'paymentMomo'])->name('payment-momo');
-Route::get('/momo/payment-success', [BookingController::class, 'paymentResult'])->name('momo.payment.result');
 
+Route::post('/payment/momo/temp-qr', [PaymentController::class, 'generateTempQr'])->name('payment.momo.temp-qr');
+Route::get('/payment/momo/check-status', [PaymentController::class, 'checkTempPayment'])->name('payment.momo.check-status');
+Route::post('/payment/momo/ipn-temp', [PaymentController::class, 'momoIpnTemp'])->name('payment.momo.ipn-temp');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/notifications/fetch', [NotificationController::class, 'fetch'])->name('notifications.fetch');
+    Route::post('/notifications/read/{id}', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+});
 
 // ==============================
 // ====== ADMIN ROUTES ======
@@ -68,7 +80,10 @@ Route::get('/momo/payment-success', [BookingController::class, 'paymentResult'])
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
 
     Route::get('/', [AdminStatisticController::class, 'index'])->name('statistics.index');
-
+    Route::prefix('withdrawal-requests')->group(function () {
+        Route::get('/', [WithdrawalRequestController::class, 'index'])->name('withdraw.index');
+        Route::post('/{id}/process', [WithdrawalRequestController::class, 'update'])->name('withdraw.update');
+    });
     Route::prefix('chats')->name('chats.')->group(function () {
         // Danh sách các cuộc hội thoại
         Route::get('/', [ChatController::class, 'index'])->name('index');
@@ -159,6 +174,32 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::patch('/{post}/update-status', [PostController::class, 'updateStatus'])->name('updateStatus');
         Route::patch('{post}/reject-or-hide', [PostController::class, 'rejectOrHide'])->name('rejectOrHide');
     });
+
+    Route::prefix('packages')->name('packages.')->group(function () {
+        Route::get('/', [SponsorshipController::class, 'listAdmin'])->name('index');
+        Route::post('store', [SponsorshipController::class, 'storeAd'])->name('store');
+        Route::put('update/{id}', [SponsorshipController::class, 'update'])->name('update');
+        Route::delete('destroy/{id}', [SponsorshipController::class, 'destroy'])->name('destroy');
+    });
+
+
+    Route::prefix('settings')->name('settings.')->group(function () {
+        // Trang hiển thị chung
+        Route::get('/', [WebSettingController::class, 'index'])->name('index');
+
+        // Các hành động Banner
+        Route::post('/banners', [WebSettingController::class, 'storeBanner'])->name('banners.store');
+        Route::put('/banners/{id}', [WebSettingController::class, 'updateBanner'])->name('banners.update');
+        Route::delete('/banners/{id}', [WebSettingController::class, 'destroyBanner'])->name('banners.destroy');
+
+        // Các hành động Sân tài trợ
+        Route::post('/sponsored', [WebSettingController::class, 'storeSponsored'])->name('sponsored.store');
+        Route::put('/sponsored/{id}', [WebSettingController::class, 'updateSponsored'])->name('sponsored.update');
+        Route::delete('/sponsored/{id}', [WebSettingController::class, 'destroySponsored'])->name('sponsored.destroy');
+
+        // Nút gạt trạng thái
+        Route::post('/toggle-status/{type}/{id}', [WebSettingController::class, 'toggleStatus'])->name('toggle-status');
+    });
 });
 
 
@@ -167,9 +208,24 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 // ==============================
 Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')->group(function () {
 
+
     // Dashboard
     Route::get('/', [OwnerStatisticController::class, 'index'])->name('statistics.index');
+    Route::get('/my-account', [UserController::class, 'myAccout'])->name('user.index');
 
+    Route::prefix('withdrawal-requests')->group(function () {
+        Route::get('/', [WithdrawalRequestController::class, 'index'])->name('withdraw.index');
+        Route::post('/', [WithdrawalRequestController::class, 'store'])->name('withdraw.store');
+        // Route::post('/{id}/process', [WithdrawalRequestController::class, 'update'])->name('withdraw.update');
+    });
+
+    Route::prefix('packages')->name('packages.')->group(function () {
+        Route::get('/', [SponsorshipController::class, 'listOwner'])->name('index');
+        Route::get('buy/{id}', [SponsorshipController::class, 'showPackage'])->name('buy');
+        Route::get('manage/{id}', [SponsorshipController::class, 'showOwner'])->name('manage');
+        Route::post('store', [SponsorshipController::class, 'store'])->name('store');
+        Route::get('/check-temp-payment', [PaymentController::class, 'checkTempPayment'])->name('check-temp-payment');
+    });
     Route::prefix('chats')->name('chats.')->group(function () {
         // Danh sách các cuộc hội thoại
         Route::get('/', [ChatController::class, 'index'])->name('index');
@@ -180,6 +236,16 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
         // Gửi tin nhắn và TẠO Conversation nếu là tin nhắn đầu tiên
         // Đã đổi {conversationId} thành {otherUserId} và sendMessage thành sendOrStartChat
         Route::post('{otherUserId}/send', [ChatController::class, 'sendOrStartChat'])->name('send');
+    });
+
+    Route::prefix('promotions')->name('promotions.')->group(function () {
+        Route::get('/', [PromotionController::class, 'index'])->name('index');
+        Route::get('create', [PromotionController::class, 'create'])->name('create');
+        Route::post('/', [PromotionController::class, 'store'])->name('store');
+        Route::get('{promotion}', [PromotionController::class, 'show'])->name('show');
+        Route::get('{promotion}/edit', [PromotionController::class, 'edit'])->name('edit');
+        Route::put('{promotion}', [PromotionController::class, 'update'])->name('update');
+        Route::delete('{promotion}', [PromotionController::class, 'destroy'])->name('destroy');
     });
 
     // --- VENUES CRUD (Owner chỉ thao tác với sân của mình) ---
@@ -214,7 +280,6 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
     Route::prefix('reviews')->name('reviews.')->group(function () {
         Route::get('/', [ReviewController::class, 'index'])->name('index');
         Route::delete('{id}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
-
     });
 
     // --- BOOKINGS MANAGE BY OWNER ---
@@ -225,12 +290,14 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
         Route::post('{id}/check-in', [BookingController::class, 'checkin'])->name('checkin');
         Route::put('{booking}', [BookingController::class, 'update'])->name('update');
         Route::delete('{booking}', [BookingController::class, 'destroy'])->name('destroy');
-        Route::post('/generate-temp-qr', [BookingController::class, 'generateTempQR'])->name('generate-temp-qr');
-        Route::get('/check-temp-payment', [BookingController::class, 'checkTempPayment'])->name('check-temp-payment');
+
+        Route::post('/generate-temp-qr', [PaymentController::class, 'generateTempQr'])->name('generate-temp-qr');
+        Route::get('/check-temp-payment', [PaymentController::class, 'checkTempPayment'])->name('check-temp-payment');
     });
 
     Route::prefix('flash-sale')->name('flash_sale_campaigns.')->group(function () {
         Route::get('/', [FlashSaleCampaignController::class, 'index'])->name('index');
+        Route::post('/store-campaign', [FlashSaleCampaignController::class, 'store'])->name('store_campaign');
         Route::get('show/{id}', [FlashSaleCampaignController::class, 'show'])->name('show');
         Route::post('store', [FlashSaleItemController::class, 'create_flash_sale_items'])->name('store');
     });

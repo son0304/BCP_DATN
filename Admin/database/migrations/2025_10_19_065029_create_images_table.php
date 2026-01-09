@@ -13,7 +13,7 @@ return new class extends Migration
 
             // Đây là cặp morph
             $table->morphs('imageable'); // Tạo imageable_id + imageable_type
-
+            $table->string('type')->nullable(); 
             $table->string('url');
             $table->text('description')->nullable();
             $table->boolean('is_primary')->default(false);

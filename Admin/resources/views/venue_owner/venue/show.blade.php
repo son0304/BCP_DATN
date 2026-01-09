@@ -192,31 +192,80 @@
                     </div>
                 </div>
 
+                {{-- === CỘT BÊN PHẢI (Tìm đến phần Thư viện ảnh và thay thế) === --}}
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white py-3 border-bottom">
-                        <h5 class="mb-0 text-primary fw-bold"><i class="fas fa-images me-2"></i>Thư viện ảnh</h5>
+                        <h5 class="mb-0 text-primary fw-bold"><i class="fas fa-images me-2"></i>Thư viện hình ảnh</h5>
                     </div>
                     <div class="card-body">
-                        @if ($venue->images->count())
-                            @php $primaryImage = $venue->images->firstWhere('is_primary', 1); @endphp
+
+                        {{-- 1. NHÓM ẢNH SÂN BÃI (TYPE: VENUE) --}}
+                        <h6 class="fw-bold mb-2 small text-muted text-uppercase">Hình ảnh sân bãi</h6>
+                        @php
+                            $venueImages = $venue->images->where('type', 'venue');
+                            $primaryImage = $venueImages->where('is_primary', 1)->first();
+                        @endphp
+
+                        @if ($venueImages->count())
+                            {{-- Ảnh chính hiển thị to --}}
                             @if ($primaryImage)
-                                <div class="mb-3 position-relative">
+                                <div class="mb-2 position-relative">
                                     <img src="{{ asset($primaryImage->url) }}" class="img-fluid rounded shadow-sm w-100"
-                                        style="max-height: 200px; object-fit: cover;" alt="Ảnh chính">
+                                        style="max-height: 180px; object-fit: cover;" alt="Ảnh chính">
+                                    <span class="position-absolute top-0 start-0 m-2 badge bg-primary">Ảnh đại diện</span>
                                 </div>
                             @endif
-                            {{-- Hiển thị các ảnh còn lại --}}
-                            <div class="row g-2">
-                                @foreach ($venue->images->where('is_primary', 0)->take(6) as $image)
+
+                            {{-- Các ảnh sân khác hiển thị grid nhỏ --}}
+                            <div class="row g-2 mb-4">
+                                @foreach ($venueImages->where('is_primary', 0) as $image)
                                     <div class="col-4">
-                                        <img src="{{ asset($image->url) }}" class="img-fluid rounded border"
-                                            style="aspect-ratio: 1/1; object-fit: cover;" alt="Gallery">
+                                        <a href="{{ asset($image->url) }}" target="_blank">
+                                            <img src="{{ asset($image->url) }}"
+                                                class="img-fluid rounded border shadow-xs"
+                                                style="aspect-ratio: 1/1; object-fit: cover;" alt="Venue gallery">
+                                        </a>
                                     </div>
                                 @endforeach
                             </div>
                         @else
-                            <p class="text-muted text-center py-3 mb-0">Chưa có hình ảnh mô tả.</p>
+                            <div class="text-center py-3 border rounded bg-light mb-4">
+                                <small class="text-muted">Chưa có hình ảnh sân bãi.</small>
+                            </div>
                         @endif
+
+
+                        {{-- 2. NHÓM GIẤY TỜ PHÁP LÝ (TYPE: DOCUMENT) --}}
+                        <h6 class="fw-bold mb-2 small text-muted text-uppercase">Giấy tờ pháp lý</h6>
+                        @php
+                            $documentImages = $venue->images->where('type', 'document');
+                        @endphp
+
+                        @if ($documentImages->count())
+                            <div class="row g-2">
+                                @foreach ($documentImages as $doc)
+                                    <div class="col-4">
+                                        <div class="position-relative group-hover">
+                                            <a href="{{ asset($doc->url) }}" target="_blank">
+                                                <img src="{{ asset($doc->url) }}"
+                                                    class="img-fluid rounded border border-primary border-opacity-25 shadow-xs"
+                                                    style="aspect-ratio: 1/1; object-fit: cover; filter: brightness(0.9);"
+                                                    alt="Giấy tờ">
+                                                <div class="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-50 text-white text-center rounded-bottom"
+                                                    style="font-size: 10px;">
+                                                    Xem tệp
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="text-center py-3 border rounded bg-light">
+                                <small class="text-muted">Chưa cập nhật giấy tờ pháp lý.</small>
+                            </div>
+                        @endif
+
                     </div>
                 </div>
             </div>
@@ -273,8 +322,8 @@
                                     <label class="form-label small fw-bold">Trạng thái tiện ích</label>
                                     <div class="btn-group w-100" role="group">
                                         {{-- [ĐÃ XÓA NAME] để không gửi lên server, thêm class stock-radio-btn để xử lý JS --}}
-                                        <input type="radio" class="btn-check stock-radio-btn"
-                                            id="statusMaintenance" value="0">
+                                        <input type="radio" class="btn-check stock-radio-btn" id="statusMaintenance"
+                                            value="0">
                                         <label class="btn btn-outline-danger" for="statusMaintenance">Bảo trì</label>
 
                                         {{-- [ĐÃ XÓA NAME] để không gửi lên server, thêm class stock-radio-btn để xử lý JS --}}

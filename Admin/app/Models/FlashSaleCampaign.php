@@ -12,6 +12,7 @@ class FlashSaleCampaign extends Model
     protected $table = 'flash_sale_campaigns';
 
     protected $fillable = [
+        'owner_id',
         'name',
         'description',
         'start_datetime',
@@ -30,6 +31,11 @@ class FlashSaleCampaign extends Model
     public function items()
     {
         return $this->hasMany(FlashSaleItem::class, 'campaign_id');
+    }
+
+    public function owner()
+    {
+        return $this->belongsTo(User::class, 'owner_id');
     }
 
     // Scope: Lấy các chiến dịch đang diễn ra (Helper để query cho nhanh)

@@ -53,6 +53,23 @@ class Venue extends Model
             ->withTimestamps();
     }
 
+    public function adTopSearch()
+    {
+        return $this->hasOne(AdTopSearch::class);
+    }
+
+    // Nếu 1 sân chỉ có 1 banner active tại 1 thời điểm
+    public function adBanner()
+    {
+        return $this->hasOne(AdBanner::class)->latestOfMany();
+    }
+
+    // Hoặc nếu featured nhiều chỗ
+    public function adFeatured()
+    {
+        return $this->hasMany(AdFeaturedVenue::class);
+    }
+
 
     public function reviews()
     {
@@ -83,6 +100,4 @@ class Venue extends Model
             'venue_type_id'
         )->withPivot('created_at', 'updated_at');
     }
-
-  
 }

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @property User $user
@@ -15,7 +16,7 @@ class Ticket extends Model
     /** @use HasFactory<\Database\Factories\TicketFactory> */
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['user_id', 'promotion_id', 'subtotal', 'discount_amount', 'total_amount', 'status', 'payment_status', 'process_status', 'notes','booking_code'];
+    protected $fillable = ['user_id', 'promotion_id', 'subtotal', 'discount_amount', 'total_amount', 'status', 'payment_status', 'payment_method', 'process_status', 'notes', 'guest', 'booking_code'];
 
     public function user()
     {
@@ -56,5 +57,24 @@ class Ticket extends Model
         )->join('items', 'courts.id', '=', 'items.court_id')
             ->where('items.ticket_id', $this->id)
             ->distinct();
+    }
+    public function moneyFlows()
+    {
+        return $this->morphMany(MoneyFlow::class, 'money_flowable');
+    }
+
+    public function getOwnerId()
+    {
+        return DB::table('items')
+            ->join('bookings', 'items.booking_id', '=', 'bookings.id')
+            ->join('courts', 'bookings.court_id', '=', 'courts.id')
+            ->join('venues', 'courts.venue_id', '=', 'venues.id')
+            ->where('items.ticket_id', $this->id)
+            ->value('venues.owner_id');
+    }
+
+    public function transactions()
+    {
+        return $this->morphMany(Transaction::class, 'transactionable');
     }
 }

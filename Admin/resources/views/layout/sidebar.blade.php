@@ -21,6 +21,24 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('admin.settings.index') }}" class="waves-effect">
+                                <i class="remixicon-dashboard-line"></i>
+                                <span> Quản lý Web </span>
+                                {{--  <span class="badge bg-danger float-end">1</span>  --}}
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="{{ route('admin.packages.index') }}" class="waves-effect">
+                                <i class="remixicon-dashboard-line"></i>
+                                <span> Gói Quảng Cáo </span>
+                                {{--  <span class="badge bg-danger float-end">1</span>  --}}
+                            </a>
+                        </li>
+
+
+
+                        <li>
                             <a href="{{ route('admin.users.index') }}" class="waves-effect">
                                 <i class="remixicon-user-line"></i>
                                 <span> Người dùng </span>
@@ -39,16 +57,15 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{{ route('admin.flash_sale_campaigns.index') }}" class="waves-effect">
-                                <i class="bi bi-lightning-fill"></i>
-                                <span> Flash Sale </span>
-                            </a>
-                        </li>
-
-                        <li>
                             <a href="{{ route('admin.promotions.index') }}" class="waves-effect">
                                 <i class="ri-coupon-line"></i>
                                 <span> Voucher </span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('admin.withdraw.index') }}" class="waves-effect">
+                                <i class="ri-hand-coin-line"></i>
+                                <span> Yêu cầu rút tiền </span>
                             </a>
                         </li>
                         <li>
@@ -110,9 +127,17 @@
                                 <span> Đánh giá </span>
                             </a>
                         </li>
+
+                        <li>
+                            <a href="{{ route('owner.packages.index') }}" class="waves-effect">
+                                <i class="remixicon-dashboard-line"></i>
+                                <span> Gói Quảng Cáo </span>
+                                {{--  <span class="badge bg-danger float-end">1</span>  --}}
+                            </a>
+                        </li>
                         <li>
                             <a href="{{ route('owner.services.index') }}" class="waves-effect">
-                                <i class="ri-ticket-line"></i>
+                                <i class="ri-tools-line"></i>
                                 <span> Quản lý dịch vụ </span>
                             </a>
                         </li>
@@ -120,6 +145,13 @@
                             <a href="{{ route('owner.bookings.index') }}" class="waves-effect">
                                 <i class="ri-ticket-line"></i>
                                 <span> Đơn đặt sân </span>
+                            </a>
+                        </li>
+
+                        <li>
+                            <a href="{{ route('owner.promotions.index') }}" class="waves-effect">
+                                <i class="ri-coupon-line"></i>
+                                <span> Voucher </span>
                             </a>
                         </li>
                         <li>

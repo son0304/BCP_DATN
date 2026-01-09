@@ -4,104 +4,100 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Promotion;
+use App\Models\Venue;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class PromotionApiController extends Controller
 {
     public function index(Request $request)
     {
-        $code = $request->input('code');
-        $now = now();
+        $code    = $request->input('code');
+        $venueId = $request->input('venue_id');
+        $user    = Auth::user(); // Có thể null nếu chưa login
 
-        // ==== TRƯỜNG HỢP 1: CÓ CODE - XÁC THỰC 1 VOUCHER ====
+        if (!$venueId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Thiếu venue_id.'
+            ], 400);
+        }
+
+        $venue = Venue::find($venueId);
+        if (!$venue) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sân không tồn tại.'
+            ], 404);
+        }
+        $ownerId = $venue->owner_id;
+
+        // --- TRƯỜNG HỢP 1: TÌM MÃ CỤ THỂ ---
         if ($code) {
             $voucher = Promotion::where('code', $code)->first();
 
-            // Không tìm thấy
             if (!$voucher) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Mã giảm giá không hợp lệ.'
+                    'message' => 'Mã giảm giá không tồn tại.'
                 ], 404);
             }
 
-            // *** LOGIC MỚI: Chưa bắt đầu ***
-            if ($voucher->start_at && $now->lessThan($voucher->start_at)) {
+            // Truyền orderTotal là null để lấy thông tin voucher dù đơn 0đ
+            if (!$voucher->isEligible(null, $venueId, $ownerId, $user)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Mã giảm giá chưa đến ngày bắt đầu.'
+                    'message' => 'Mã này không áp dụng cho cửa hàng hoặc tài khoản của bạn.'
                 ], 400);
             }
-
-            // Hết hạn (Logic cũ)
-            if ($voucher->end_at && $now->greaterThan($voucher->end_at)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Mã giảm giá đã hết hạn.'
-                ], 400);
-            }
-
-            // *** LOGIC MỚI: Hết lượt sử dụng ***
-            if ($voucher->usage_limit !== null && $voucher->used_count >= $voucher->usage_limit) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Mã giảm giá đã hết lượt sử dụng.'
-                ], 400);
-            }
-
-            // Chuẩn hoá data theo type Voucher trên FE
-            $result = [
-                'id' => $voucher->id,
-                'code' => $voucher->code,
-                'value' => floatval($voucher->value),
-                'type' => $voucher->type === '%' ? '%' : 'VND',
-                'start_at' => $voucher->start_at, // *** MỚI: Thêm start_at ***
-                'expires_at' => $voucher->end_at,
-                'max_discount_amount' => $voucher->type === '%' ? floatval($voucher->max_discount_amount) : null, // *** MỚI: Thêm max_discount_amount ***
-            ];
 
             return response()->json([
                 'success' => true,
-                'message' => 'Mã giảm giá hợp lệ.',
-                'data' => $result
+                'data' => $this->formatVoucher($voucher)
             ]);
         }
 
-        // ==== TRƯỜNG HỢP 2: KHÔNG CÓ CODE - LẤY TẤT CẢ VOUCHER HỢP LỆ ====
-        
-        // *** LOGIC MỚI: Lấy tất cả voucher HỢP LỆ (đã bắt đầu, còn hạn, còn lượt) ***
-        $vouchers = Promotion::where(function ($query) use ($now) {
-                // 1. Phải bắt đầu rồi
-                $query->where('start_at', '<=', $now);
-            })
-            ->where(function ($query) use ($now) {
-                // 2. Phải chưa kết thúc (hoặc không có ngày kết thúc - logic cũ)
-                $query->where('end_at', '>=', $now)
-                      ->orWhereNull('end_at');
-            })
-            ->where(function ($query) {
-                // 3. Phải còn lượt sử dụng (hoặc không giới hạn)
-                $query->whereNull('usage_limit')
-                      ->orWhereRaw('used_count < usage_limit');
-            })
-            ->get();
+        // --- TRƯỜNG HỢP 2: LẤY DANH SÁCH ---
+        // Tối ưu: Chỉ lấy các voucher đang Active ở cấp DB trước
+        $query = Promotion::where('process_status', 'active')
+            ->where('start_at', '<=', now())
+            ->where('end_at', '>=', now());
 
-        // Chuẩn hoá mảng data
-        $result = $vouchers->map(function ($voucher) {
-            return [
-                'id' => $voucher->id,
-                'code' => $voucher->code,
-                'value' => floatval($voucher->value),
-                'type' => $voucher->type === '%' ? '%' : 'VND',
-                'start_at' => $voucher->start_at, // *** MỚI: Thêm start_at ***
-                'expires_at' => $voucher->end_at,
-                'max_discount_amount' => $voucher->type === '%' ? floatval($voucher->max_discount_amount) : null, // *** MỚI: Thêm max_discount_amount ***
-            ];
-        });
+        // Nếu muốn query kỹ hơn về venue_id tại DB thì thêm where vào đây
+        // Tuy nhiên logic isValidForVenue của bạn khá phức tạp nên lọc PHP sau cũng tạm ổn
+        // nhưng tốt nhất là filter owner/venue ngay trong query nếu được.
+
+        $vouchers = $query->get()
+            ->filter(function ($voucher) use ($venueId, $ownerId, $user) {
+                // Truyền null để hiển thị cả voucher chưa đủ tiền mua
+                return $voucher->isEligible(null, $venueId, $ownerId, $user);
+            })
+            ->values()
+            ->map(function ($voucher) {
+                return $this->formatVoucher($voucher);
+            });
 
         return response()->json([
             'success' => true,
-            'data' => $result // Trả về mảng các voucher
+            'data' => $vouchers
         ]);
+    }
+
+    // Helper format response để đồng nhất dữ liệu
+    private function formatVoucher($voucher)
+    {
+        return [
+            'id'                  => $voucher->id,
+            'code'                => $voucher->code,
+            'value'               => (float) $voucher->value,
+            'type'                => $voucher->type === 'percentage' ? '%' : 'VND',
+            'start_at'            => $voucher->start_at,
+            'end_date'            => $voucher->end_at, // React dùng field này
+            // QUAN TRỌNG: React cần field này để validate
+            'min_order_amount'    => (float) $voucher->min_order_value,
+            'max_discount_amount' => $voucher->type === 'percentage'
+                ? (float) $voucher->max_discount_amount
+                : null,
+        ];
     }
 }

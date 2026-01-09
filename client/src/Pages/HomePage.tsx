@@ -3,235 +3,278 @@ import { useFetchData } from "../Hooks/useApi";
 import type { Venue } from "../Types/venue";
 import type { Image } from "../Types/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+
+interface VenueEnhanced extends Venue {
+  is_featured?: boolean;
+  is_promoted?: boolean;
+  is_on_sale?: boolean;
+}
 
 const Content = () => {
   const navigate = useNavigate();
-  const { data: venueData, isLoading, isError } = useFetchData<Venue[]>("venues");
+  const { data: bannerRes } = useFetchData<any[]>("banners");
+  const { data: venueRes, isLoading: venueLoading } = useFetchData<any>("venues");
+  const { data: typesRes } = useFetchData<any[]>("venueType");
+  const { data: provincesRes } = useFetchData<any[]>("provinces");
 
-  const venues: Venue[] = (venueData?.data as Venue[]) || [];
-  const displayedVenues = venues.slice(0, 4);
+  const banners = useMemo(() => bannerRes?.data || [], [bannerRes]);
+  const displayedVenues = useMemo(() => (venueRes?.data?.data as VenueEnhanced[]) || [], [venueRes]);
+  const venueTypes = useMemo(() => typesRes?.data || [], [typesRes]);
+  const provinces = useMemo(() => provincesRes?.data || [], [provincesRes]);
 
-  const banners = [
-    {
-      image: "https://images.unsplash.com/photo-1626248921347-74a8166f4536?q=80&w=2070&auto=format&fit=crop",
-      title: "Bùng Nổ Đam Mê",
-      subtitle: "Đặt sân thể thao dễ dàng",
-      desc: "Kết nối đam mê với hàng trăm sân bóng, cầu lông, pickleball chất lượng cao.",
-    },
-    {
-      image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1936&auto=format&fit=crop",
-      title: "Sân Cỏ Đẳng Cấp",
-      subtitle: "Trải nghiệm thi đấu đỉnh cao",
-      desc: "Hệ thống sân cỏ nhân tạo tiêu chuẩn, dịch vụ tiện ích đầy đủ cho trận đấu của bạn.",
-    },
-    {
-      image: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?q=80&w=2070&auto=format&fit=crop",
-      title: "Kết Nối Đồng Đội",
-      subtitle: "Thể thao là không khoảng cách",
-      desc: "Tìm kiếm đối thủ, đặt sân nhanh chóng và xây dựng cộng đồng thể thao vững mạnh.",
-    },
-  ];
+  const [selectedType, setSelectedType] = useState("");
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [bannerIndex, setBannerIndex] = useState(0);
 
-  const [index, setIndex] = useState(0);
-
+  // Auto-play Slider
   useEffect(() => {
-    const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % banners.length);
-    }, 5000);
+    if (banners.length <= 1) return;
+    const interval = setInterval(() => setBannerIndex((p) => (p + 1) % banners.length), 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [banners.length]);
 
-  const banner = banners[index];
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (selectedType) params.append("type_id", selectedType);
+    if (selectedProvince) params.append("province_id", selectedProvince);
+    navigate(`/venues?${params.toString()}`);
+  };
 
   return (
     <div className="bg-white min-h-screen font-sans">
-      {/* --- HERO SECTION --- */}
-      {/* Mobile: h-400px, Desktop: h-600px (Thoáng hơn trên màn hình lớn) */}
-      <section className="relative h-[400px] md:h-[600px] overflow-hidden group">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, scale: 1.05 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1 }}
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${banner.image})` }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/30"></div>
-          </motion.div>
-        </AnimatePresence>
+      {/* ========================================================= */}
+      {/* 1. HERO SLIDER - PHONG CÁCH PRO (SPLIT LAYOUT) */}
+      {/* ========================================================= */}
+      <section className="relative h-[600px] overflow-hidden bg-[#0f172a]">
 
-        <div className="relative z-10 h-full flex flex-col justify-center items-center text-center px-4 max-w-5xl mx-auto pt-8">
-          <motion.div
-            key={index + "-text"}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            {/* Title nhỏ ở trên */}
-            <span className="inline-block py-1 px-3 rounded-full bg-white/10 border border-white/20 text-white/90 text-[10px] md:text-sm font-bold tracking-widest uppercase mb-4 backdrop-blur-sm">
-              {banner.title}
-            </span>
-            
-            {/* Main Title: Mobile 3xl, Desktop 5xl hoặc 6xl nhưng nét chữ thanh thoát */}
-            <h1 className="text-3xl md:text-6xl font-extrabold text-white mb-4 leading-tight drop-shadow-lg">
-              {banner.subtitle}
-            </h1>
-            
-            {/* Desc: Mobile text-sm, Desktop text-lg */}
-            <p className="text-gray-200 text-sm md:text-lg max-w-2xl mx-auto leading-relaxed mb-8 font-light opacity-90">
-              {banner.desc}
-            </p>
-            
-            <Link to="/venues">
-              <button className="px-6 py-3 md:px-8 md:py-3.5 bg-[#10B981] hover:bg-[#059669] text-white text-sm md:text-base font-bold rounded-full shadow-lg shadow-emerald-900/30 transition-all transform hover:-translate-y-1 hover:shadow-xl">
-                Đặt sân ngay
-              </button>
-            </Link>
-          </motion.div>
+        {/* A. HÌNH NỀN CỐ ĐỊNH CHẤT LƯỢNG CAO (STATIC BACKGROUND) */}
+        {/* Bạn có thể thay url bên dưới bằng một hình sân cỏ/sân vận động chất lượng 4k làm nền chung */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-800/80 z-10"></div>
+          <img
+            src="https://images.unsplash.com/photo-1522778119026-d647f0565c6a?q=80&w=2070&auto=format&fit=crop"
+            alt="Background Texture"
+            className="w-full h-full object-cover opacity-40 grayscale"
+          />
+        </div>
+
+        {/* B. NỘI DUNG SLIDER */}
+        <div className="relative z-20 container mx-auto px-4 h-full">
+          <AnimatePresence mode="wait">
+            {banners.length > 0 ? (
+              <div key={bannerIndex} className="h-full flex flex-col md:flex-row items-center justify-between gap-8 md:gap-16">
+
+                {/* --- CỘT TRÁI: TEXT --- */}
+                <motion.div
+                  initial={{ x: -50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: -50, opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="flex-1 text-center md:text-left pt-10 md:pt-0"
+                >
+                  {/* Badge */}
+                  {banners[bannerIndex].type === 'sponsored' && (
+                    <span className="inline-block bg-[#10B981] text-white text-[10px] md:text-xs font-black px-3 py-1.5 rounded-sm uppercase tracking-[0.2em] mb-4 md:mb-6">
+                      Đối tác chiến lược
+                    </span>
+                  )}
+
+                  {/* Tiêu đề lớn */}
+                  <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white leading-tight uppercase italic mb-6">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
+                      {banners[bannerIndex].title || "BCP Sports"}
+                    </span>
+                    <br />
+                    <span className="text-[#10B981] text-2xl md:text-4xl not-italic font-bold tracking-normal block mt-2">
+                      Đặt sân nhanh - Chơi cực đã
+                    </span>
+                  </h1>
+
+                  {/* Nút bấm */}
+                  <div className="flex flex-col md:flex-row gap-4 justify-center md:justify-start">
+                    <button
+                      onClick={() => {
+                        const url = banners[bannerIndex].target_url;
+                        if (url) url.startsWith('http') ? window.open(url, '_blank') : navigate(url);
+                      }}
+                      className="bg-[#10B981] text-white px-8 py-4 rounded-xl font-bold uppercase tracking-wider hover:bg-[#059669] hover:shadow-lg hover:shadow-emerald-500/30 transition-all transform hover:-translate-y-1"
+                    >
+                      Đặt sân ngay
+                    </button>
+                    <button
+                      onClick={() => navigate('/venues')}
+                      className="border border-white/20 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-wider hover:bg-white/10 transition-all"
+                    >
+                      Xem chi tiết
+                    </button>
+                  </div>
+                </motion.div>
+
+                {/* --- CỘT PHẢI: ẢNH TỪ DB (DISPLAY AS A CARD) --- */}
+                <motion.div
+                  initial={{ x: 50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: 50, opacity: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="flex-1 w-full max-w-lg flex justify-center md:justify-end pb-10 md:pb-0 relative"
+                >
+                  {/* Hiệu ứng trang trí phía sau ảnh */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[#10B981]/20 blur-[60px] rounded-full pointer-events-none"></div>
+
+                  {/* Khung chứa ảnh (Card) */}
+                  <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 p-3 rounded-3xl shadow-2xl transform rotate-2 hover:rotate-0 transition-transform duration-500">
+                    <div className="relative overflow-hidden rounded-2xl aspect-[4/3] w-full md:w-[450px]">
+                      <img
+                        src={banners[bannerIndex].image}
+                        alt="Banner Hero"
+                        className="w-full h-full object-cover" // Ảnh DB lấp đầy khung Card này, không phải lấp đầy màn hình nên sẽ nét
+                      />
+
+                      {/* Overlay Gradient trên ảnh cho đẹp */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+
+                      <div className="absolute bottom-4 left-4 text-white">
+                        <p className="text-xs font-bold opacity-80 uppercase tracking-widest">Featured Venue</p>
+                        <p className="text-lg font-bold">{banners[bannerIndex].title}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                </motion.div>
+
+              </div>
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-white/20">
+                <i className="fa-solid fa-circle-notch animate-spin text-4xl"></i>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Dots Navigation */}
+          {banners.length > 1 && (
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-3 z-30">
+              {banners.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setBannerIndex(i)}
+                  className={`h-2 transition-all duration-300 rounded-full ${i === bannerIndex ? "w-8 bg-[#10B981]" : "w-2 bg-white/20 hover:bg-white/40"}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* --- SEARCH BOX (Responsive Floating) --- */}
-      <div className="relative z-20 px-4 -mt-10 md:-mt-16 mb-16">
-        <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-5 md:p-8 border border-gray-100">
-          <div className="flex items-center gap-2 mb-5">
-             <div className="p-2 bg-green-50 rounded-lg text-[#10B981]">
-                <i className="fa-solid fa-filter text-sm md:text-base"></i>
-             </div>
-             <h2 className="text-sm md:text-lg font-bold text-gray-800 uppercase tracking-wide">Tìm kiếm nhanh</h2>
-          </div>
-          
-          <form className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[
-              { icon: "fa-futbol", placeholder: "Môn thể thao...", type: "text" },
-              { icon: "fa-map-location-dot", placeholder: "Khu vực...", type: "text" },
-              { icon: "fa-calendar-days", placeholder: "Chọn ngày", type: "date" },
-            ].map((field, i) => (
-              <div key={i} className="relative group">
-                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                    <i className={`fa-solid ${field.icon} text-sm text-gray-400 group-focus-within:text-[#10B981] transition-colors`}></i>
-                 </div>
-                 {/* Input: Mobile text-sm, Desktop text-base để dễ đọc hơn */}
-                 <input 
-                    type={field.type}
-                    placeholder={field.placeholder}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#10B981]/20 focus:border-[#10B981] outline-none transition-all text-sm md:text-base text-gray-700 font-medium placeholder:text-gray-400"
-                 />
-              </div>
-            ))}
-
-            <button className="h-full w-full bg-[#10B981] hover:bg-[#059669] text-white text-sm md:text-base font-bold py-3 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-wide transform active:scale-95">
-              <i className="fa-solid fa-magnifying-glass"></i> Tìm kiếm
-            </button>
-          </form>
+      {/* 2. SEARCH BOX (Giữ nguyên hoặc chỉnh lại chút margin cho đẹp) */}
+      <div className="max-w-6xl mx-auto px-4 -mt-8 relative z-30">
+        <div className="bg-white p-5 rounded-2xl shadow-xl shadow-slate-200/50 flex flex-wrap md:flex-nowrap gap-4 border border-gray-100">
+          <select value={selectedType} onChange={e => setSelectedType(e.target.value)} className="flex-1 p-4 bg-gray-50 rounded-xl outline-none font-medium text-sm border-none focus:ring-2 focus:ring-[#10B981]">
+            <option value="">Tất cả môn thể thao</option>
+            {venueTypes.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <select value={selectedProvince} onChange={e => setSelectedProvince(e.target.value)} className="flex-1 p-4 bg-gray-50 rounded-xl outline-none font-medium text-sm border-none focus:ring-2 focus:ring-[#10B981]">
+            <option value="">Toàn quốc</option>
+            {provinces.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <button onClick={handleSearch} className="bg-[#10B981] text-white px-12 py-4 rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-[#059669] transition-all shadow-lg hover:shadow-emerald-200">
+            TÌM KIẾM
+          </button>
         </div>
       </div>
 
-      {/* --- FEATURED VENUES --- */}
-      <section className="py-10 pb-20 max-w-7xl mx-auto px-4">
-        <div className="flex items-end justify-between mb-8 border-b border-gray-100 pb-4">
+      {/* 3. VENUE LISTING (GIỮ NGUYÊN CODE TRƯỚC VÌ ĐÃ ỔN) */}
+      <section className="py-16 max-w-7xl mx-auto px-4">
+        {/* ... (Giữ nguyên phần Venue List ở câu trả lời trước) ... */}
+        <div className="flex items-end justify-between mb-10">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Sân Nổi Bật</h2>
-            <p className="text-sm md:text-base text-gray-500">Địa điểm được cộng đồng yêu thích nhất tuần qua</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-[#11182C]">Khám Phá Sân Bóng</h2>
+            <div className="h-1 w-12 bg-[#10B981] mt-2 rounded-full"></div>
           </div>
-          <Link to="/venues" className="text-sm md:text-base font-semibold text-[#10B981] hover:text-[#059669] transition-colors flex items-center gap-2 group">
-            Xem tất cả <i className="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+          <Link to="/venues" className="text-sm font-bold text-[#10B981] hover:underline uppercase tracking-tight">
+            Xem tất cả <i className="fa-solid fa-arrow-right ml-1"></i>
           </Link>
         </div>
 
-        {isError ? (
-          <div className="text-center py-12 bg-red-50 rounded-2xl text-red-500 border border-red-100 text-sm md:text-base">
-            <i className="fa-solid fa-circle-exclamation text-2xl mb-2 block"></i>
-            Không thể tải dữ liệu sân.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {isLoading
-              ? Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100">
-                    <div className="h-44 md:h-52 bg-gray-100 animate-pulse"></div>
-                    <div className="p-4 space-y-3">
-                      <div className="h-5 bg-gray-100 rounded w-3/4 animate-pulse"></div>
-                      <div className="h-4 bg-gray-100 rounded w-1/2 animate-pulse"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {venueLoading ? (
+            Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-80 bg-gray-100 rounded-2xl animate-pulse" />)
+          ) : (
+            displayedVenues.slice(0, 4).map((venue) => {
+              const primaryImage = venue.images?.find((img: Image) => img.is_primary === 1) || venue.images?.[0];
+              const imageUrl = primaryImage?.url || "https://via.placeholder.com/400x300?text=BCP+Sports";
+
+              return (
+                <div
+                  key={venue.id}
+                  onClick={() => navigate(`/venues/${venue.id}`)}
+                  className="group bg-white rounded-2xl shadow-sm hover:shadow-xl border border-gray-100 overflow-hidden cursor-pointer transition-all duration-300 flex flex-col h-full transform hover:-translate-y-1"
+                >
+                  <div className="relative overflow-hidden h-44 bg-gray-100">
+                    <div
+                      className="absolute inset-0 bg-cover bg-center blur-md scale-125 opacity-50 transition-transform duration-700 group-hover:scale-150"
+                      style={{ backgroundImage: `url(${imageUrl})` }}
+                    ></div>
+                    <img
+                      src={imageUrl}
+                      alt={venue.name}
+                      className="absolute inset-0 w-full h-full object-contain z-10 transition-transform duration-500 group-hover:scale-105 drop-shadow-md"
+                      loading="lazy"
+                    />
+                    <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-20">
+                      {venue.is_on_sale && (
+                        <div className="bg-amber-400 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm uppercase flex items-center gap-1">
+                          <i className="fa-solid fa-bolt text-[8px]"></i> Sale
+                        </div>
+                      )}
+                      {(venue.is_featured || venue.is_promoted) && (
+                        <div className="bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded shadow-sm uppercase flex items-center gap-1">
+                          <i className="fa-solid fa-crown text-[8px]"></i> Nổi bật
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute bottom-3 right-3 z-20 bg-white/95 backdrop-blur px-2 py-1 rounded-lg shadow-sm flex items-center gap-1 text-[10px] font-bold text-gray-800">
+                      <i className="fa-solid fa-star text-amber-400"></i>
+                      <span>{Number(venue.reviews_avg_rating)?.toFixed(1) || "0.0"}</span>
                     </div>
                   </div>
-                ))
-              : displayedVenues.length > 0
-              ? displayedVenues.map((venue) => {
-                  const primaryImage = venue.images?.find((img: Image) => img.is_primary === 1);
-                  
-                  return (
-                    <div
-                      key={venue.id}
-                      onClick={() => navigate(`/venues/${venue.id}`)}
-                      className="group bg-white rounded-2xl hover:shadow-xl border border-gray-100 overflow-hidden cursor-pointer transition-all duration-300 flex flex-col h-full transform hover:-translate-y-1"
-                    >
-                      {/* Image - Mobile: h-44, Desktop: h-52 (Rộng rãi hơn) */}
-                      <div className="relative overflow-hidden h-44 md:h-52">
-                        <img
-                          src={primaryImage?.url || "https://via.placeholder.com/400x300?text=BCP+Sports"}
-                          alt={venue.name}
-                          className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
-                        />
-                        
-                        {/* Rating Badge */}
-                        <div className="absolute top-3 right-3 bg-white/95 backdrop-blur px-2 py-1 rounded-lg shadow-sm flex items-center gap-1 text-xs font-bold text-gray-800">
-                          <i className="fa-solid fa-star text-amber-400"></i>
-                          <span>{Number(venue.reviews_avg_rating)?.toFixed(1) || "0.0"}</span>
-                        </div>
-                      </div>
 
-                      {/* Content */}
-                      <div className="p-4 flex-1 flex flex-col">
-                        {/* Tags */}
-                        <div className="flex flex-wrap gap-2 mb-3">
-                            {venue.venue_types?.length ? (
-                              venue.venue_types.slice(0, 2).map((type, i) => (
-                                <span key={i} className="text-[10px] md:text-xs font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md">
-                                  {type.name}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-[10px] text-gray-400 italic">Đa năng</span>
-                            )}
-                        </div>
-
-                        {/* Title - Mobile text-sm, Desktop text-lg */}
-                        <h3 className="text-base md:text-lg font-bold text-gray-800 mb-2 line-clamp-1 group-hover:text-[#10B981] transition-colors">
-                          {venue.name}
-                        </h3>
-
-                        {/* Address - Mobile text-xs, Desktop text-sm */}
-                        <div className="flex items-start gap-2 text-xs md:text-sm text-gray-500 mb-4">
-                          <i className="fa-solid fa-location-dot text-emerald-500 mt-0.5 flex-shrink-0"></i>
-                          <span className="line-clamp-2 leading-snug">{venue.address_detail}</span>
-                        </div>
-
-                        {/* Footer Card */}
-                        <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between">
-                           <div className="flex items-center gap-1.5 text-xs md:text-sm text-gray-500 font-medium">
-                              <i className="fa-regular fa-clock text-[#10B981]"></i>
-                              {venue.start_time?.slice(0, 5)} - {venue.end_time?.slice(0, 5)}
-                           </div>
-                           <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-[#10B981] group-hover:text-white transition-all">
-                              <i className="fa-solid fa-arrow-right text-xs"></i>
-                           </div>
-                        </div>
-                      </div>
+                  <div className="p-4 flex-1 flex flex-col">
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {venue.venue_types?.map((type: any, i: number) => (
+                        <span key={i} className="text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md">
+                          {type.name}
+                        </span>
+                      ))}
                     </div>
-                  );
-                })
-              : (
-                <div className="col-span-full text-center text-gray-400 py-12">
-                  Chưa có sân nào được đề xuất.
+                    <h3 className="text-base font-bold text-gray-800 mb-2 line-clamp-1 group-hover:text-[#10B981] transition-colors uppercase">
+                      {venue.name}
+                    </h3>
+                    <div className="flex items-start gap-2 text-[11px] text-gray-500 mb-4 min-h-[32px]">
+                      <i className="fa-solid fa-location-dot text-[#10B981] mt-0.5 flex-shrink-0"></i>
+                      <span className="line-clamp-2 leading-relaxed">{venue.address_detail}</span>
+                    </div>
+                    <div className="mt-auto pt-3 border-t border-gray-50 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-bold">
+                        <i className="fa-regular fa-clock text-[#10B981]"></i>
+                        {venue.start_time?.slice(0, 5)} - {venue.end_time?.slice(0, 5)}
+                      </div>
+                      <button className="text-[10px] font-bold text-[#10B981] bg-emerald-50 px-3 py-1.5 rounded-full group-hover:bg-[#10B981] group-hover:text-white transition-all uppercase tracking-tighter">
+                        Đặt sân
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              )}
-          </div>
-        )}
+              );
+            })
+          )}
+        </div>
       </section>
+
+      <footer className="py-12 bg-gray-900 text-white text-center">
+        <p className="text-[10px] font-bold opacity-40 tracking-[0.4em]">© 2024 BCP SPORTS GLOBAL</p>
+      </footer>
     </div>
   );
 };

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthApiController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BannerApiController;
 use App\Http\Controllers\Api\CourtApiController;
 use App\Http\Controllers\Api\DistrictApiController;
 use App\Http\Controllers\Api\ImageApiController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\Api\ChatApiController;
 use App\Http\Controllers\Api\CommentApiController;
 use App\Http\Controllers\Api\PostApiController;
 use App\Http\Controllers\Api\TagApiController;
+use App\Models\District;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -38,15 +40,23 @@ Route::post('/verify-email', [AuthApiController::class, 'verifyEmail']);
 Route::get('/user', [AuthApiController::class, 'showuer']);
 Route::get('/transaction', [TransactionApiController::class, 'index']);
 
+Route::get('/banners', [BannerApiController::class, 'index']);
+Route::get('/promoted-venues', [VenueApiController::class, 'promotedVenues']);
+
+Route::get('/locations/districts/{province_id}', function ($province_id) {
+    return response()->json(
+        District::where('province_id', $province_id)->orderBy('name')->get()
+    );
+})->name('locations.districts');
 
 Route::get('/venues', [VenueApiController::class, 'index']);
 Route::post('/venues', [VenueApiController::class, 'store']);
 Route::get('/venue/{id}', [VenueApiController::class, 'show']);
 
+Route::get('/venueType', [VenueTypeApiController::class, 'getVenueType']);
+
 Route::get('/court/{id}', [CourtApiController::class, 'show']);
 Route::get('/services/{id}', [ServiceApiController::class, 'getServiceByVenue']);
-
-
 
 Route::get('/time_slots', [TimeSlotApiController::class, 'index']);
 
@@ -68,7 +78,6 @@ Route::get('/payment/check-status/{id}', [PaymentApiController::class, 'checkTra
 
 Route::get('/tags', [TagApiController::class, 'index']);
 
-Route::get('/promotions', [PromotionApiController::class, 'index']);
 
 Route::apiResource('reviews', ReviewApiController::class)
     ->only(['index', 'show']);
@@ -83,6 +92,7 @@ Route::middleware(['jwt.auth'])->group(function () {
 
     // Logout
     Route::post('/logout', [AuthApiController::class, 'logout']);
+    Route::get('/promotions', [PromotionApiController::class, 'index']);
 
     Route::prefix('chats')->group(function () {
         // Gửi tin nhắn mới (POST: /api/chats/send/{otherUserId})

@@ -27,14 +27,4 @@ export type SelectedItem = {
   date: string;
   price: number;
   sale_price: number;
-};
-
-export type Voucher = {
-  id: number;
-  code: string;
-  value: number;
-  type: '%' | 'VND';
-  start_at: string;
-  expires_at: string | null;
-  max_discount_amount: number | null;
-};
+}

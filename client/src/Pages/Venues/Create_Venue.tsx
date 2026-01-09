@@ -7,12 +7,10 @@ import Input from "../../Components/Input";
 import { useFetchData, usePostData } from "../../Hooks/useApi";
 import { useNotification } from "../../Components/Notification";
 import { useLocation, useNavigate } from "react-router-dom";
-
 // --- CONFIG LEAFLET ---
 import icon from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
 import type { Venue } from "../../Types/venue";
-
 let DefaultIcon = L.icon({
     iconUrl: icon,
     shadowUrl: iconShadow,
@@ -20,7 +18,6 @@ let DefaultIcon = L.icon({
     iconAnchor: [12, 41],
 });
 L.Marker.prototype.options.icon = DefaultIcon;
-
 // --- TYPES ---
 type CourtData = {
     name: string;
@@ -28,7 +25,6 @@ type CourtData = {
     surface: string;
     price_per_hour: number;
 };
-
 type CreateVenueFormData = {
     // Merchant Group
     business_name: string;
@@ -37,7 +33,6 @@ type CreateVenueFormData = {
     bank_account_number: string;
     bank_account_name: string;
     user_profiles: FileList;
-
     // Venue Group
     venue_name: string;
     venue_phone: string;
@@ -51,12 +46,14 @@ type CreateVenueFormData = {
     venue_profiles: FileList;
     courts: CourtData[];
 };
-
 type DataApi = {
     merchant: any;
     venue: Venue
 }
-
+type VenueType = {
+    id: string;
+    name: string;
+}
 // --- MOCK DATA ---
 const PROVINCES = [{ id: 1, name: "Hà Nội" }, { id: 2, name: "TP. HCM" }];
 const DISTRICTS = [{ id: 1, name: "Quận Ba Đình" }, { id: 2, name: "Quận Cầu Giấy" }];
@@ -66,7 +63,6 @@ const SURFACES = [
     { id: "natural_grass", name: "Cỏ tự nhiên" },
     { id: "concrete", name: "Sân bê tông" }
 ];
-
 const LocationMarker = ({ setMarker, setValue }: any) => {
     useMapEvents({
         click(e) {
@@ -77,24 +73,22 @@ const LocationMarker = ({ setMarker, setValue }: any) => {
     });
     return null;
 };
-
 const CreateVenue = () => {
     // --- STATE & HOOKS ---
     const [legalPreviews, setLegalPreviews] = useState<string[]>([]);
     const [venuePreviews, setVenuePreviews] = useState<string[]>([]);
     const [mapMarker, setMapMarker] = useState<{ lat: number; lng: number } | null>(null);
-
+    const [selectedTypes, setSelectedTypes] = useState<VenueType[]>([]);;
     const { mutate: createVenueMutate, isPending: isCreating } = usePostData('venues');
     const { data, isLoading } = useFetchData('merchant');
+    const { data: venueType } = useFetchData<VenueType[]>('venueType');
     const { showNotification } = useNotification();
     const navigate = useNavigate();
-
-
 
     const dataApi = data?.data as DataApi;
     const merchant = dataApi?.merchant;
     const venue = dataApi?.venue;
-
+    const venueTypes = venueType?.data || [];
     const hasRegistration = !!merchant || !!venue;
 
 
@@ -116,6 +110,15 @@ const CreateVenue = () => {
     const { fields, append, remove } = useFieldArray({ control, name: "courts" });
     const legalFiles = watch("user_profiles");
     const venueFiles = watch("venue_profiles");
+
+    const handleCheck = (type: VenueType) => {
+        setSelectedTypes(prev =>
+            prev.some(item => item.id === type.id)
+                ? prev.filter(item => item.id !== type.id) // bỏ chọn
+                : [...prev, type] // thêm vào mảng
+        );
+    };
+
 
     // --- PREVIEW IMAGES ---
     useEffect(() => {
@@ -167,8 +170,10 @@ const CreateVenue = () => {
 
         createVenueMutate(formData as any, {
             onSuccess: () => {
-                showNotification("Đăng ký đối tác thành công!", "success");
-                navigate('/partner/congratulations');
+                console.log(formData);
+
+                // showNotification("Đăng ký đối tác thành công!", "success");
+                // navigate('/partner/congratulations');
             },
             onError: (err: any) => {
                 showNotification(err.response?.data?.message || "Lỗi đăng ký", "error");
@@ -236,7 +241,7 @@ const CreateVenue = () => {
                                 {/* Status Badge: text-xs -> text-[10px] */}
                                 <span
                                     className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider
-                                           ${merchant?.status === 'approved'
+                                       ${merchant?.status === 'approved'
                                             ? 'bg-green-100 text-green-700'
                                             : merchant?.status === 'rejected'
                                                 ? 'bg-red-100 text-red-700'
@@ -422,6 +427,51 @@ const CreateVenue = () => {
                                             </div>
                                         </div>
 
+                                        <div>
+                                            <label className="text-sm font-bold text-gray-700 mb-3 block">
+                                                Loại sân
+                                            </label>
+
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                {venueTypes.map(type => {
+                                                    const checked = selectedTypes.includes(type);
+
+                                                    return (
+                                                        <label
+                                                            key={type.id}
+                                                            className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition
+                                                         ${checked
+                                                                    ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                                                                    : "border-gray-200 bg-white hover:border-emerald-300"
+                                                                }`}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                className="hidden"
+                                                                checked={checked}
+                                                                onChange={() => handleCheck(type)}
+                                                            />
+
+                                                            <div
+                                                                className={`w-5 h-5 rounded-md border flex items-center justify-center
+          ${checked
+                                                                        ? "bg-emerald-500 border-emerald-500"
+                                                                        : "border-gray-300"
+                                                                    }`}
+                                                            >
+                                                                {checked && (
+                                                                    <i className="fa-solid fa-check text-white text-xs"></i>
+                                                                )}
+                                                            </div>
+
+                                                            <span className="text-sm font-medium">{type.name}</span>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+
                                         {/* Venue Image Upload */}
                                         <div className="mt-4">
                                             <label className="block text-sm font-bold text-gray-700 mb-2">Hình ảnh sân bãi</label>
@@ -501,15 +551,10 @@ const CreateVenue = () => {
                                                         <div>
                                                             <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Loại</label>
                                                             <select {...register(`courts.${index}.venue_type_id` as const)} className="w-full px-2 py-1.5 bg-white rounded border border-gray-200 text-sm">
-                                                                {VENUE_TYPES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                                                {selectedTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                                             </select>
                                                         </div>
-                                                        <div>
-                                                            <label className="text-[10px] font-bold text-gray-500 uppercase block mb-1">Mặt sân</label>
-                                                            <select {...register(`courts.${index}.surface` as const)} className="w-full px-2 py-1.5 bg-white rounded border border-gray-200 text-sm">
-                                                                {SURFACES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                            </select>
-                                                        </div>
+
                                                     </div>
 
                                                     <div>
@@ -552,5 +597,4 @@ const CreateVenue = () => {
 
     );
 };
-
 export default CreateVenue;

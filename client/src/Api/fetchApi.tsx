@@ -30,6 +30,19 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+apiClient.interceptors.response.use(
+  (response) => response, // Trả về response nếu thành công
+  (error) => {
+    // Nếu server trả về lỗi 401 (Unauthorized)
+    if (error.response && error.response.status === 401) {
+      // 1. Xóa token khỏi localStorage
+      localStorage.removeItem("token");
+
+    }
+    return Promise.reject(error);
+  }
+);
+
 // ==================== GET ALL ====================
 export async function fetchData<T>(
   resource: string,

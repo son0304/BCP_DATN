@@ -28,6 +28,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\CheckRole::class,
             'venue.owner' => \App\Http\Middleware\CheckVenueOwner::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'payment/momo/ipn-temp',          // Cho đường dẫn IPN MoMo gọi về
+            'owner/bookings/generate-temp-qr' // Cho đường dẫn AJAX tạo QR
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

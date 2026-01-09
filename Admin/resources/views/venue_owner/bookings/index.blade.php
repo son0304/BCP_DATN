@@ -505,10 +505,7 @@
             detailHtml = `
                     <div class="d-flex flex-column">
                         <span class="fw-bold text-primary fs-7">${bookingItem.booking.court?.name || 'Sân ?'}</span>
-                        <span class="text-muted fs-8">
-                            <i class="far fa-calendar-alt me-1"></i>${bookingItem.booking.date}
-                            <i class="far fa-clock ms-2 me-1"></i>${startTime}
-                        </span>
+                        <span class="text-muted fs-8">${bookingItem.booking.date} <span class="mx-1">|</span> ${startTime}</span>
                     </div>`;
         } else {
             detailHtml = `<span class="fw-bold text-success fs-7">Đơn dịch vụ lẻ</span>`;
@@ -566,22 +563,18 @@
                 <td class="text-center fw-bold text-secondary">${ticket.id}</td>
                 <td>
                     <div class="d-flex align-items-center">
-                        <div class="avatar-sm me-2"><i class="fas fa-user"></i></div>
-                        <div>
-                            <div class="fw-bold text-dark fs-7">${ticket.user?.name || 'Khách vãng lai'}</div>
-                            <div class="text-muted fs-8">${ticket.user?.phone || '---'}</div>
-                        </div>
+                        <div class="avatar-sm me-2"><i class="fas ${ticket.guest ? 'fa-user-tag text-primary' : 'fa-user'}"></i></div>
+                        <div>${customerHtml}</div>
                     </div>
                 </td>
                 <td>${detailHtml}</td>
                 <td class="text-end fw-bold text-dark fs-7">${formatMoney(ticket.total_amount)}</td>
                 <td class="text-center">${statusHtml}</td>
-                <td class="text-center">${paymentHtml}</td>
                 <td class="text-center">
-                    <div class="d-flex justify-content-center gap-1">
+                    <div class="d-flex justify-content-center gap-2">
                         ${checkinBtn}
-                        <button class="btn btn-sm btn-light border shadow-sm text-primary" onclick="window.location.reload()">
-                            <i class="fas fa-eye fs-8"></i>
+                        <button type="button" class="btn btn-primary btn-action shadow-sm" onclick="window.location.reload()">
+                            <i class="fas fa-eye"></i>
                         </button>
                     </div>
                 </td>

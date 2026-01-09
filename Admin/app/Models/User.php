@@ -87,7 +87,10 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->hasMany(Comment::class);
     }
-
+    public function withdrawalRequests()
+    {
+        return $this->hasMany(WithdrawalRequest::class);
+    }
 
 
 

@@ -12,6 +12,8 @@ use App\Models\Item;
 use App\Models\Availability;
 use App\Models\MoneyFlow;
 use App\Models\Promotion;
+use App\Models\Wallet;
+use App\Models\WalletLog;
 use BaconQrCode\Common\ErrorCorrectionLevel;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -68,26 +70,40 @@ class BookingController extends Controller
 
         return view('admin.bookings.index', compact('tickets', 'search', 'status', 'venues', 'venueId'));
     }
-
     public function booking_venue(Request $request)
     {
         $user = Auth::user();
+
+        // 1. Lấy tham số từ URL
         $search  = $request->input('search');
         $status  = $request->input('status');
         $venueId = $request->input('venue');
 
-        $query = Ticket::with(['user', 'items.booking.court.venue', 'items.booking.timeSlot']);
+        // 2. Khởi tạo Query & Load quan hệ
+        $query = Ticket::with([
+            'user',
+            'items.booking.court.venue',
+            'items.booking.timeSlot',
+        ]);
 
-        // Lọc theo chủ sân
+        // 3. BẮT BUỘC: Chỉ lấy vé thuộc sân của Owner đang đăng nhập
         $query->whereHas('items.booking.court.venue', function ($q) use ($user, $venueId) {
             $q->where('owner_id', $user->id);
-            if ($venueId) $q->where('id', $venueId);
+            if ($venueId) {
+                $q->where('id', $venueId);
+            }
         });
 
-        // Tìm kiếm
+        // 4. XỬ LÝ TÌM KIẾM (Đã thêm tìm theo ID)
         if ($search) {
             $query->where(function ($subQuery) use ($search) {
+                // A. Tìm theo Mã Booking
                 $subQuery->where('booking_code', 'like', "%{$search}%")
+
+                    // B. Tìm theo ID (Mới thêm)
+                    ->orWhere('id', $search)
+
+                    // C. Hoặc tìm theo Tên hoặc SĐT
                     ->orWhereHas('user', function ($q) use ($search) {
                         $q->where('name', 'like', "%{$search}%")
                             ->orWhere('phone', 'like', "%{$search}%");
@@ -95,9 +111,17 @@ class BookingController extends Controller
             });
         }
 
-        if ($status) $query->where('status', $status);
+        // 5. Lọc theo trạng thái
+        if ($status) {
+            $query->where('status', $status);
+        }
 
-        $tickets = $query->orderBy('created_at', 'desc')->paginate(10);
+        // 6. Lấy dữ liệu & Phân trang
+        $tickets = $query->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->withQueryString();
+
+        // 7. Lấy danh sách sân để lọc
         $venues = Venue::where('owner_id', $user->id)->get();
 
         // CHỖ QUAN TRỌNG: Nếu là AJAX, chỉ trả về phần HTML của các dòng bảng
@@ -108,239 +132,235 @@ class BookingController extends Controller
         return view('venue_owner.bookings.index', compact('tickets', 'venues', 'search', 'status', 'venueId'));
     }
 
-    public function update(Request $request, $id)
-    {
-        $request->validate([
-            'status' => 'required|string',
-            'payment_status' => 'required|string',
-        ]);
-
-        // Sử dụng transaction để đảm bảo cả 2 bảng cùng cập nhật thành công
-        DB::transaction(function () use ($request, $id) {
-            $ticket = Ticket::findOrFail($id);
-
-            // Lưu trạng thái cũ
-            $oldStatus = $ticket->status;
-
-            // Cập nhật Ticket
-            $ticket->update([
-                'status' => $request->status,
-                'payment_status' => $request->payment_status,
-            ]);
-
-            if ($ticket->payment_status === 'paid') {
-                return back()->with('error', 'Đơn hàng đã thanh toán, không thể thay đổi.');
-            }
-
-            // Kiểm tra logic: Nếu trước đó chưa hoàn thành -> nay chuyển thành hoàn thành
-            if ($oldStatus !== 'completed' && $request->status === 'completed') {
-
-                // Vì bạn chắc chắn MoneyFlow đã có, ta chạy lệnh update thẳng vào DB
-                // Cách này gọn hơn, không cần get() ra rồi mới update
-                MoneyFlow::where('booking_id', $ticket->id)
-                    ->update(['status' => 'completed']);
-
-                Log::info("Đã cập nhật trạng thái MoneyFlow thành completed cho Ticket #{$id}");
-            }
-        });
-
-        return redirect()->back()->with('success', 'Cập nhật đơn hàng thành công!');
-    }
-
     public function create()
     {
         $user = Auth::user();
+        $venues = Venue::where('owner_id', $user->id)->where('is_active', 1)->with('courts')->get();
 
-        $venues = Venue::where('owner_id', $user->id)
-            ->where('is_active', 1)
-            ->with('courts')
-            ->get();
+        // Lấy khách hàng, nếu không có cột role thì bỏ where('role', 'user')
+        $customers = \App\Models\User::orderBy('name', 'asc')->get(['id', 'name', 'phone']);
 
-        $currentUserId = $user->id;
-        $ownerName = $user->name;
-        $now = Carbon::now();
-
-        $promotions = Promotion::query()
-            ->where('start_at', '<=', $now)
-            ->where(function ($query) use ($now) {
-                $query->where('end_at', '>=', $now)
-                    ->orWhereNull('end_at');
+        $promotions = \App\Models\Promotion::query()
+            ->where('start_at', '<=', now())
+            ->where(function ($query) {
+                $query->where('end_at', '>=', now())->orWhereNull('end_at');
             })
             ->where(function ($query) {
-                $query->whereNull('usage_limit')
-                    ->orWhere('usage_limit', 0)
-                    ->orWhereRaw('used_count < usage_limit');
+                $query->whereNull('usage_limit')->orWhere('usage_limit', 0)->orWhereRaw('used_count < usage_limit');
             })
-            ->orderBy('end_at', 'asc')
             ->get();
 
-        $venuesJson = $venues->map(function ($v) {
-            return [
-                'id' => $v->id,
-                'name' => $v->name,
-                'courts' => $v->courts->map(function ($c) {
-                    return ['id' => $c->id, 'name' => $c->name];
-                })->values()->toArray(),
-            ];
-        })->values()->toArray();
+        $venuesJson = $venues->map(fn($v) => [
+            'id' => $v->id,
+            'name' => $v->name,
+            'courts' => $v->courts->map(fn($c) => ['id' => $c->id, 'name' => $c->name])
+        ]);
 
-        return view(
-            'venue_owner.bookings.create',
-            compact('venues', 'promotions', 'venuesJson', 'currentUserId', 'ownerName')
-        );
+        return view('venue_owner.bookings.create', [
+            'venuesJson' => $venuesJson,
+            'promotions' => $promotions,
+            'customers' => $customers,
+            'ownerName' => $user->name,
+            'currentUserId' => $user->id
+        ]);
     }
 
     public function store(Request $request)
     {
-        try {
-            $validated = $request->validate([
-                'user_id' => 'required|exists:users,id',
-                'promotion_id' => 'nullable|exists:promotions,id',
-                'discount_amount' => 'nullable|numeric|min:0',
-                'subtotal' => 'required|numeric|min:0',
-                'total_amount' => 'required|numeric|min:0',
-                'payment_status' => 'required|in:unpaid,paid',
-                'bookings' => 'required|array|min:1',
-                'bookings.*.court_id' => 'required|exists:courts,id',
-                'bookings.*.time_slot_id' => 'required|exists:time_slots,id',
-                'bookings.*.date' => 'required|date|after_or_equal:today',
-                'bookings.*.unit_price' => 'required|numeric|min:0',
-            ]);
-        } catch (ValidationException $e) {
-            Log::warning('Validation failed khi tạo booking', [
-                'errors' => $e->errors(),
-                'input' => $request->all()
-            ]);
+        $validated = $request->validate([
+            'user_id' => 'required',
+            'guest_name' => 'nullable|string|max:255',
+            'guest_phone' => 'nullable|string|max:20',
+            'promotion_id' => 'nullable|exists:promotions,id',
+            'discount_amount' => 'nullable|numeric',
+            'subtotal' => 'required|numeric',
+            'total_amount' => 'required|numeric',
+            'payment_status' => 'required|in:unpaid,paid',
+            'payment_method' => 'required|in:cash,momo,vnpay',
+            'temp_order_id' => 'nullable|string',
+            'bookings' => 'required|array|min:1',
+            'bookings.*.court_id' => 'required|exists:courts,id',
+            'bookings.*.time_slot_id' => 'required|exists:time_slots,id',
+            'bookings.*.date' => 'required|date',
+            'bookings.*.unit_price' => 'required|numeric',
+        ]);
 
-            return redirect()->back()
-                ->withErrors($e->errors())
-                ->withInput();
-        }
+        $timeSlotIds = collect($validated['bookings'])->pluck('time_slot_id')->unique();
+        $timeSlotsMap = \App\Models\TimeSlot::whereIn('id', $timeSlotIds)->get()->keyBy('id');
 
         try {
-            $ticket = DB::transaction(function () use ($validated, $request) {
-
-                // ✅ BƯỚC 1: Kiểm tra tất cả availability trước khi tạo
-                foreach ($validated['bookings'] as $index => $bookingData) {
-                    $availability = Availability::where('court_id', $bookingData['court_id'])
-                        ->where('slot_id', $bookingData['time_slot_id'])
-                        ->where('date', $bookingData['date'])
-                        ->lockForUpdate()
-                        ->first();
-
-                    if (!$availability) {
-                        throw new \Exception("Không tìm thấy availability cho sân ID {$bookingData['court_id']}, slot {$bookingData['time_slot_id']}, ngày {$bookingData['date']}");
-                    }
-
-                    if ($availability->status !== 'open') {
-                        throw ValidationException::withMessages([
-                            "bookings.{$index}.time_slot_id" => "Khung giờ này đã được đặt hoặc không khả dụng."
-                        ]);
+            $transactionResult = DB::transaction(function () use ($validated, $timeSlotsMap) {
+                // 1. Xác định trạng thái thanh toán
+                $finalPaymentStatus = $validated['payment_status'];
+                if ($finalPaymentStatus === 'paid' && !empty($validated['temp_order_id'])) {
+                    if (Cache::get("momo_temp_paid_" . $validated['temp_order_id']) !== 'paid') {
+                        $finalPaymentStatus = 'unpaid';
                     }
                 }
 
-                // ✅ BƯỚC 2: Tạo Ticket - Status luôn là 'confirmed'
-                $subtotal = floatval($validated['subtotal']);
-                $discount = floatval($validated['discount_amount'] ?? 0);
-                $total = floatval($validated['total_amount']);
+                // 2. Xử lý thông tin người đặt
+                $dbUserId = $validated['user_id'];
+                $guestData = null;
+                $note = "Đơn đặt bởi Chủ sân.";
+                if ($dbUserId === 'guest') {
+                    $dbUserId = Auth::id();
+                    $guestData = ($validated['guest_name'] ?? 'Khách vãng lai') . ' - ' . ($validated['guest_phone'] ?? 'N/A');
+                }
 
-                $ticket = Ticket::create([
-                    'user_id' => $validated['user_id'],
-                    'promotion_id' => $validated['promotion_id'] ?? null,
-                    'subtotal' => $subtotal,
-                    'discount_amount' => $discount,
-                    'total_amount' => $total,
-                    'status' => 'confirmed', // ✅ Luôn là confirmed
-                    'payment_status' => $validated['payment_status'],
+                // 3. Kiểm tra khả dụng sân
+                foreach ($validated['bookings'] as $item) {
+                    $avail = \App\Models\Availability::where([
+                        'court_id' => $item['court_id'],
+                        'slot_id' => $item['time_slot_id'],
+                        'date' => $item['date']
+                    ])->lockForUpdate()->first();
+
+                    if (!$avail || $avail->status !== 'open') throw new \Exception("Sân đã có người đặt hoặc vừa bị đóng.");
+                }
+
+                // 4. Tạo Ticket
+                $ticket = \App\Models\Ticket::create([
+                    'user_id' => $dbUserId,
+                    'promotion_id' => $validated['promotion_id'],
+                    'subtotal' => $validated['subtotal'],
+                    'discount_amount' => $validated['discount_amount'] ?? 0,
+                    'total_amount' => $validated['total_amount'],
+                    'status' => 'confirmed',
+                    'payment_status' => $finalPaymentStatus,
+                    'payment_method' => $validated['payment_method'],
+                    'note' => $note,
+                    'guest' => $guestData,
                     'booking_code' => 'BK-' . now()->format('Ymd') . '-' . rand(1000, 9999)
                 ]);
 
-                Log::info("✅ Ticket #{$ticket->id} đã được tạo", [
-                    'ticket_id' => $ticket->id,
-                    'user_id' => $validated['user_id'],
-                    'status' => 'confirmed',
-                    'payment_status' => $validated['payment_status'],
-                    'total' => $total
+                $schedulerData = [];
+                $venue_id = null;
+
+                // 5. Tạo các Booking Item
+                foreach ($validated['bookings'] as $item) {
+                    $booking = \App\Models\Booking::create([
+                        'user_id' => $dbUserId,
+                        'court_id' => $item['court_id'],
+                        'time_slot_id' => $item['time_slot_id'],
+                        'date' => $item['date'],
+                        'status' => 'confirmed'
+                    ]);
+
+                    \App\Models\Item::create([
+                        'ticket_id' => $ticket->id,
+                        'booking_id' => $booking->id,
+                        'unit_price' => $item['unit_price']
+                    ]);
+
+                    \App\Models\Availability::where([
+                        'court_id' => $item['court_id'],
+                        'slot_id' => $item['time_slot_id'],
+                        'date' => $item['date']
+                    ])->update(['status' => 'closed', 'note' => 'Đã đặt #' . $ticket->id]);
+
+                    if (!$venue_id) {
+                        $venue_id = \App\Models\Court::where('id', $item['court_id'])->value('venue_id');
+                    }
+
+                    if (isset($timeSlotsMap[$item['time_slot_id']])) {
+                        $slot = $timeSlotsMap[$item['time_slot_id']];
+                        $schedulerData[] = [
+                            'court_id' => $item['court_id'],
+                            'date' => $item['date'],
+                            'start_time_str' => $item['date'] . ' ' . $slot->start_time,
+                            'end_time_str' => $item['date'] . ' ' . $slot->end_time
+                        ];
+                    }
+                }
+
+                // 6. --- LOGIC MONEY FLOW (SỬA LẠI ĐA HÌNH) ---
+                $actualPaid = (float)$validated['total_amount'];
+                $discount = (float)($validated['discount_amount'] ?? 0);
+                $grossAmount = (float)$validated['subtotal'];
+                $commissionRate = 0.10;
+                $baseCommission = $grossAmount * $commissionRate;
+
+                $promotion = $validated['promotion_id'] ? \App\Models\Promotion::find($validated['promotion_id']) : null;
+                $isVenueVoucher = true;
+                if ($promotion && is_null($promotion->venue_id)) {
+                    $isVenueVoucher = false;
+                }
+
+                if ($isVenueVoucher) {
+                    $adminAmount = $baseCommission;
+                    $venueOwnerAmount = $actualPaid - $baseCommission;
+                } else {
+                    $adminAmount = $baseCommission - $discount;
+                    $venueOwnerAmount = $grossAmount - $baseCommission;
+                }
+                if ($venueOwnerAmount < 0) $venueOwnerAmount = 0;
+
+                // SỬ DỤNG QUAN HỆ ĐA HÌNH: Laravel tự điền money_flowable_id và money_flowable_type
+                $ticket->moneyFlows()->create([
+                    'total_amount' => $grossAmount,
+                    'promotion_id' => $validated['promotion_id'],
+                    'promotion_amount' => $discount,
+                    'venue_id' => $venue_id,
+                    'admin_amount' => $adminAmount,
+                    'venue_owner_amount' => $venueOwnerAmount,
+                    'status' => 'completed', // Vì chủ sân tạo đơn trực tiếp thường được coi là xong luồng tiền
+                    'process_status' => 'done',
+                    'note' => $note
                 ]);
 
-                // ✅ BƯỚC 3: Giảm usage_limit của promotion (nếu có)
-                if (!empty($validated['promotion_id'])) {
-                    $promotion = Promotion::find($validated['promotion_id']);
+                if (!empty($validated['temp_order_id'])) Cache::forget("momo_temp_paid_" . $validated['temp_order_id']);
 
-                    if ($promotion && $promotion->usage_limit > 0) {
-                        $promotion->decrement('usage_limit');
-                        Log::info("✅ Promotion #{$promotion->id} usage giảm 1");
-                    }
-                }
-
-                // ✅ BƯỚC 4: Tạo Booking + Item + Cập nhật Availability
-                foreach ($validated['bookings'] as $bookingData) {
-
-                    // Tạo Booking - Status luôn là 'confirmed'
-                    $createdBooking = Booking::create([
-                        'user_id' => $validated['user_id'],
-                        'court_id' => $bookingData['court_id'],
-                        'time_slot_id' => $bookingData['time_slot_id'],
-                        'date' => $bookingData['date'],
-                        'status' => 'confirmed', // ✅ Luôn là confirmed
-                    ]);
-
-                    Log::info("✅ Booking #{$createdBooking->id} đã tạo", [
-                        'court_id' => $bookingData['court_id'],
-                        'date' => $bookingData['date'],
-                        'time_slot_id' => $bookingData['time_slot_id']
-                    ]);
-
-                    // Tạo Item
-                    Item::create([
-                        'ticket_id' => $ticket->id,
-                        'booking_id' => $createdBooking->id,
-                        'unit_price' => floatval($bookingData['unit_price']),
-                        'discount_amount' => 0,
-                    ]);
-
-                    // Cập nhật Availability
-                    $updated = Availability::where('court_id', $bookingData['court_id'])
-                        ->where('slot_id', $bookingData['time_slot_id'])
-                        ->where('date', $bookingData['date'])
-                        ->update([
-                            'status' => 'closed',
-                            'note' => 'Đã đặt qua ticket #' . $ticket->id,
-                        ]);
-
-                    if ($updated === 0) {
-                        throw new \Exception("Không thể cập nhật availability cho booking #{$createdBooking->id}");
-                    }
-
-                    Log::info("✅ Availability đã đóng", [
-                        'court_id' => $bookingData['court_id'],
-                        'date' => $bookingData['date'],
-                        'slot_id' => $bookingData['time_slot_id']
-                    ]);
-                }
-
-                return $ticket;
+                return [
+                    'ticket' => $ticket,
+                    'scheduler_data' => $schedulerData
+                ];
             });
 
-            Log::info("🎉 Tạo ticket thành công", [
-                'ticket_id' => $ticket->id,
-                'payment_status' => $validated['payment_status']
-            ]);
+            // 7. --- XỬ LÝ JOB SCHEDULER ---
+            $ticket = $transactionResult['ticket'];
+            $rawSchedulerData = $transactionResult['scheduler_data'];
 
-            $statusText = $validated['payment_status'] === 'paid'
-                ? '✅ Đã thanh toán'
-                : '⏳ Chưa thanh toán';
+            try {
+                if (!empty($rawSchedulerData)) {
+                    $sortedData = collect($rawSchedulerData)->sort(function ($a, $b) {
+                        if ($a['court_id'] != $b['court_id']) return $a['court_id'] <=> $b['court_id'];
+                        return strcmp($a['start_time_str'], $b['start_time_str']);
+                    })->values();
 
-            return redirect()->route('owner.bookings.index')
-                ->with('success', "Tạo đơn đặt sân #{$ticket->id} thành công! Trạng thái: {$statusText}");
+                    $groups = [];
+                    $currentGroup = null;
+                    foreach ($sortedData as $item) {
+                        if (!$currentGroup) {
+                            $currentGroup = $item;
+                            continue;
+                        }
+                        if ($currentGroup['court_id'] == $item['court_id'] && $currentGroup['end_time_str'] == $item['start_time_str']) {
+                            $currentGroup['end_time_str'] = $item['end_time_str'];
+                        } else {
+                            $groups[] = $currentGroup;
+                            $currentGroup = $item;
+                        }
+                    }
+                    if ($currentGroup) $groups[] = $currentGroup;
+
+                    foreach ($groups as $group) {
+                        $finalEndTime = Carbon::parse($group['end_time_str']);
+                        $now = Carbon::now();
+
+                        $notifyAt = $finalEndTime->copy()->subMinutes(10);
+                        if ($notifyAt->gt($now)) \App\Jobs\NotifyOwnerJob::dispatch($ticket)->delay($notifyAt);
+
+                        $completeAt = $finalEndTime->copy()->addMinutes(2);
+                        if ($completeAt->gt($now)) \App\Jobs\AutoCompleteTicketJob::dispatch($ticket->id)->delay($completeAt);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::error("JOBS SCHEDULER FAILED: " . $e->getMessage());
+            }
+
+            return redirect()->route('owner.bookings.index')->with('success', "Đã tạo đơn #" . $ticket->id);
         } catch (\Exception $e) {
-            Log::error('❌ Lỗi khi tạo ticket', [
-                'message' => $e->getMessage()
-            ]);
-
-            return redirect()->back()
-                ->with('error', 'Đã có lỗi hệ thống: ' . $e->getMessage())
-                ->withInput();
+            return redirect()->back()->with('error', $e->getMessage())->withInput();
         }
     }
     public function checkin(Request $request, $id)
@@ -367,504 +387,82 @@ class BookingController extends Controller
         return redirect()->back()->with('success', 'Check-in thành công!');
     }
 
-    private function generateMomoPaymentRedirect(int $ticketId, Request $request)
+    public function update(Request $request, $id)
     {
-        try {
-            $ticket = Ticket::find($ticketId);
-
-            if (!$ticket) {
-                return redirect()->route('owner.bookings.index')
-                    ->with('error', "Không tìm thấy vé cần thanh toán.");
-            }
-
-            if ($ticket->payment_status === 'paid') {
-                return redirect()->route('owner.bookings.index')
-                    ->with('success', "Vé #{$ticketId} đã được thanh toán.");
-            }
-
-            $host = $request->getHost();
-            $isLocalhost = in_array($host, ['localhost', '127.0.0.1'])
-                || strpos($host, 'localhost') !== false;
-
-            if ($isLocalhost) {
-                $redirectUrl = env('MOMO_REDIRECT_URL');
-
-                if (!$redirectUrl) {
-                    throw new \Exception('❌ Chưa cấu hình MOMO_REDIRECT_URL_LOCAL trong .env');
-                }
-
-                Log::info("🔵 Môi trường: LOCAL | redirectUrl = {$redirectUrl}");
-            }
-
-            // ✅ Config MoMo
-            $endpoint = env('MOMO_ENDPOINT');
-            $partnerCode = env('MOMO_PARTNER_CODE');
-            $accessKey = env('MOMO_ACCESS_KEY');
-            $secretKey = env('MOMO_SECRET_KEY');
-            $ipnUrl = env('MOMO_IPN_URL');
-
-            if (!$accessKey || !$secretKey || !$ipnUrl) {
-                throw new \Exception('❌ Chưa đầy đủ config MoMo (ACCESS_KEY, SECRET_KEY, IPN_URL)');
-            }
-
-            // ✅ Tạo orderId và requestId
-            $orderId = $ticket->id . '_' . time();
-            $requestId = $orderId;
-            $amount = (int) round($ticket->total_amount);
-            $orderInfo = "Thanh toán vé #{$ticket->id}";
-            $extraData = "";
-            $requestType = "payWithQR";
-
-            // ✅ Tạo Signature
-            $rawHash = "accessKey={$accessKey}&amount={$amount}&extraData={$extraData}&ipnUrl={$ipnUrl}"
-                . "&orderId={$orderId}&orderInfo={$orderInfo}&partnerCode={$partnerCode}"
-                . "&redirectUrl={$redirectUrl}&requestId={$requestId}&requestType={$requestType}";
-
-            $signature = hash_hmac("sha256", $rawHash, $secretKey);
-
-            // ✅ Payload gửi MoMo
-            $data = [
-                'partnerCode' => $partnerCode,
-                'partnerName' => "BCP Sports",
-                'storeId' => "BCP_Store",
-                'requestId' => $requestId,
-                'amount' => $amount,
-                'orderId' => $orderId,
-                'orderInfo' => $orderInfo,
-                'redirectUrl' => $redirectUrl,
-                'ipnUrl' => $ipnUrl,
-                'lang' => 'vi',
-                'extraData' => $extraData,
-                'requestType' => $requestType,
-                'signature' => $signature
-            ];
-
-            Log::info("📤 Gửi MoMo (Temp QR với payWithQR)", ['orderId' => $tempOrderId, 'amount' => $amount, 'requestType' => $requestType]);
-
-            // ✅ Gọi API MoMo
-            $response = Http::timeout(10)->post($endpoint, $data);
-
-            if (!$response->successful()) {
-                throw new \Exception("MoMo API trả lỗi: HTTP {$response->status()}");
-            }
-
-            $responseData = $response->json();
-
-            Log::info("📥 Response từ MoMo", $responseData);
-
-            // ✅ Kiểm tra payUrl
-            if (isset($responseData['payUrl']) && !empty($responseData['payUrl'])) {
-                Log::info("✅ Chuyển hướng MoMo thành công", [
-                    'payUrl' => $responseData['payUrl']
-                ]);
-
-                return redirect($responseData['payUrl']);
-            }
-
-            // ❌ Lỗi từ MoMo
-            $errorMsg = $responseData['message'] ?? $responseData['localMessage'] ?? 'Lỗi không xác định từ MoMo';
-
-            Log::error("❌ MoMo không trả payUrl", [
-                'response' => $responseData,
-                'resultCode' => $responseData['resultCode'] ?? null
-            ]);
-
-            return redirect()->route('owner.bookings.index')
-                ->with('error', "Lỗi MoMo: {$errorMsg}");
-        } catch (\Exception $e) {
-            Log::error("❌ Exception trong generateMomoPaymentRedirect", [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return redirect()->route('owner.bookings.index')
-                ->with('error', "Lỗi hệ thống: {$e->getMessage()}");
-        }
-    }
-
-    public function generateTempQR(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'total_amount' => 'required|numeric|min:1000',
-                'temp_order_id' => 'required|string'
-            ]);
-
-            $tempOrderId = $validated['temp_order_id'];
-            $amount = (int) round($validated['total_amount']);
-
-            if ($amount < 1000) {
-                throw new \Exception('Số tiền phải >= 1,000 VNĐ');
-            }
-            if ($amount > 50000000) {
-                throw new \Exception('Số tiền vượt quá giới hạn MoMo (50 triệu VNĐ)');
-            }
-
-            $redirectUrl = env('MOMO_REDIRECT_URL');
-            $ipnUrl = env('MOMO_IPN_URL');
-
-            if (!$redirectUrl || !$ipnUrl) {
-                throw new \Exception('Thiếu MOMO_REDIRECT_URL hoặc MOMO_IPN_URL');
-            }
-
-            // ✅ Config MoMo
-            $endpoint = env('MOMO_ENDPOINT');
-            $partnerCode = env('MOMO_PARTNER_CODE');
-            $accessKey = env('MOMO_ACCESS_KEY');
-            $secretKey = env('MOMO_SECRET_KEY');
-            $ipnUrl = env('MOMO_IPN_URL');
-
-            if (!$endpoint || !$partnerCode || !$accessKey || !$secretKey || !$ipnUrl) {
-                throw new \Exception('Thiếu config MoMo trong .env');
-            }
-
-            $requestId = $tempOrderId;
-            $orderInfo = "Thanh toán đặt sân (Tạm thời)";
-            $extraData = base64_encode(json_encode([
-                'temp_order_id' => $tempOrderId,
-                'created_at' => now()->toIso8601String()
-            ]));
-
-            // ✅ Sử dụng captureWallet cho MoMo Test
-            $requestType = "captureWallet";
-
-            // ✅ Tạo Signature
-            $rawHash = "accessKey={$accessKey}&amount={$amount}&extraData={$extraData}&ipnUrl={$ipnUrl}"
-                . "&orderId={$tempOrderId}&orderInfo={$orderInfo}&partnerCode={$partnerCode}"
-                . "&redirectUrl={$redirectUrl}&requestId={$requestId}&requestType={$requestType}";
-
-            $signature = hash_hmac("sha256", $rawHash, $secretKey);
-
-            // ✅ Payload gửi MoMo
-            $data = [
-                'partnerCode' => $partnerCode,
-                'partnerName' => "BCP Sports",
-                'storeId' => "BCP_Store",
-                'requestId' => $requestId,
-                'amount' => $amount,
-                'orderId' => $tempOrderId,
-                'orderInfo' => $orderInfo,
-                'redirectUrl' => $redirectUrl,
-                'ipnUrl' => $ipnUrl,
-                'lang' => 'vi',
-                'extraData' => $extraData,
-                'requestType' => $requestType,
-                'signature' => $signature
-            ];
-
-            Log::info("📤 Request gửi MoMo", [
-                'endpoint' => $endpoint,
-                'orderId' => $tempOrderId,
-                'amount' => $amount,
-                'requestType' => $requestType
-            ]);
-
-            // ✅ Call MoMo API
-            $response = Http::timeout(10)->post($endpoint, $data);
-
-            if (!$response->successful()) {
-                Log::error("❌ MoMo trả lỗi", [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                    'json' => $response->json()
-                ]);
-
-                $errorMsg = $response->json()['message'] ?? $response->json()['localMessage'] ?? 'Lỗi không xác định';
-                throw new \Exception("MoMo API error: {$response->status()} - {$errorMsg}");
-            }
-
-            $responseData = $response->json();
-            Log::info("📥 Response từ MoMo", $responseData);
-
-            if (!isset($responseData['payUrl'])) {
-                Log::error("❌ MoMo không trả payUrl", ['response' => $responseData]);
-                throw new \Exception($responseData['message'] ?? 'MoMo không trả về Deep Link');
-            }
-
-            $deepLinkMomo = $responseData['payUrl'];
-
-            // ✅ TẠO QR CODE 
-            $qrCode = \Endroid\QrCode\QrCode::create($deepLinkMomo)
-                ->setEncoding(new \Endroid\QrCode\Encoding\Encoding('UTF-8'))
-                ->setSize(300)
-                ->setMargin(10);
-
-            $writer = new \Endroid\QrCode\Writer\PngWriter();
-            $result = $writer->write($qrCode);
-
-            // ✅ Chuyển sang Base64 Data URI
-            $qrCodeBase64 = $result->getDataUri();
-
-            Log::info("✅ Tạo QR tạm thời thành công", [
-                'orderId' => $tempOrderId,
-                'amount' => $amount
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'qr_code_url' => $qrCodeBase64,
-                    'pay_url' => $deepLinkMomo,
-                    'order_id' => $tempOrderId,
-                    'amount' => $amount,
-                ]
-            ]);
-        } catch (\Exception $e) {
-            Log::error("❌ Lỗi generateTempQR: " . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function checkTempPayment(Request $request)
-    {
-        try {
-            $tempOrderId = $request->input('temp_order_id');
-
-            if (!$tempOrderId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Missing temp_order_id'
-                ], 400);
-            }
-
-            $cacheKey = "momo_temp_paid_{$tempOrderId}";
-            $isPaid = Cache::get($cacheKey, false);
-
-            Log::info("🔍 Check temp payment", [
-                'temp_order_id' => $tempOrderId,
-                'cache_key' => $cacheKey,
-                'is_paid' => $isPaid,
-                'cache_has' => Cache::has($cacheKey)
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'paid' => $isPaid === true, // ✅ Đảm bảo boolean
-                'temp_order_id' => $tempOrderId
-            ]);
-        } catch (\Exception $e) {
-            Log::error("❌ Lỗi checkTempPayment", [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function paymentMomo(Request $request)
-    {
-        try {
-            $request->validate([
-                'id' => 'required|exists:tickets,id'
-            ]);
-
-            $ticketId = $request->input('id');
-
-            return $this->generateMomoPaymentRedirect($ticketId, $request);
-        } catch (\Exception $e) {
-            Log::error("Lỗi tạo payment MoMo: " . $e->getMessage());
-            return back()->with('error', "Lỗi hệ thống: " . $e->getMessage());
-        }
-    }
-
-    public function ipn(Request $request)
-    {
-        Log::info("📥 MoMo IPN nhận được", $request->all());
+        $request->validate(['status' => 'required|string|in:pending,completed,cancelled']);
 
         try {
-            // ===== 1. LẤY DỮ LIỆU =====
-            $partnerCode  = $request->input('partnerCode');
-            $orderId      = $request->input('orderId');
-            $requestId    = $request->input('requestId');
-            $amount       = $request->input('amount');
-            $orderInfo    = $request->input('orderInfo');
-            $orderType    = $request->input('orderType');
-            $transId      = $request->input('transId');
-            $resultCode   = $request->input('resultCode');
-            $message      = $request->input('message');
-            $payType      = $request->input('payType');
-            $responseTime = $request->input('responseTime');
-            $extraData    = $request->input('extraData');
-            $signature    = $request->input('signature');
+            $message = DB::transaction(function () use ($request, $id) {
+                $ticket = Ticket::with(['items.booking.court.venue'])->lockForUpdate()->findOrFail($id);
+                $oldStatus = $ticket->status;
+                $newStatus = $request->status;
 
-            $accessKey = env('MOMO_ACCESS_KEY');
-            $secretKey = env('MOMO_SECRET_KEY');
+                if ($oldStatus === $newStatus) return 'Trạng thái không thay đổi.';
+                if (in_array($oldStatus, ['completed', 'cancelled'])) throw new \Exception("Không thể cập nhật Ticket đã đóng.");
 
-            // ===== 2. VERIFY SIGNATURE =====
-            $rawHash = "accessKey={$accessKey}"
-                . "&amount={$amount}"
-                . "&extraData={$extraData}"
-                . "&message={$message}"
-                . "&orderId={$orderId}"
-                . "&orderInfo={$orderInfo}"
-                . "&orderType={$orderType}"
-                . "&partnerCode={$partnerCode}"
-                . "&payType={$payType}"
-                . "&requestId={$requestId}"
-                . "&responseTime={$responseTime}"
-                . "&resultCode={$resultCode}"
-                . "&transId={$transId}";
+                $venue = $ticket->items->first()->booking->court->venue;
+                $venueOwnerId = $venue->owner_id;
 
-            $mySignature = hash_hmac("sha256", $rawHash, $secretKey);
+                $ticket->update(['status' => $newStatus]);
+                $realBookingIds = $ticket->items->pluck('booking_id')->filter()->unique()->toArray();
 
-            if ($mySignature !== $signature) {
-                Log::error("❌ MoMo IPN: Signature không hợp lệ", [
-                    'received' => $signature,
-                    'calculated' => $mySignature,
-                    'orderId' => $orderId
-                ]);
-
-                // ⚠️ VẪN TRẢ 200 để MoMo không retry vô hạn
-                return response()->json(['message' => 'Invalid signature'], 200);
-            }
-
-            Log::info("✅ MoMo IPN: Signature hợp lệ", [
-                'orderId' => $orderId,
-                'resultCode' => $resultCode
-            ]);
-
-            // ===== 3. XỬ LÝ TEMP ORDER =====
-            if (str_starts_with($orderId, 'temp_')) {
-                if ((int)$resultCode === 0) {
-                    Cache::put("momo_temp_paid_{$orderId}", true, now()->addMinutes(30));
-                    Cache::put("momo_temp_trans_{$orderId}", [
-                        'transId' => $transId,
-                        'amount' => $amount,
-                        'responseTime' => $responseTime,
-                        'message' => $message,
-                    ], now()->addMinutes(30));
-
-                    Log::info("🟢 Temp order thanh toán thành công", [
-                        'orderId' => $orderId,
-                        'transId' => $transId
-                    ]);
-
-                    return response()->json(['message' => 'Temp order confirmed'], 200);
-                }
-
-                Cache::put("momo_temp_paid_{$orderId}", false, now()->addMinutes(5));
-
-                Log::warning("🔴 Temp order thanh toán thất bại", [
-                    'orderId' => $orderId,
-                    'resultCode' => $resultCode,
-                    'message' => $message
-                ]);
-
-                return response()->json(['message' => 'Temp order failed'], 200);
-            }
-
-            // ===== 4. XỬ LÝ TICKET ORDER =====
-            $ticketId = explode('_', $orderId)[0];
-            $ticket = Ticket::where('id', $ticketId)->lockForUpdate()->first();
-
-            if (!$ticket) {
-                Log::error("❌ Không tìm thấy ticket", ['ticketId' => $ticketId]);
-                return response()->json(['message' => 'Ticket not found'], 200);
-            }
-
-            // ✅ ĐÃ XỬ LÝ TRƯỚC ĐÓ
-            if ($ticket->payment_status === 'paid') {
-                Log::info("ℹ️ Ticket đã được thanh toán trước đó", [
-                    'ticketId' => $ticketId
-                ]);
-
-                return response()->json(['message' => 'Already processed'], 200);
-            }
-
-            // ===== 5. THANH TOÁN THÀNH CÔNG =====
-            if ((int)$resultCode === 0) {
-                DB::beginTransaction();
-
-                try {
-                    // Kiểm tra số tiền
-                    if ((float)$amount < (float)$ticket->total_amount) {
-                        throw new \Exception('Amount mismatch');
+                // XỬ LÝ KHI HOÀN THÀNH (COMPLETED)
+                if ($newStatus === 'completed') {
+                    if (!empty($realBookingIds)) {
+                        Booking::whereIn('id', $realBookingIds)->update(['status' => 'completed']);
                     }
 
-                    $ticket->update([
-                        'payment_status' => 'paid',
-                        'status' => 'confirmed'
-                    ]);
+                    // Cập nhật MoneyFlow (Truy vấn đa hình)
+                    $ticket->moneyFlows()->update(['status' => 'completed']);
 
-                    DB::commit();
+                    $amount_payment = $ticket->moneyFlows()->sum('venue_owner_amount');
+                    $amount_admin_fee = $ticket->moneyFlows()->sum('admin_amount');
 
-                    Log::info("✅ Ticket thanh toán thành công", [
-                        'ticketId' => $ticketId,
-                        'transId' => $transId,
-                        'amount' => $amount
-                    ]);
+                    $finalAmount = 0;
+                    $logMessage = '';
+                    $type = '';
 
-                    return response()->json(['message' => 'Payment confirmed'], 200);
-                } catch (\Exception $e) {
-                    DB::rollBack();
-                    throw $e;
+                    if ($ticket->payment_method == 'cash') {
+                        $finalAmount = -$amount_admin_fee;
+                        $type = 'payment';
+                        $logMessage = "Trừ phí sàn đơn #{$ticket->id} (Sân: {$venue->name}) - Tiền mặt";
+                    } else {
+                        $finalAmount = $amount_payment;
+                        $type = 'deposit';
+                        $logMessage = "Doanh thu online Ticket #{$ticket->id} (Sân: {$venue->name})";
+                    }
+
+                    if ($finalAmount != 0) {
+                        $wallet = Wallet::firstOrCreate(['user_id' => $venueOwnerId], ['balance' => 0]);
+                        $beforeBalance = $wallet->balance;
+                        $wallet->increment('balance', $finalAmount);
+
+                        WalletLog::create([
+                            'wallet_id'      => $wallet->id,
+                            'before_balance' => $beforeBalance,
+                            'after_balance'  => $beforeBalance + $finalAmount,
+                            'amount'         => $finalAmount,
+                            'type'           => $type,
+                            'description'    => $logMessage
+                        ]);
+                    }
                 }
-            }
 
-            // ===== 6. THANH TOÁN THẤT BẠI =====
-            Log::warning("🔴 Ticket thanh toán thất bại", [
-                'ticketId' => $ticketId,
-                'resultCode' => $resultCode,
-                'message' => $message
-            ]);
+                // XỬ LÝ KHI HỦY (CANCELLED)
+                if ($newStatus === 'cancelled') {
+                    if (!empty($realBookingIds)) {
+                        Booking::whereIn('id', $realBookingIds)->update(['status' => 'cancelled']);
+                    }
+                    $ticket->moneyFlows()->update(['status' => 'cancelled']);
+                }
 
-            return response()->json(['message' => 'Transaction failed'], 200);
+                return 'Cập nhật trạng thái thành công!';
+            });
+
+            return redirect()->back()->with('success', $message);
         } catch (\Exception $e) {
-            Log::error("❌ Exception trong MoMo IPN", [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            // ⚠️ Luôn trả 200 cho MoMo
-            return response()->json(['message' => 'Server error'], 200);
+            Log::error("Lỗi cập nhật Ticket #{$id}: " . $e->getMessage());
+            return redirect()->back()->with('error', $e->getMessage());
         }
-    }
-
-    public function checkStatus($id)
-    {
-        $ticket = Ticket::find($id);
-
-        if (!$ticket) {
-            return response()->json(['status' => 'not_found'], 404);
-        }
-
-        return response()->json([
-            'id' => $ticket->id,
-            'status' => $ticket->status,
-            'payment_status' => $ticket->payment_status
-        ]);
-    }
-
-    public function paymentResult(Request $request)
-    {
-        $resultCode = $request->input('resultCode');
-        $orderId = $request->input('orderId');
-        $message = $request->input('message');
-
-        $ticketId = explode("_", $orderId)[0] ?? null;
-
-        Log::info("📥 Payment Result", [
-            'resultCode' => $resultCode,
-            'orderId' => $orderId,
-            'ticketId' => $ticketId
-        ]);
-
-        if ($resultCode == 0) {
-            return redirect()->route('owner.bookings.index')
-                ->with('success', "✅ Thanh toán thành công cho đơn hàng #{$ticketId}");
-        }
-
-        return redirect()->route('owner.bookings.index')
-            ->with('error', "❌ Thanh toán thất bại: {$message}");
     }
 }

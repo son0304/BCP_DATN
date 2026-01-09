@@ -11,6 +11,7 @@ use App\Models\Availability;
 use App\Models\Booking;
 use App\Models\Item;
 use App\Models\MoneyFlow;
+use App\Models\Notification;
 use App\Models\Promotion;
 use App\Models\Ticket;
 use App\Models\TimeSlot;
@@ -93,13 +94,15 @@ class TicketApiController extends Controller
     {
         Log::info('Yêu cầu tạo ticket', ['request' => $request->all()]);
 
-        // 1. Validate dữ liệu
+        // ---------------------------------------------------------
+        // BƯỚC 1: VALIDATE DỮ LIỆU ĐẦU VÀO
+        // ---------------------------------------------------------
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'promotion_id' => 'nullable|exists:promotions,id',
             'discount_amount' => 'nullable|numeric|min:0',
 
-            // --- Validate Bookings ---
+            // Validate Bookings
             'bookings' => 'required|array|min:1',
             'bookings.*.court_id' => 'required|exists:courts,id',
             'bookings.*.time_slot_id' => 'required|exists:time_slots,id',
@@ -107,35 +110,35 @@ class TicketApiController extends Controller
             'bookings.*.unit_price' => 'required|numeric|min:0',
             'bookings.*.sale_price' => 'required|numeric|min:0',
 
-            // --- Validate Services ---
+            // Validate Services
             'services' => 'nullable|array',
             'services.*.venue_service_id' => 'required|exists:venue_services,id',
             'services.*.quantity' => 'required|integer|min:1',
         ]);
 
-        // [QUAN TRỌNG] Lấy thông tin TimeSlot 1 lần duy nhất
+        // Lấy thông tin TimeSlot trước để dùng trong logic
         $timeSlotIds = collect($validated['bookings'])->pluck('time_slot_id')->unique();
         $timeSlotsMap = TimeSlot::whereIn('id', $timeSlotIds)->get()->keyBy('id');
 
-        try {
-            // Sử dụng Transaction
-            $result = DB::transaction(function () use ($validated, $timeSlotsMap) {
+        // Biến lưu kết quả transaction để dùng bên ngoài
+        $transactionResult = null;
 
-                // ====================================================
-                // GIAI ĐOẠN 1: TÍNH TOÁN & KHÓA DỮ LIỆU
-                // ====================================================
+        try {
+            // ---------------------------------------------------------
+            // BƯỚC 2: TRANSACTION - XỬ LÝ DỮ LIỆU QUAN TRỌNG (CRITICAL)
+            // Nếu lỗi ở đây thì Rollback toàn bộ, không lưu gì cả.
+            // ---------------------------------------------------------
+            $transactionResult = DB::transaction(function () use ($validated, $timeSlotsMap) {
 
                 $bookingTotal = 0;
                 $serviceTotal = 0;
                 $bookingItemsPayload = [];
                 $serviceItemsPayload = [];
-
-                // Mảng chứa thông tin để lên lịch Job (Scheduler)
                 $schedulerData = [];
 
-                // --- 1.1 Xử lý Booking ---
+                // --- 2.1: Xử lý & Khóa Booking ---
                 foreach ($validated['bookings'] as $bookingData) {
-                    // Lock availability
+                    // Lock dữ liệu để tránh trùng lịch (Race Condition)
                     $availability = Availability::where('court_id', $bookingData['court_id'])
                         ->where('slot_id', $bookingData['time_slot_id'])
                         ->where('date', $bookingData['date'])
@@ -144,7 +147,7 @@ class TicketApiController extends Controller
 
                     if (!$availability || $availability->status !== 'open') {
                         throw ValidationException::withMessages([
-                            'bookings' => "Sân ID {$bookingData['court_id']} ngày {$bookingData['date']} khung giờ này đã có người đặt."
+                            'bookings' => "Sân ID {$bookingData['court_id']} ngày {$bookingData['date']} khung giờ này vừa có người đặt xong."
                         ]);
                     }
 
@@ -156,24 +159,22 @@ class TicketApiController extends Controller
                         'final_price' => $finalPrice
                     ];
 
-                    // [UPDATE] Thu thập cả Giờ Bắt Đầu và Giờ Kết Thúc để so sánh nối tiếp
+                    // Chuẩn bị dữ liệu cho Job Scheduler
                     if (isset($timeSlotsMap[$bookingData['time_slot_id']])) {
                         $slot = $timeSlotsMap[$bookingData['time_slot_id']];
                         $schedulerData[] = [
                             'court_id' => $bookingData['court_id'],
                             'date' => $bookingData['date'],
-                            // Lưu dạng chuỗi chuẩn yyyy-mm-dd HH:mm:ss để dễ so sánh
                             'start_time_str' => $bookingData['date'] . ' ' . $slot->start_time,
                             'end_time_str' => $bookingData['date'] . ' ' . $slot->end_time
                         ];
                     }
                 }
 
-                // --- 1.2 Xử lý Services ---
+                // --- 2.2: Xử lý Services ---
                 if (!empty($validated['services'])) {
                     foreach ($validated['services'] as $srvItem) {
-                        $venueService = VenueService::with('service')
-                            ->where('id', $srvItem['venue_service_id'])
+                        $venueService = VenueService::where('id', $srvItem['venue_service_id'])
                             ->lockForUpdate()
                             ->first();
 
@@ -181,21 +182,21 @@ class TicketApiController extends Controller
                             throw ValidationException::withMessages(['services' => "Dịch vụ {$venueService->name} không đủ tồn kho."]);
                         }
 
-                        $qty = $srvItem['quantity'];
-                        $venueService->decrement('stock', $qty);
-                        $itemTotal = $venueService->price * $qty;
+                        $venueService->decrement('stock', $srvItem['quantity']);
+
+                        $itemTotal = $venueService->price * $srvItem['quantity'];
                         $serviceTotal += $itemTotal;
 
                         $serviceItemsPayload[] = [
                             'venue_service' => $venueService,
-                            'quantity' => $qty,
+                            'quantity' => $srvItem['quantity'],
                             'unit_price' => $venueService->price,
                             'total_price' => $itemTotal
                         ];
                     }
                 }
 
-                // --- 1.3 Tổng kết tiền ---
+                // --- 2.3: Tính tổng tiền & Tạo Ticket ---
                 $subtotal = $bookingTotal + $serviceTotal;
                 $discount = $validated['discount_amount'] ?? 0;
                 $totalAmount = max(0, $subtotal - $discount);
@@ -269,7 +270,7 @@ class TicketApiController extends Controller
                         ->increment('used_count');
                 }
 
-                // 2.2 Lưu Item Booking
+                // --- 2.4: Tạo các Item và Booking chi tiết ---
                 foreach ($bookingItemsPayload as $payload) {
                     $bData = $payload['data'];
                     $booking = Booking::create([
@@ -278,8 +279,10 @@ class TicketApiController extends Controller
                         'time_slot_id' => $bData['time_slot_id'],
                         'date' => $bData['date'],
                         'status' => 'pending',
+                        'ticket_id' => $ticket->id // Nếu bảng bookings có ticket_id
                     ]);
 
+                    // Cập nhật trạng thái sân thành đã đóng
                     Availability::where('court_id', $bData['court_id'])
                         ->where('slot_id', $bData['time_slot_id'])
                         ->where('date', $bData['date'])
@@ -289,7 +292,6 @@ class TicketApiController extends Controller
                         'ticket_id'        => $ticket->id,
                         'item_type'        => 'booking',
                         'booking_id'       => $booking->id,
-                        'venue_service_id' => null,
                         'unit_price'       => $bData['unit_price'],
                         'quantity'         => 1,
                         'discount_amount'  => $bData['unit_price'] - $payload['final_price'],
@@ -297,12 +299,10 @@ class TicketApiController extends Controller
                     ]);
                 }
 
-                // 2.3 Lưu Item Services
                 foreach ($serviceItemsPayload as $payload) {
                     Item::create([
                         'ticket_id'        => $ticket->id,
                         'item_type'        => 'service',
-                        'booking_id'       => null,
                         'venue_service_id' => $payload['venue_service']->id,
                         'unit_price'       => $payload['unit_price'],
                         'quantity'         => $payload['quantity'],
@@ -315,19 +315,36 @@ class TicketApiController extends Controller
                     'ticket' => $ticket,
                     'scheduler_data' => $schedulerData
                 ];
-            });
+            }); // KẾT THÚC TRANSACTION
 
-            // ====================================================
-            // GIAI ĐOẠN 3: LÊN LỊCH JOB (SCHEDULING) - ĐÃ SỬA LOGIC
-            // ====================================================
+        } catch (ValidationException $e) {
+            // Lỗi validate trả về ngay cho client
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            // Lỗi Database/Code nghiêm trọng
+            Log::error('CRITICAL ERROR - TICKET CREATION: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi hệ thống khi lưu đơn hàng. Vui lòng thử lại.',
+            ], 500);
+        }
 
-            $ticket = $result['ticket'];
-            $rawSchedulerData = $result['scheduler_data'];
+        // =========================================================
+        // BƯỚC 3: TÁC VỤ PHỤ (NON-CRITICAL)
+        // Code chạy đến đây nghĩa là Đơn Hàng Đã Tạo Thành Công 100%.
+        // Mọi lỗi ở dưới đây chỉ nên Log lại, KHÔNG ĐƯỢC return lỗi cho client.
+        // =========================================================
 
+        $ticket = $transactionResult['ticket'];
+        $rawSchedulerData = $transactionResult['scheduler_data'];
+
+        try {
+            // --- 3.1: Xử lý Job Scheduler (Thông báo hết giờ) ---
             if (!empty($rawSchedulerData)) {
-
-                // BƯỚC 1: Sắp xếp dữ liệu theo thứ tự thời gian
-                // Sắp xếp theo Sân -> Ngày -> Giờ Bắt Đầu
                 $sortedData = collect($rawSchedulerData)->sort(function ($a, $b) {
                     if ($a['court_id'] != $b['court_id']) return $a['court_id'] <=> $b['court_id'];
                     return strcmp($a['start_time_str'], $b['start_time_str']);
@@ -336,61 +353,42 @@ class TicketApiController extends Controller
                 $groups = [];
                 $currentGroup = null;
 
-                // BƯỚC 2: Duyệt và Gom nhóm (Chỉ gộp nếu thời gian NỐI TIẾP nhau)
                 foreach ($sortedData as $item) {
                     if (!$currentGroup) {
                         $currentGroup = $item;
                         continue;
                     }
-
-                    // Điều kiện gộp:
-                    // 1. Cùng Sân
-                    // 2. Giờ Kết Thúc slot trước == Giờ Bắt Đầu slot này (Liên tục)
                     $isSameCourt = ($currentGroup['court_id'] == $item['court_id']);
                     $isContinuous = ($currentGroup['end_time_str'] == $item['start_time_str']);
 
                     if ($isSameCourt && $isContinuous) {
-                        // Nối tiếp -> Cập nhật giờ kết thúc mới cho nhóm
                         $currentGroup['end_time_str'] = $item['end_time_str'];
                     } else {
-                        // Ngắt quãng (hoặc khác sân) -> Chốt nhóm cũ, bắt đầu nhóm mới
                         $groups[] = $currentGroup;
                         $currentGroup = $item;
                     }
                 }
-                // Đẩy nhóm cuối cùng vào danh sách
-                if ($currentGroup) {
-                    $groups[] = $currentGroup;
-                }
+                if ($currentGroup) $groups[] = $currentGroup;
 
-                // BƯỚC 3: Tạo Job cho từng nhóm đã gom
                 foreach ($groups as $group) {
                     $finalEndTime = Carbon::parse($group['end_time_str']);
                     $now = Carbon::now();
 
-                    // --- Job 1: Notify Owner (Trước 10 phút) ---
+                    // Job báo trước 10p
                     $notifyAt = $finalEndTime->copy()->subMinutes(10);
-
                     if ($notifyAt->gt($now)) {
-                        // Truyền court_id vào nếu Job của bạn hỗ trợ để thông báo rõ sân nào
                         NotifyOwnerJob::dispatch($ticket)->delay($notifyAt);
-                        Log::info("🔔 Đã hẹn Job báo hết giờ (Sân {$group['court_id']}) lúc: " . $notifyAt->toDateTimeString());
                     }
 
-                    // --- Job 2: Auto Complete (Sau 2 phút) ---
+                    // Job hoàn thành sau 2p
                     $completeAt = $finalEndTime->copy()->addMinutes(2);
-
                     if ($completeAt->gt($now)) {
-                        // AutoCompleteTicketJob::dispatch($ticket->id)
-                        //     ->delay(now()->addMinute());
                         AutoCompleteTicketJob::dispatch($ticket->id)->delay($completeAt);
-                        Log::info("🏁 Đã hẹn Job hoàn thành (Sân {$group['court_id']}) lúc: " . $completeAt->toDateTimeString());
                     }
                 }
             }
 
-            // ====================================================
-
+            // --- 3.2: Load quan hệ để trả về hoặc broadcast ---
             $ticket->load([
                 'user:id,name,phone',
                 'items.booking.court',
@@ -398,26 +396,25 @@ class TicketApiController extends Controller
                 'items.venueService.service'
             ]);
 
-            broadcast(new DataCreated($ticket, $this->namChannel, 'ticket.created'));
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Tạo đơn hàng thành công! Hệ thống đã lên lịch nhắc giờ.',
-                'data' =>  $ticket->id
-            ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-                'errors' => $e->errors(),
-            ], 422);
-        } catch (\Throwable $e) {
-            Log::error('Lỗi tạo ticket: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Lỗi hệ thống.'
-            ], 500);
+            // --- 3.3: Broadcast (Thường xuyên gây lỗi nếu mạng lag) ---
+            try {
+                broadcast(new DataCreated($ticket, $this->namChannel, 'ticket.created'));
+            } catch (\Throwable $bcEx) {
+                Log::warning("Broadcast failed for Ticket #{$ticket->id}: " . $bcEx->getMessage());
+            }
+        } catch (\Throwable $secondaryError) {
+            // Chỉ ghi log, không làm ảnh hưởng response
+            Log::error("TICKET CREATED BUT SECONDARY TASKS FAILED (ID: {$ticket->id}): " . $secondaryError->getMessage());
         }
+
+        // =========================================================
+        // BƯỚC 4: TRẢ VỀ KẾT QUẢ THÀNH CÔNG
+        // =========================================================
+        return response()->json([
+            'success' => true,
+            'message' => 'Tạo đơn hàng thành công!',
+            'data' =>  $ticket->id
+        ]);
     }
 
 
@@ -587,12 +584,13 @@ class TicketApiController extends Controller
     }
 
     public function destroyTicket($id)
+
     {
         $ticket = Ticket::with(['items.booking.timeSlot', 'items.booking.court', 'items.venueService'])->findOrFail($id);
 
-        if ($ticket->status === 'cancelled') {
+         if ($ticket->status === 'cancelled') {
             return response()->json(['success' => false, 'message' => 'Vé này đã bị hủy.'], 400);
-        }
+         }
 
         $now = Carbon::now();
 

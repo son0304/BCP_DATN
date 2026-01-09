@@ -9,6 +9,9 @@ use App\Models\User;
 use App\Models\Role;
 use App\Models\Province;
 use App\Models\District;
+use App\Models\WalletLog;
+use App\Models\WithdrawalRequest;
+use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -214,5 +217,33 @@ class UserController extends Controller
             DB::rollback();
             return back()->with('error', 'Có lỗi xảy ra khi thay đổi trạng thái người dùng: ' . $e->getMessage());
         }
+    }
+
+
+    public function myAccout()
+    {
+        $user = Auth::user();
+        $user->load([
+            'role',
+            'province',
+            'district',
+            'merchantProfile.images',
+        ]);
+        Log::info('message:' . $user->toJson());
+
+
+        // Paginate venues
+        $venues = $user->venues()
+            ->with(['province', 'district'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(5, ['*'], 'venues_page');
+
+        $wallet = $user->wallet;
+        $wallet_log = WalletLog::where('wallet_id', $wallet->id)->orderBy('created_at', 'desc')->get();
+        $roles = Role::select('id', 'name')->get();
+
+        $withdraw = WithdrawalRequest::where('user_id', $user->id)->orderBy('created_at', 'desc')->get();
+
+        return view('venue_owner.user.index', compact('user', 'wallet_log', 'venues', 'roles', 'wallet', 'withdraw'));
     }
 }

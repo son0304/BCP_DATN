@@ -90,6 +90,7 @@ class AuthController extends Controller
     // Xử lý đăng nhập
     public function login(Request $request)
     {
+        // 1. Validate dữ liệu đầu vào
         $credentials = $request->validate([
             'email' => 'required|email',
             'password' => 'required',
@@ -99,20 +100,47 @@ class AuthController extends Controller
             'password.required' => 'Mật khẩu là bắt buộc',
         ]);
 
+        // 2. Thử đăng nhập
         if (Auth::attempt($credentials, $request->remember)) {
-            // Kiểm tra email đã được xác nhận chưa
-            if (!Auth::user()->is_email_verified) {
+
+            $user = Auth::user();
+
+            // 3. Kiểm tra xác thực email
+            if (!$user->is_email_verified) {
                 Auth::logout();
                 return back()->withErrors([
                     'email' => 'Vui lòng xác nhận email trước khi đăng nhập.',
                 ])->withInput($request->except('password'));
             }
 
+            // 4. Regenerate Session để bảo mật
             $request->session()->regenerate();
-            return redirect()->intended(route('home.index'))
+
+            // ====================================================
+            // 5. LOGIC CHUYỂN HƯỚNG THEO QUYỀN (ROLE)
+            // ====================================================
+
+            // Mặc định là về trang chủ
+            $redirectUrl = route('home.index');
+
+            // Lấy tên Role (Giả sử User có quan hệ belongsTo 'role')
+            // Lưu ý: Cần đảm bảo trong Model User có function role()
+            $roleName = $user->role->name ?? '';
+
+            if ($roleName === 'admin') {
+                $redirectUrl = route('admin.statistics.index');
+            } elseif ($roleName === 'venue_owner') {
+                $redirectUrl = route('owner.statistics.index');
+            }
+
+            // Sử dụng intended:
+            // Nếu user cố vào link A -> bị đẩy ra login -> login xong -> tự về lại A.
+            // Nếu user chủ động bấm login -> login xong -> về $redirectUrl (Dashboard).
+            return redirect()->intended($redirectUrl)
                 ->with('success', 'Đăng nhập thành công!');
         }
 
+        // 6. Đăng nhập thất bại
         return back()->withErrors([
             'email' => 'Thông tin đăng nhập không chính xác.',
         ])->withInput($request->except('password'));

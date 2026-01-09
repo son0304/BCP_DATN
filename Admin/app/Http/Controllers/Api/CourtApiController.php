@@ -34,7 +34,9 @@ class CourtApiController extends Controller
         $date = $validated['date'] ?? now()->toDateString();
         $courts = Court::where('venue_id', $id)
             ->with([
+                'venueType:id,name',
                 'timeSlots:id,court_id,label,start_time,end_time'
+
             ])
             ->get();
 
@@ -64,7 +66,7 @@ class CourtApiController extends Controller
                 $availability = $courtAvailabilities->get($slot->id);
 
                 $slot->availability_id = $availability ? $availability->id : null;
-                $slot->status          = $availability ? $availability->status : 'unavailable'; 
+                $slot->status          = $availability ? $availability->status : 'unavailable';
                 $slot->price           = $availability ? $availability->price : null;
 
                 // Xử lý Flash Sale

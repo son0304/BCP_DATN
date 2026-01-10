@@ -41,13 +41,7 @@ Route::get('/user', [AuthApiController::class, 'showuer']);
 Route::get('/transaction', [TransactionApiController::class, 'index']);
 
 Route::get('/banners', [BannerApiController::class, 'index']);
-Route::get('/promoted-venues', [VenueApiController::class, 'promotedVenues']);
 
-Route::get('/locations/districts/{province_id}', function ($province_id) {
-    return response()->json(
-        District::where('province_id', $province_id)->orderBy('name')->get()
-    );
-})->name('locations.districts');
 
 Route::get('/venues', [VenueApiController::class, 'index']);
 Route::post('/venues', [VenueApiController::class, 'store']);
@@ -71,6 +65,11 @@ Route::get('/tickets', [TicketApiController::class, 'index']);
 
 Route::post('/payment/momo', [PaymentApiController::class, 'paymentMomo']);
 Route::post('/payment/momo/ipn', [PaymentApiController::class, 'ipn']);
+
+Route::post('/payment/vnpay', [PaymentApiController::class, 'paymentVNPay']);
+Route::get('/payment/vnpay-callback', [PaymentApiController::class, 'vnpayCallback']);
+
+
 Route::get('/user', [AuthApiController::class, 'index']);
 
 Route::get('/payment/check-status/{id}', [PaymentApiController::class, 'checkTransactionStatus']);

@@ -264,6 +264,229 @@ class PaymentApiController extends Controller
         }
     }
 
+
+    public function paymentVNPay(Request $request)
+    {
+        $ticket = Ticket::findOrFail($request->id);
+
+        Log::info("env: " . env('VNPAY_HASH_SECRET'));
+        $vnp_TmnCode = env('VNPAY_TMN_CODE');
+        $vnp_HashSecret = env('VNPAY_HASH_SECRET');
+        $vnp_Url = env('VNPAY_URL');
+        $vnp_Returnurl = env('VNPAY_RETURN_URL') . $ticket->id;
+
+        $vnp_TxnRef = $ticket->id . '_' . time();
+        $vnp_OrderInfo = "Thanh toan ve " . $ticket->id;
+        $vnp_OrderType = "billpayment";
+        $vnp_Amount = (int)($ticket->total_amount * 100);
+        $vnp_Locale = "vn";
+        $vnp_IpAddr = $request->ip();
+
+        $inputData = array(
+            "vnp_Version" => "2.1.0",
+            "vnp_TmnCode" => $vnp_TmnCode,
+            "vnp_Amount" => $vnp_Amount,
+            "vnp_Command" => "pay",
+            "vnp_CreateDate" => date('YmdHis'),
+            "vnp_CurrCode" => "VND",
+            "vnp_IpAddr" => $vnp_IpAddr,
+            "vnp_Locale" => $vnp_Locale,
+            "vnp_OrderInfo" => $vnp_OrderInfo,
+            "vnp_OrderType" => $vnp_OrderType,
+            "vnp_ReturnUrl" => $vnp_Returnurl,
+            "vnp_TxnRef" => $vnp_TxnRef
+        );
+
+        // 1. Sắp xếp dữ liệu theo key
+        ksort($inputData);
+
+        // 2. Tạo chuỗi query và hash data
+        $query = "";
+        $i = 0;
+        $hashdata = "";
+        foreach ($inputData as $key => $value) {
+            if ($i == 1) {
+                $hashdata .= '&' . urlencode($key) . "=" . urlencode($value);
+            } else {
+                $hashdata .= urlencode($key) . "=" . urlencode($value);
+                $i = 1;
+            }
+            $query .= urlencode($key) . "=" . urlencode($value) . '&';
+        }
+
+        $vnp_Url = $vnp_Url . "?" . $query;
+
+        // 3. Tính Secure Hash
+        $vnpSecureHash = hash_hmac('sha512', $hashdata, $vnp_HashSecret);
+        $vnp_Url .= 'vnp_SecureHash=' . $vnpSecureHash;
+
+        return response()->json([
+            'success' => true,
+            'payUrl' => $vnp_Url
+        ]);
+    }
+    public function vnpayCallback(Request $request)
+    {
+        Log::info("VNPay Callback Received:", $request->all());
+
+        $vnp_HashSecret = env('VNPAY_HASH_SECRET');
+        $inputData = array();
+
+        foreach ($request->all() as $key => $value) {
+            if (substr($key, 0, 4) == "vnp_") {
+                $inputData[$key] = $value;
+            }
+        }
+
+        $vnp_SecureHash = $inputData['vnp_SecureHash'] ?? '';
+        unset($inputData['vnp_SecureHash']);
+        ksort($inputData);
+
+        $i = 0;
+        $hashData = "";
+        foreach ($inputData as $key => $value) {
+            if ($i == 1) {
+                $hashData .= '&' . urlencode($key) . "=" . urlencode($value);
+            } else {
+                $hashData .= urlencode($key) . "=" . urlencode($value);
+                $i = 1;
+            }
+        }
+
+        $secureHash = hash_hmac('sha512', $hashData, $vnp_HashSecret);
+
+        if ($secureHash !== $vnp_SecureHash) {
+            Log::error("VNPay: Sai chữ ký");
+            return response()->json(['success' => false, 'message' => 'Sai chữ ký']);
+        }
+
+        $vnp_TxnRef = $request->vnp_TxnRef;
+        $ticketId = explode('_', $vnp_TxnRef)[0];
+        $ticket = Ticket::find($ticketId);
+
+        if (!$ticket || $request->vnp_ResponseCode !== '00') {
+            return response()->json(['success' => false, 'message' => 'Giao dịch thất bại hoặc không tìm thấy đơn']);
+        }
+
+        // Kiểm tra xem đơn đã confirmed chưa để tránh xử lý trùng (VNPay hay gọi lại)
+        if ($ticket->status === 'confirmed') {
+            return response()->json(['success' => true, 'message' => 'Đã xử lý trước đó']);
+        }
+
+        $vnp_Amount = $request->vnp_Amount / 100;
+        $vnp_TransactionNo = $request->vnp_TransactionNo;
+
+        DB::beginTransaction();
+        try {
+            $ticketLocked = Ticket::where('id', $ticketId)->lockForUpdate()->first();
+
+            // 1. Cập nhật Transaction
+            $transaction = $ticketLocked->transactions()->updateOrCreate(
+                ['note' => 'VNPay: ' . $vnp_TransactionNo],
+                [
+                    'user_id' => $ticketLocked->user_id,
+                    'payment_source' => 'vnpay',
+                    'amount' => $vnp_Amount,
+                    'status' => 'success'
+                ]
+            );
+
+            // 2. Tìm venue_id nhanh
+            $venue_id = DB::table('items')
+                ->join('bookings', 'items.booking_id', '=', 'bookings.id')
+                ->join('courts', 'bookings.court_id', '=', 'courts.id')
+                ->where('items.ticket_id', $ticketLocked->id)
+                ->value('courts.venue_id');
+
+            // 3. Tính toán tiền nong (Logic giữ nguyên)
+            $actualPaid = (float)$vnp_Amount;
+            $discount = (float)($ticketLocked->discount_amount ?? 0);
+            $grossAmount = $actualPaid + $discount;
+            $commissionRate = 0.10;
+            $baseCommission = $grossAmount * $commissionRate;
+
+            $promotion = $ticketLocked->promotion_id ? Promotion::find($ticketLocked->promotion_id) : null;
+            $isVenueVoucher = !($promotion && is_null($promotion->venue_id));
+
+            if ($isVenueVoucher) {
+                $adminAmount = $baseCommission;
+                $venueOwnerAmount = $actualPaid - $baseCommission;
+            } else {
+                $adminAmount = $baseCommission - $discount;
+                $venueOwnerAmount = $grossAmount - $baseCommission;
+            }
+            if ($venueOwnerAmount < 0) $venueOwnerAmount = 0;
+
+            // 4. Cập nhật các Booking
+            foreach ($ticketLocked->items as $item) {
+                if ($item->booking) {
+                    $item->booking->update(['status' => 'confirmed']);
+                }
+            }
+
+            // 5. Tạo Money Flow
+            $ticketLocked->moneyFlows()->create([
+                'total_amount' => $grossAmount,
+                'promotion_id' => $ticketLocked->promotion_id,
+                'promotion_amount' => $discount,
+                'venue_id' => $venue_id,
+                'admin_amount' => $adminAmount,
+                'venue_owner_amount' => $venueOwnerAmount,
+                'status' => 'pending'
+            ]);
+
+            // 6. Cập nhật Ticket
+            $ticketLocked->update([
+                'status' => 'confirmed',
+                'payment_status' => 'paid',
+                'payment_method' => 'vnpay'
+            ]);
+
+            DB::commit();
+
+            // =====================================================================
+            // ĐÂY LÀ PHẦN LÀM CHO NÓ NHANH: Đẩy các tác vụ chờ đợi vào afterResponse
+            // =====================================================================
+            dispatch(function () use ($ticketLocked) {
+                try {
+                    // 1. Gửi thông báo cho chủ sân (Tốn thời gian kết nối Database/Pusher)
+                    $owner_id = $ticketLocked->getOwnerId();
+                    if ($owner_id) {
+                        $notification = Notification::create([
+                            'user_id' => $owner_id,
+                            'type' => 'info',
+                            'title' => 'Đơn đặt sân mới (VNPay)',
+                            'message' => 'Bạn có đơn đặt sân mới #' . $ticketLocked->id . ' từ ' . ($ticketLocked->user->name ?? 'Khách'),
+                            'data' => [
+                                'booking_id' => $ticketLocked->id,
+                                'link' => '/owner/bookings?search=' . $ticketLocked->booking_code,
+                            ],
+                        ]);
+
+                        if (class_exists(\App\Events\DataCreated::class)) {
+                            broadcast(new \App\Events\DataCreated($notification, 'notification', 'notification.created'));
+                        }
+                    }
+
+                    // 2. Gửi Mail (Đây là bước chậm nhất - tốn 2-5 giây)
+                    if (method_exists($this, 'sendMailAndBroadcast')) {
+                        $this->sendMailAndBroadcast($ticketLocked);
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Tác vụ ngầm VNPay lỗi: " . $e->getMessage());
+                }
+            })->afterResponse();
+
+            // Trả về JSON ngay lập tức cho Frontend
+            return response()->json(['success' => true, 'message' => 'Thanh toán thành công']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("VNPay Callback Logic Error: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Lỗi xử lý hệ thống'], 500);
+        }
+    }
+
+
     // =========================================================================
     // 3. THANH TOÁN QUA VÍ (WALLET)
     // =========================================================================

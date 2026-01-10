@@ -11,6 +11,7 @@ use App\Models\MoneyFlow;
 use App\Models\SponsorshipPackageItem;
 use App\Models\Transaction;
 use App\Models\Venue;
+use App\Models\WalletLog;
 use Auth;
 use Cache;
 use Illuminate\Http\Request;
@@ -242,11 +243,25 @@ class SponsorshipController extends Controller
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+
         // 1. Validate dữ liệu
         $request->validate([
             'package_id'     => 'required|exists:sponsorship_packages,id',
             'venue_ids'      => 'required|array|min:1',
-            'venue_ids.*'    => 'exists:venues,id',
+            // Kiểm tra venue tồn tại VÀ phải thuộc về chủ sân đang đăng nhập
+            'venue_ids.*'    => [
+                'required',
+                'exists:venues,id',
+                function ($attribute, $value, $fail) use ($user) {
+                    $exists = \App\Models\Venue::where('id', $value)
+                        ->where('owner_id', $user->id) // Quan trọng: Check chủ sở hữu
+                        ->exists();
+                    if (!$exists) {
+                        $fail("Sân với ID $value không hợp lệ hoặc không thuộc quyền quản lý của bạn.");
+                    }
+                }
+            ],
             'payment_method' => 'required|in:wallet,momo',
             'momo_trans_id'  => 'nullable|string|required_if:payment_method,momo',
         ]);
@@ -254,30 +269,43 @@ class SponsorshipController extends Controller
         try {
             DB::beginTransaction();
 
-            $user = Auth::user();
-            // Eager load items để tối ưu query
-            $package = SponsorshipPackage::with('items')->findOrFail($request->package_id);
+            $package = \App\Models\SponsorshipPackage::with('items')->findOrFail($request->package_id);
 
-            // Tổng tiền = Giá gói * Số lượng sân
+            // Tổng tiền
             $totalAmount = $package->price * count($request->venue_ids);
 
             // =========================================================================
-            // BƯỚC 1: XỬ LÝ THANH TOÁN (NGUỒN TIỀN)
+            // BƯỚC 1: XỬ LÝ THANH TOÁN
             // =========================================================================
 
             if ($request->payment_method === 'wallet') {
-                // --- THANH TOÁN VÍ ---
-                if ($user->wallet->balance < $totalAmount) {
-                    throw new \Exception("Số dư ví không đủ ({$user->balance} < {$totalAmount}).");
-                }
-                // Chỉ thực hiện trừ tiền, KHÔNG tạo Transaction
-                $user->wallet->decrement('balance', $totalAmount);
-            } elseif ($request->payment_method === 'momo') {
-                // --- THANH TOÁN MOMO ---
-                $tempId = $request->momo_trans_id;
-                $paymentData = Cache::get("momo_temp_paid_$tempId");
+                // Lấy ví (Lock for update để tránh race condition nếu cần thiết)
+                $wallet = $user->wallet;
 
-                // Check bảo mật giao dịch
+                // --- FIX LOGIC: Kiểm tra số dư ---
+                if ($wallet->balance < $totalAmount) {
+                    throw new \Exception("Số dư ví không đủ (Hiện tại: " . number_format($wallet->balance) . "đ).");
+                }
+
+                $beforeBalance = $wallet->balance; // Lưu số dư trước khi trừ
+                $afterBalance  = $beforeBalance - $totalAmount;
+
+                // Trừ tiền
+                $wallet->decrement('balance', $totalAmount);
+
+                // --- FIX TYPO: blace -> balance ---
+                \App\Models\WalletLog::create([
+                    'wallet_id'      => $wallet->id,
+                    'before_balance' => $beforeBalance,
+                    'after_balance'  => $afterBalance, // FIX: Logic tính đúng
+                    'amount'         => -$totalAmount,
+                    'type'           => 'payment', // Hoặc 'expense' tùy quy ước
+                    'description'    => 'Thanh toán gói ' . $package->name
+                ]);
+            } elseif ($request->payment_method === 'momo') {
+                $tempId = $request->momo_trans_id;
+                $paymentData = \Illuminate\Support\Facades\Cache::get("momo_temp_paid_$tempId");
+
                 if (!$paymentData || $paymentData['status'] !== 'paid') {
                     throw new \Exception("Giao dịch Momo không hợp lệ hoặc đã hết hạn.");
                 }
@@ -285,47 +313,42 @@ class SponsorshipController extends Controller
                     throw new \Exception("Số tiền thanh toán không khớp.");
                 }
 
-                // Tạo Transaction: Chỉ để ghi nhận việc nhận tiền từ cổng Momo
-                Transaction::create([
-                    'transactionable_type' => SponsorshipPackage::class,
+                // --- FIX: Xóa key trùng lặp ---
+                \App\Models\Transaction::create([
+                    'transactionable_type' => \App\Models\SponsorshipPackage::class,
                     'transactionable_id'   => $package->id,
                     'user_id'              => $user->id,
                     'payment_source'       => 'momo',
                     'amount'               => $totalAmount,
-                    'note'                 => "Thanh toán Momo cho gói: " . $package->name,
+                    'note'                 => "Thanh toán Momo gói: " . $package->name,
                     'status'               => 'success',
-                    'status'       => 'success',
-                    'process_status'  => 'new'
+                    'process_status'       => 'new'
                 ]);
 
-                // Xóa Cache để tránh replay attack
-                Cache::forget("momo_temp_paid_$tempId");
+                \Illuminate\Support\Facades\Cache::forget("momo_temp_paid_$tempId");
             }
 
             // =========================================================================
-            // BƯỚC 2: GHI NHẬN MONEY FLOW & KÍCH HOẠT DỊCH VỤ (Loop từng sân)
+            // BƯỚC 2: GHI NHẬN MONEY FLOW & KÍCH HOẠT
             // =========================================================================
 
             foreach ($request->venue_ids as $venueId) {
-                $moneyFlow = MoneyFlow::create([
-                    'money_flowable_type' => SponsorshipPackage::class,
+                $moneyFlow = \App\Models\MoneyFlow::create([
+                    'money_flowable_type' => \App\Models\SponsorshipPackage::class,
                     'money_flowable_id'   => $package->id,
                     'venue_id'            => $venueId,
-                    'total_amount'        => $package->price, // Giá của 1 gói
-
-                    'admin_amount'        => $package->price, // Admin nhận hết
-                    'venue_owner_amount'  => 0,               // Chủ sân không nhận được tiền, đây là khoản chi
-                    'status'      => 'completed',
-
+                    'total_amount'        => $package->price,
+                    'admin_amount'        => $package->price,
+                    'venue_owner_amount'  => 0,
+                    'status'              => 'completed',
                     'process_status'      => 'new',
                     'note'                => "Mua gói '{$package->name}' qua {$request->payment_method}",
                 ]);
 
-                // 2.2. Kích hoạt quyền lợi (Items)
-                // Truyền $moneyFlow->id vào làm purchase_id cho các bảng Ad
                 foreach ($package->items as $item) {
                     $settings = $item->settings ?? [];
 
+                    // Giả định các hàm này đã được định nghĩa trong Controller
                     switch ($item->type) {
                         case 'top_search':
                             $this->handleTopSearch($venueId, $package, $settings, $moneyFlow->id);
@@ -344,7 +367,7 @@ class SponsorshipController extends Controller
             return redirect()->route('owner.packages.index')->with('success', 'Đăng ký gói quảng cáo thành công!');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Sponsorship Purchase Error: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Sponsorship Purchase Error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Giao dịch thất bại: ' . $e->getMessage());
         }
     }

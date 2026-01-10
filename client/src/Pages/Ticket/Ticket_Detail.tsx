@@ -423,7 +423,7 @@ const Ticket_Detail = () => {
 
             <div className="animate-fade-in">
               {paymentMethod === "momo" && <PaymentMomo ticket={ticket} onSuccess={handlePaymentSuccess} />}
-              {paymentMethod === "vnpay" && <PaymentVNPay />}
+              {paymentMethod === "vnpay" && <PaymentVNPay ticket={ticket} onSuccess={handlePaymentSuccess} />}
               {paymentMethod === "wallet" && <PaymentWallet ticket={ticket} onSuccess={handlePaymentSuccess} />}
             </div>
           </div>

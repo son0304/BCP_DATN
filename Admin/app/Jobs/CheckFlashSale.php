@@ -29,15 +29,18 @@ class CheckFlashSale implements ShouldQueue
     public function handle(): void
     {
         $campaign = FlashSaleCampaign::find($this->campaignId);
+
         if ($campaign) {
-            $campaign->status = $this->status;
-            $campaign->save();
-            if ($this->status == 'inactive') {
-                $campaign->flashSaleItems()->update(['status' => 'inactive']);
-            }
-            Log::info("QUEUE SUCCESS: Đã cập nhật chiến dịch ID {$this->campaignId} sang trạng thái: {$this->status}");
-        } else {
-            Log::error("QUEUE FAILED: Không tìm thấy chiến dịch ID {$this->campaignId}");
+            \Illuminate\Support\Facades\DB::transaction(function () use ($campaign) {
+
+                // 1. Cập nhật trạng thái Campaign
+                $campaign->status = $this->status;
+                $campaign->save();
+
+                $campaign->items()->update(['status' => $this->status]);
+            });
+
+            Log::info("Đã đồng bộ trạng thái {$this->status} cho Campaign #{$this->campaignId} và tất cả Items.");
         }
     }
 }

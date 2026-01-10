@@ -97,7 +97,7 @@ const PaymentVNPay = ({ ticket, onSuccess }: PaymentVNPayProps) => {
             <div className="bg-amber-50 p-4 rounded-xl border border-amber-200 text-left text-[11px] text-amber-900 leading-relaxed shadow-sm">
               <h5 className="font-bold border-b border-amber-200 mb-2 pb-1 uppercase">Thông tin thẻ Test (NCB)</h5>
               <p>• Ngân hàng: <strong>NCB</strong></p>
-              <p>• Số thẻ: <strong className="text-red-600">9704198521</strong></p>
+              <p>• Số thẻ: <strong className="text-red-600">97041985219704198526191432198</strong></p>
               <p>• Tên: <strong>NGUYEN VAN A</strong></p>
               <p>• Ngày phát hành: <strong>07/15</strong></p>
               <p>• OTP: <strong>123456</strong></p>

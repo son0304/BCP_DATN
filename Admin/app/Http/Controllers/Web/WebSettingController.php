@@ -20,8 +20,6 @@ class WebSettingController extends Controller
         // 1. Lấy danh sách Banner kèm theo các ảnh của chúng
         $banners = Banner::with('images')->orderBy('priority', 'asc')->get();
 
-        // 2. Lấy danh sách Sân tài trợ kèm thông tin sân
-        $sponsoredVenues = SponsoredVenue::with('venue')->get();
 
         // 3. Lấy danh sách tất cả sân (để hiện trong dropdown chọn sân tài trợ)
         $venues = Venue::where('is_active', true)->get();
@@ -30,7 +28,7 @@ class WebSettingController extends Controller
             'banners' => $banners->toArray()
         ]);
         // Trả về view
-        return view('admin.setting.index', compact('banners', 'sponsoredVenues', 'venues'));
+        return view('admin.setting.index', compact('banners',  'venues'));
     }
 
     // ==========================================
@@ -127,46 +125,7 @@ class WebSettingController extends Controller
         return redirect()->route('admin.settings.index')->with('success', 'Xóa banner thành công!');
     }
 
-    // ==========================================
-    // LOGIC SÂN TÀI TRỢ
-    // ==========================================
 
-    public function storeSponsored(Request $request)
-    {
-        $request->validate([
-            'venue_id' => 'required|exists:venues,id',
-            'tier' => 'required',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-        ]);
 
-        SponsoredVenue::create($request->all());
-        return redirect()->route('admin.settings.index')->with('success', 'Thêm sân tài trợ thành công!');
-    }
 
-    public function updateSponsored(Request $request, $id)
-    {
-        $sponsored = SponsoredVenue::findOrFail($id);
-        $sponsored->update($request->all());
-        return redirect()->route('admin.settings.index')->with('success', 'Cập nhật tài trợ thành công!');
-    }
-
-    public function destroySponsored($id)
-    {
-        SponsoredVenue::destroy($id);
-        return redirect()->route('admin.settings.index')->with('success', 'Xóa tài trợ thành công!');
-    }
-
-    // ==========================================
-    // TIỆN ÍCH CHUNG
-    // ==========================================
-
-    public function toggleStatus(Request $request, $type, $id)
-    {
-        $item = ($type === 'banner') ? Banner::findOrFail($id) : SponsoredVenue::findOrFail($id);
-        $item->is_active = !$item->is_active;
-        $item->save();
-
-        return response()->json(['success' => true, 'is_active' => $item->is_active]);
-    }
 }

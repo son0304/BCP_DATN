@@ -18,6 +18,7 @@ class MoneyFlow extends Model
         'venue_id',
         'admin_amount',
         'venue_owner_amount',
+        'status',
         'process_status',
         'note'
     ];

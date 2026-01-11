@@ -421,7 +421,7 @@ class TicketApiController extends Controller
 
     public function destroyItem($id)
     {
-        // 1. Lấy thông tin Item và Ticket
+        // ... (Giữ nguyên logic kiểm tra đầu vào 1, 2) ...
         $item = Item::with(['booking.court', 'ticket.promotion', 'venueService.service'])->find($id);
 
         if (!$item) return response()->json(['success' => false, 'message' => 'Mục này không tồn tại.'], 404);
@@ -439,12 +439,9 @@ class TicketApiController extends Controller
             $logDescription = "Hủy: {$name} (SL: {$item->quantity})";
         } elseif ($item->booking) {
             $bookingTime = Carbon::parse($item->booking->date . ' ' . $item->booking->timeSlot->start_time);
-
             if ($bookingTime->isPast()) return response()->json(['success' => false, 'message' => 'Sân đang/đã đá, không thể hủy.'], 400);
-
             $minutes = $now->diffInMinutes($bookingTime, false);
             if ($minutes < 120) return response()->json(['success' => false, 'message' => 'Phải hủy trước giờ đá ít nhất 2 tiếng.'], 400);
-
             $refundRate = ($minutes > 1440) ? 1.0 : 0.5;
             $name = $item->booking->court->name ?? 'Sân';
             $logDescription = "Hủy: {$name} (Hoàn " . ($refundRate * 100) . "%)";
@@ -506,13 +503,15 @@ class TicketApiController extends Controller
                 ]);
 
                 // =========================================================
-                // 3.4 [QUAN TRỌNG] CẬP NHẬT MONEY FLOW ĐẦY ĐỦ
+                // 3.4 [QUAN TRỌNG] CẬP NHẬT MONEY FLOW ĐẦY ĐỦ (ĐÃ SỬA)
                 // =========================================================
-                $moneyFlow = MoneyFlow::where('booking_id', $ticket->id)->first();
+                // Tìm dòng tiền thuộc về Ticket này (Polymorphic)
+                $moneyFlow = MoneyFlow::where('money_flowable_id', $ticket->id)
+                    ->where('money_flowable_type', Ticket::class)
+                    ->first();
 
                 if ($moneyFlow) {
                     // Tính tỷ lệ giảm để chia lại tiền Admin/Venue
-                    // Nếu tổng cũ là 100k, tổng mới là 80k -> Tỷ lệ giữ lại là 0.8
                     $oldTotal = $moneyFlow->total_amount;
 
                     // Tránh chia cho 0
@@ -584,17 +583,16 @@ class TicketApiController extends Controller
     }
 
     public function destroyTicket($id)
-
     {
         $ticket = Ticket::with(['items.booking.timeSlot', 'items.booking.court', 'items.venueService'])->findOrFail($id);
 
-         if ($ticket->status === 'cancelled') {
+        if ($ticket->status === 'cancelled') {
             return response()->json(['success' => false, 'message' => 'Vé này đã bị hủy.'], 400);
-         }
+        }
 
         $now = Carbon::now();
 
-        // --- BƯỚC 1: CHECK ĐIỀU KIỆN (Chỉ cần 1 món vi phạm là chặn hủy cả vé) ---
+        // --- BƯỚC 1: CHECK ĐIỀU KIỆN ---
         foreach ($ticket->items as $item) {
             if ($item->status === 'refund') continue;
             if ($item->booking) {
@@ -606,15 +604,13 @@ class TicketApiController extends Controller
 
         // --- BƯỚC 2: XỬ LÝ HỦY TOÀN BỘ ---
         DB::transaction(function () use ($ticket, $now) {
-            $totalRawRefund = 0; // Tổng tiền hoàn từ các món (chưa trừ voucher)
+            $totalRawRefund = 0;
             $refundDetails = [];
 
             foreach ($ticket->items as $item) {
                 if ($item->status === 'refund') continue;
 
-                // Xử lý hoàn trả tài nguyên & tính tiền
                 if ($item->booking) {
-                    // Mở lịch
                     Availability::where([
                         'court_id' => $item->booking->court_id,
                         'slot_id' => $item->booking->time_slot_id,
@@ -623,37 +619,28 @@ class TicketApiController extends Controller
 
                     $item->booking->update(['status' => 'cancelled']);
 
-                    // Tính tiền
                     $bookingTime = Carbon::parse($item->booking->date . ' ' . $item->booking->timeSlot->start_time);
                     $rate = ($now->diffInMinutes($bookingTime, false) > 1440) ? 1.0 : 0.5;
 
                     $totalRawRefund += ($item->unit_price * $item->quantity) * $rate;
                     $refundDetails[] = "Sân (" . ($rate * 100) . "%)";
                 } elseif ($item->venue_service_id) {
-                    // Trả kho
                     $item->venueService->increment('stock', $item->quantity);
-
-                    $totalRawRefund += ($item->unit_price * $item->quantity); // Service hoàn 100%
+                    $totalRawRefund += ($item->unit_price * $item->quantity);
                     $refundDetails[] = "Dịch vụ (100%)";
                 }
-
                 $item->update(['status' => 'refund']);
             }
 
-            // Tính toán hoàn tiền ví
-            // Khi hủy cả vé: Thu hồi TOÀN BỘ voucher đã giảm
-            // Tiền hoàn = Tổng tiền các món (sau khi phạt) - Voucher đã dùng
             $voucherAmount = $ticket->discount_amount ?? 0;
             $finalRefundToWallet = max(0, $totalRawRefund - $voucherAmount);
 
-            // Cộng ví
             if ($ticket->user_id && $finalRefundToWallet > 0) {
                 $wallet = Wallet::where('user_id', $ticket->user_id)->lockForUpdate()->first();
                 if ($wallet) {
                     $before = $wallet->balance;
                     $wallet->increment('balance', $finalRefundToWallet);
 
-                    // Log mô tả
                     $desc = "Hủy vé #{$ticket->id}. Chi tiết: " . implode(', ', array_unique($refundDetails));
                     if ($voucherAmount > 0) {
                         $desc .= " | Thu hồi voucher: -" . number_format($voucherAmount, 0, ',', '.') . "đ";
@@ -671,7 +658,7 @@ class TicketApiController extends Controller
                 }
             }
 
-            // Cập nhật Ticket: ĐƯA TẤT CẢ VỀ 0 & CANCELLED
+            // Cập nhật Ticket
             $ticket->update([
                 'status' => 'cancelled',
                 'subtotal' => 0,
@@ -679,14 +666,12 @@ class TicketApiController extends Controller
                 'total_amount' => 0
             ]);
 
-            if ($ticket->promotion_id) {
-                Promotion::where('id', $ticket->promotion_id)
-                    ->where('used_count', '>', 0)
-                    ->decrement('used_count');
-            }
-
-            // Cập nhật MoneyFlow
-            MoneyFlow::where('booking_id', $ticket->id)->update(['status' => 'cancelled']);
+            // =========================================================
+            // CẬP NHẬT MONEY FLOW (ĐÃ SỬA)
+            // =========================================================
+            MoneyFlow::where('money_flowable_id', $ticket->id)
+                ->where('money_flowable_type', Ticket::class)
+                ->update(['status' => 'cancelled']);
         });
 
         broadcast(new \App\Events\DataUpdated($ticket, $this->namChannel, 'ticket.updated'));

@@ -32,61 +32,66 @@ class AutoCompleteTicketJob implements ShouldQueue
 
         try {
             DB::transaction(function () {
-                // 1. Lấy Ticket và Khóa hàng (Lock)
-                $ticket = Ticket::with(['items.booking.court.venue'])->lockForUpdate()->find($this->ticketId);
+                // 1. Lấy Ticket và Khóa dòng dữ liệu (Lock)
+                $ticket = Ticket::with(['items'])->lockForUpdate()->find($this->ticketId);
 
                 if (!$ticket) {
                     Log::error("Ticket #{$this->ticketId} không tồn tại.");
                     return;
                 }
 
-                // 2. Kiểm tra trạng thái (Idempotency)
+                // 2. Kiểm tra trạng thái (Tránh xử lý 2 lần)
                 if (in_array($ticket->status, ['completed', 'cancelled'])) {
                     Log::warning("Ticket #{$this->ticketId} đã ở trạng thái kết thúc ({$ticket->status}).");
                     return;
                 }
 
-                // 3. Xác định thông tin chủ sân
-                $firstItem = $ticket->items->first();
-                if (!$firstItem || !$firstItem->booking || !$firstItem->booking->court || !$firstItem->booking->court->venue) {
+                // 3. Xác định ID chủ sân (Sử dụng hàm có sẵn trong Model Ticket)
+                $venueOwnerId = $ticket->getOwnerId();
+
+                if (!$venueOwnerId) {
                     throw new \Exception("Không tìm thấy thông tin chủ sân cho Ticket #{$this->ticketId}");
                 }
-
-                $venue = $firstItem->booking->court->venue;
-                $venueOwnerId = $venue->owner_id;
 
                 // 4. Cập nhật Ticket sang Completed
                 $ticket->update(['status' => 'completed']);
 
-                // 5. Cập nhật các Bookings liên quan
+                // 5. Cập nhật các Bookings liên quan (Lấy từ items của ticket)
                 $bookingIds = $ticket->items->pluck('booking_id')->filter()->unique()->toArray();
                 if (!empty($bookingIds)) {
                     Booking::whereIn('id', $bookingIds)->update(['status' => 'completed']);
                 }
 
-                // 6. Cập nhật Money Flows (Cột booking_id trong DB là ticket_id)
-                MoneyFlow::where('booking_id', $this->ticketId)->update(['status' => 'completed']);
+                // 6. Cập nhật Money Flows
+                // LOGIC QUAN TRỌNG:
+                // Vì Model MoneyFlow dùng quan hệ đa hình (money_flowable), và Ticket có quan hệ morphMany.
+                // Nên "ticket_id" trong DB chính là cột "money_flowable_id" khi type là Ticket.
+                MoneyFlow::where('money_flowable_id', $this->ticketId)
+                    ->where('money_flowable_type', Ticket::class)
+                    ->update(['status' => 'completed']);
 
-                // 7. Tính toán tiền bạc
-                // venue_owner_amount: Số tiền chủ sân nhận được (sau khi trừ phí)
-                // admin_amount: Số tiền phí sàn
-                $ownerRevenue = MoneyFlow::where('booking_id', $this->ticketId)->sum('venue_owner_amount');
-                $adminFee = MoneyFlow::where('booking_id', $this->ticketId)->sum('admin_amount');
+                // 7. Tính toán tiền bạc (Dựa trên dòng tiền của Ticket này)
+                $queryMoneyFlow = MoneyFlow::where('money_flowable_id', $this->ticketId)
+                    ->where('money_flowable_type', Ticket::class);
+
+                $ownerRevenue = $queryMoneyFlow->sum('venue_owner_amount');
+                $adminFee     = $queryMoneyFlow->sum('admin_amount');
 
                 $finalAmount = 0;
                 $logMessage = '';
                 $type = '';
 
+                // Xác định số tiền cộng/trừ ví
                 if ($ticket->payment_method === 'cash') {
-                    // Khách trả tiền mặt: Chủ sân đã cầm tiền -> Hệ thống trừ phí sàn trong ví
+                    // Tiền mặt: Khách trả chủ sân -> Trừ phí sàn của chủ sân
                     $finalAmount = -$adminFee;
-                    $type = 'payment'; // Ghi nhận là một khoản thanh toán phí
-                    $logMessage = "Hệ thống tự động trừ phí sàn Ticket #{$ticket->id} (Sân: {$venue->name}) - Khách trả tiền mặt";
+                    $type = 'payment';
+                    $logMessage = "Hệ thống trừ phí sàn Ticket #{$ticket->id} - Khách trả tiền mặt";
                 } else {
-                    // Khách trả Online: Hệ thống giữ tiền -> Cộng tiền thực nhận vào ví chủ sân
+                    // Online: Tiền đang ở sàn -> Cộng doanh thu cho chủ sân
                     $finalAmount = $ownerRevenue;
                     $type = 'deposit';
-                    $logMessage = "Hệ thống tự động cộng doanh thu Ticket #{$ticket->id} (Sân: {$venue->name})";
+                    $logMessage = "Hệ thống cộng doanh thu Ticket #{$ticket->id}";
                 }
 
                 // 8. Cập nhật Ví chủ sân
@@ -98,7 +103,7 @@ class AutoCompleteTicketJob implements ShouldQueue
 
                     $beforeBalance = $wallet->balance;
 
-                    // increment() tự động xử lý được số âm (sẽ thành phép trừ)
+                    // increment hoạt động đúng với cả số âm (thành trừ tiền)
                     $wallet->increment('balance', $finalAmount);
 
                     // Ghi log biến động số dư
@@ -111,12 +116,11 @@ class AutoCompleteTicketJob implements ShouldQueue
                         'description'    => $logMessage
                     ]);
 
-                    Log::info("AUTO COMPLETE SUCCESS: Ticket #{$ticket->id}, Số tiền: {$finalAmount}, Chủ sân: #{$venueOwnerId}");
+                    Log::info("AUTO COMPLETE SUCCESS: Ticket #{$ticket->id}, Ví thay đổi: {$finalAmount}, Owner ID: {$venueOwnerId}");
                 }
             });
         } catch (\Exception $e) {
             Log::error("Lỗi AutoCompleteTicketJob (Ticket #{$this->ticketId}): " . $e->getMessage());
-            // Quăng lỗi ra để Queue có thể retry nếu cấu hình
             throw $e;
         }
     }

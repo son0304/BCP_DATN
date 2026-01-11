@@ -38,12 +38,6 @@
                             <i class="fas fa-images me-2 text-primary"></i>Quản lý Banners
                         </button>
                     </li>
-                    <li class="nav-item">
-                        <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-sponsored"
-                            type="button">
-                            <i class="fas fa-star me-2 text-warning"></i>Sân Tài Trợ (VIP)
-                        </button>
-                    </li>
                 </ul>
             </div>
 
@@ -245,119 +239,7 @@
                         </div>
                     </div>
 
-                    <!-- TAB 2: QUẢN LÝ SÂN TÀI TRỢ -->
-                    <div class="tab-pane fade" id="tab-sponsored">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0 fw-bold">Sân bóng đẩy hiển thị nổi bật</h5>
-                            <button class="btn btn-warning btn-sm px-3 shadow-sm fw-bold" data-bs-toggle="modal"
-                                data-bs-target="#addSponsoredModal">
-                                <i class="fas fa-ad me-1"></i> Đăng ký tài trợ
-                            </button>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle border">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Tên sân bóng</th>
-                                        <th class="text-center">Gói VIP</th>
-                                        <th class="text-center">Nhãn hiển thị</th>
-                                        <th class="text-center">Ngày hết hạn</th>
-                                        <th class="text-center">Trạng thái</th>
-                                        <th class="text-center">Hành động</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($sponsoredVenues as $item)
-                                        <tr>
-                                            <td><strong class="text-dark">{{ $item->venue->name ?? 'N/A' }}</strong></td>
-                                            <td class="text-center">
-                                                @if ($item->tier == 'diamond')
-                                                    <span class="badge bg-primary px-3">DIAMOND</span>
-                                                @elseif($item->tier == 'gold')
-                                                    <span class="badge bg-warning text-dark px-3">GOLD</span>
-                                                @else
-                                                    <span class="badge bg-secondary px-3">SILVER</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center text-danger fw-bold">{{ $item->badge_text ?? 'N/A' }}
-                                            </td>
-                                            <td class="text-center">
-                                                {{ \Carbon\Carbon::parse($item->end_date)->format('d/m/Y') }}</td>
-                                            <td class="text-center">
-                                                <div class="form-check form-switch d-inline-block">
-                                                    <input class="form-check-input toggle-status" type="checkbox"
-                                                        data-type="sponsored" data-id="{{ $item->id }}"
-                                                        {{ $item->is_active ? 'checked' : '' }}>
-                                                </div>
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="btn-group shadow-sm">
-                                                    <button class="btn btn-white btn-sm border" data-bs-toggle="modal"
-                                                        data-bs-target="#editSpon{{ $item->id }}">
-                                                        <i class="fas fa-edit text-info"></i>
-                                                    </button>
-                                                    <form
-                                                        action="{{ route('admin.settings.sponsored.destroy', $item->id) }}"
-                                                        method="POST" class="d-inline">
-                                                        @csrf @method('DELETE')
-                                                        <button class="btn btn-white btn-sm border"
-                                                            onclick="return confirm('Hủy gói tài trợ này?')">
-                                                            <i class="fas fa-trash text-danger"></i>
-                                                        </button>
-                                                    </form>
-                                                </div>
-                                            </td>
-                                        </tr>
 
-                                        <!-- MODAL SỬA TÀI TRỢ -->
-                                        <div class="modal fade" id="editSpon{{ $item->id }}" tabindex="-1">
-                                            <div class="modal-dialog">
-                                                <form action="{{ route('admin.settings.sponsored.update', $item->id) }}"
-                                                    method="POST">
-                                                    @csrf @method('PUT')
-                                                    <div class="modal-content">
-                                                        <div class="modal-header">
-                                                            <h5>Cập nhật tài trợ</h5><button type="button"
-                                                                class="btn-close" data-bs-dismiss="modal"></button>
-                                                        </div>
-                                                        <div class="modal-body">
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Gói tài trợ</label>
-                                                                <select name="tier" class="form-select">
-                                                                    <option value="diamond"
-                                                                        {{ $item->tier == 'diamond' ? 'selected' : '' }}>
-                                                                        Diamond</option>
-                                                                    <option value="gold"
-                                                                        {{ $item->tier == 'gold' ? 'selected' : '' }}>Gold
-                                                                    </option>
-                                                                    <option value="silver"
-                                                                        {{ $item->tier == 'silver' ? 'selected' : '' }}>
-                                                                        Silver</option>
-                                                                </select>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Nhãn hiển thị</label>
-                                                                <input type="text" name="badge_text"
-                                                                    class="form-control" value="{{ $item->badge_text }}">
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Ngày hết hạn</label>
-                                                                <input type="date" name="end_date"
-                                                                    class="form-control"
-                                                                    value="{{ \Carbon\Carbon::parse($item->end_date)->format('Y-m-d') }}">
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer"><button type="submit"
-                                                                class="btn btn-success">Lưu cập nhật</button></div>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

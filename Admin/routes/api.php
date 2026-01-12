@@ -76,7 +76,6 @@ Route::get('/payment/check-status/{id}', [PaymentApiController::class, 'checkTra
 // Route::get('/merchant', [MerchantApiController::class, 'index']);
 
 Route::get('/posts', [PostApiController::class, 'index']);
-Route::get('/tags', [TagApiController::class, 'index']);
 
 
 Route::apiResource('reviews', ReviewApiController::class)

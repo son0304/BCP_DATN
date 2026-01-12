@@ -3,11 +3,9 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Models\FlashSaleItem;
-use App\Models\FlashSaleCampaign;
-use App\Models\Availability;
+use App\Models\{FlashSaleItem, FlashSaleCampaign, Availability, Post};
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\{Auth, DB};
 
 class FlashSaleItemController extends Controller
 {
@@ -15,52 +13,57 @@ class FlashSaleItemController extends Controller
     {
         $user = Auth::user();
 
-        // 1. Validate dữ liệu
-        $validatedData = $request->validate([
+        $request->validate([
             'campaign_id' => 'required|exists:flash_sale_campaigns,id',
             'availability_ids' => 'required|array',
-            'availability_ids.*' => 'exists:availabilities,id',
             'sale_price' => 'required|numeric|min:0',
         ]);
 
-        $campaignId = $request->campaign_id;
-        $selectedIds = $request->availability_ids;
-        $salePrice = $request->sale_price;
+        return DB::transaction(function () use ($request, $user) {
+            $campaign = FlashSaleCampaign::where('id', $request->campaign_id)
+                ->where('owner_id', $user->id)
+                ->firstOrFail();
 
-        // 2. Bảo mật: Kiểm tra xem Campaign này có đúng là của chủ sân này không
-        $campaign = FlashSaleCampaign::where('id', $campaignId)
-            ->where('owner_id', $user->id)
-            ->firstOrFail();
+            // 1. Sync Flash Sale Items
+            FlashSaleItem::where('campaign_id', $campaign->id)
+                ->whereNotIn('availability_id', $request->availability_ids)
+                ->delete();
 
-        // 3. Logic Sync (Đồng bộ):
-        // Xóa những Item cũ của Campaign này mà KHÔNG nằm trong danh sách vừa gửi lên
-        FlashSaleItem::where('campaign_id', $campaignId)
-            ->whereNotIn('availability_id', $selectedIds)
-            ->delete();
+            $venueId = null;
 
-        // 4. Tạo mới hoặc Cập nhật giá cho các Item được chọn
-        foreach ($selectedIds as $availabilityId) {
-            // Kiểm tra thêm: Slot này phải thuộc về sân của chủ sân này
-            $isOwnAvailability = Availability::where('id', $availabilityId)
-                ->whereHas('court.venue', function ($q) use ($user) {
-                    $q->where('owner_id', $user->id);
-                })->exists();
+            foreach ($request->availability_ids as $availabilityId) {
+                $availability = Availability::with('court.venue')->find($availabilityId);
 
-            if ($isOwnAvailability) {
-                FlashSaleItem::updateOrCreate(
+                // Kiểm tra quyền sở hữu và lấy Venue ID
+                if ($availability && $availability->court->venue->owner_id == $user->id) {
+                    $venueId = $availability->court->venue->id; // Lấy venue_id từ slot đầu tiên hợp lệ
+
+                    FlashSaleItem::updateOrCreate(
+                        ['campaign_id' => $campaign->id, 'availability_id' => $availabilityId],
+                        ['sale_price' => $request->sale_price, 'status' => 'active']
+                    );
+                }
+            }
+
+            // 2. TỰ ĐỘNG TẠO/CẬP NHẬT BÀI ĐĂNG TRÊN BẢNG TIN
+            if ($venueId) {
+                Post::updateOrCreate(
                     [
-                        'campaign_id' => $campaignId,
-                        'availability_id' => $availabilityId
+                        'type' => 'sale',
+                        'reference_id' => $campaign->id // Dùng ID chiến dịch để không tạo trùng bài
                     ],
                     [
-                        'sale_price' => $salePrice,
-                        'status' => 'active'
+                        'user_id' => $user->id,
+                        'venue_id' => $venueId,
+                        'content' => "🔥 SIÊU GIẢM GIÁ: Chiến dịch " . $campaign->name . " đang diễn ra với giá chỉ " . number_format($request->sale_price) . "đ. Đặt sân ngay để nhận ưu đãi!",
+                        'status' => 'active',
+                        'phone_contact' => $user->phone ?? ''
                     ]
                 );
             }
-        }
 
-        return redirect()->route('owner.flash_sale_campaigns.index')
-            ->with('success', 'Đã thiết lập giảm giá Flash Sale thành công!');
+            return redirect()->route('owner.flash_sale_campaigns.index')
+                ->with('success', 'Đã cập nhật Flash Sale và bài đăng cộng đồng!');
+        });
     }
 }

@@ -4,35 +4,29 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Post extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
-        'author_id',
-        'tag_id',
-        'title',
+        'user_id',
+        'type',           // 'sale' hoặc 'user_post'
+        'reference_id',   // Lưu ID của FlashSaleCampaign (nếu là bài sale)
+        'venue_id',       // Lưu ID của Venue để điều hướng
         'content',
-        'is_active',
-        'process_status',
-        'note',
+        'phone_contact',
+        'status',
     ];
 
     public function author()
     {
-        return $this->belongsTo(User::class, 'author_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function tag()
+    public function venue()
     {
-        return $this->belongsTo(Tag::class);
-    }
-
-    public function tags()
-    {
-        return $this->belongsToMany(Tag::class, 'post_tag');
+        return $this->belongsTo(Venue::class, 'venue_id');
     }
 
     public function images()
@@ -40,42 +34,8 @@ class Post extends Model
         return $this->morphMany(Image::class, 'imageable');
     }
 
-    // App\Models\Post.php
-
-    public function getStatusLabelAttribute()
+    public function scopeActive($query)
     {
-        if ($this->is_active) {
-            return [
-                'text' => 'Đã duyệt',
-                'class' => 'bg-success'
-            ];
-        }
-
-        if (!$this->is_active && $this->note) {
-
-            if (str_starts_with($this->note, '[CANCELLED]')) {
-                return [
-                    'text' => 'Đã hủy',
-                    'class' => 'bg-dark'
-                ];
-            }
-
-            return [
-                'text' => 'Bị từ chối',
-                'class' => 'bg-danger'
-            ];
-        }
-
-        return [
-            'text' => 'Chưa duyệt',
-            'class' => 'bg-warning text-dark'
-        ];
-    }
-
-    public function comments()
-    {
-        return $this->hasMany(Comment::class)
-            ->whereNull('parent_id')
-            ->latest();
+        return $query->where('status', 'active');
     }
 }

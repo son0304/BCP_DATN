@@ -1,476 +1,240 @@
+import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-    Avatar,
-    Image,
-    Typography,
-    Space,
-    Card,
-    List,
-    Button,
-    Input,
-    Modal,
-    message,
-    Select,
-    Upload,
-} from "antd";
-import {
-    UserOutlined,
-    LikeOutlined,
-    MessageOutlined,
-    ShareAltOutlined,
-    EllipsisOutlined,
-    PictureOutlined,
-} from "@ant-design/icons";
-import { useFetchData, usePostData } from "../../Hooks/useApi";
-import { useState } from "react";
-import dayjs from "dayjs";
+    Phone, Image as ImageIcon, Send, X, Loader2,
+    MapPin, Clock, MoreHorizontal, ArrowRight,
+    Tag, Zap, Share2, MessageCircle, ShieldCheck
+} from 'lucide-react';
+import { useFetchData, usePostData } from '../../Hooks/useApi';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/vi';
 
-const { Text, Paragraph, Title } = Typography;
-
-function CommentItem({
-    comment,
-    postId,
-    refetch,
-}: {
-    comment: any;
-    postId: number;
-    refetch: () => void;
-}) {
-    const [showReply, setShowReply] = useState(false);
-    const [reply, setReply] = useState("");
-    const createComment = usePostData("comments");
-
-    const submitReply = async () => {
-        if (!reply.trim()) return;
-
-        await createComment.mutateAsync({
-            post_id: postId,
-            content: reply,
-            parent_id: comment.id,
-        });
-
-        setReply("");
-        setShowReply(false);
-        refetch();
-    };
-
-    return (
-        <div className="ml-10 mt-2">
-            <div className="flex gap-2">
-                <Avatar size={28} icon={<UserOutlined />} />
-                <div>
-                    <Text strong className="text-sm">
-                        {comment.author?.name}
-                    </Text>
-                    <div className="text-sm">{comment.content}</div>
-
-                    <span
-                        className="text-xs text-gray-500 cursor-pointer hover:underline"
-                        onClick={() => setShowReply(!showReply)}
-                    >
-                        Trả lời
-                    </span>
-                </div>
-            </div>
-
-            {showReply && (
-                <div className="ml-8 mt-2 flex gap-2">
-                    <Input
-                        size="small"
-                        value={reply}
-                        onChange={(e) => setReply(e.target.value)}
-                        onPressEnter={submitReply}
-                        placeholder="Viết trả lời..."
-                    />
-                    <Button size="small" onClick={submitReply}>
-                        Gửi
-                    </Button>
-                </div>
-            )}
-
-            {comment.replies?.map((c: any) => (
-                <CommentItem
-                    key={c.id}
-                    comment={c}
-                    postId={postId}
-                    refetch={refetch}
-                />
-            ))}
-        </div>
-    );
-}
-
-function CommentSection({ postId }: { postId: number }) {
-    const { data, refetch } = useFetchData<any>(
-        `posts/${postId}/comments`
-    );
-    const comments = data?.data || [];
-    const [content, setContent] = useState("");
-    const createComment = usePostData("comments");
-
-    const submit = async () => {
-        if (!content.trim()) return;
-
-        await createComment.mutateAsync({
-            post_id: postId,
-            content,
-        });
-
-        setContent("");
-        refetch();
-    };
-
-    return (
-        <div className="mt-3 border-t pt-3">
-            <div className="flex gap-2 mb-3 items-start">
-                <div className="shrink-0">
-                    <Avatar size={32} icon={<UserOutlined />} />
-                </div>
-
-                <Input
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    onPressEnter={submit}
-                    placeholder="Viết bình luận..."
-                />
-
-                <Button onClick={submit}>Gửi</Button>
-            </div>
-
-
-            {comments.map((c: any) => (
-                <CommentItem
-                    key={c.id}
-                    comment={c}
-                    postId={postId}
-                    refetch={refetch}
-                />
-            ))}
-        </div>
-    );
-}
-
+dayjs.extend(relativeTime);
+dayjs.locale('vi');
 
 export default function Home_Post() {
-    const [currentPage, setCurrentPage] = useState(1);
-    const { data: response, isLoading, refetch } = useFetchData<any>("posts", {
-        page: currentPage,
+    const navigate = useNavigate();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // --- 1. STATES ---
+    const [content, setContent] = useState("");
+    const [phone, setPhone] = useState("");
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [previews, setPreviews] = useState<string[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // State quản lý bộ lọc: 'all' | 'sale' | 'user_post'
+    const [activeFilter, setActiveFilter] = useState<'all' | 'sale' | 'user_post'>('all');
+
+    // --- 2. API DATA ---
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const { data: response, isLoading: isFetching, refetch } = useFetchData<any>("posts");
+    const { mutate } = usePostData<any, any>('posts');
+
+    const allPosts = response?.data?.data || [];
+
+    // --- 3. LOGIC LỌC (QUAN TRỌNG) ---
+    const filteredPosts = allPosts.filter((post: any) => {
+        if (activeFilter === 'all') return true;
+        return post.type === activeFilter;
     });
 
-    const posts = response?.data?.data || [];
-    const { data: tagRes } = useFetchData<any>("tags");
-    const tags = tagRes?.data || [];
+    // --- 4. HANDLERS ---
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        setSelectedFiles(prev => [...prev, ...files]);
+        setPreviews(prev => [...prev, ...files.map(file => URL.createObjectURL(file))]);
+    };
 
-    const meta = response?.data;
-
-    const [openCreatePost, setOpenCreatePost] = useState(false);
-    const [content, setContent] = useState("");
-    const [selectedTags, setSelectedTags] = useState<number[]>([]);
-    const [uploadedImages, setUploadedImages] = useState<any[]>([]);
-    const [uploading, setUploading] = useState(false);
-
-    const [openCommentPostId, setOpenCommentPostId] = useState<number | null>(null);
-
-    // Hook tạo post
-    const createPostMutation = usePostData<any, any>("posts");
-
-    /* ================= UPLOAD IMAGE ================= */
-    const handleUploadImage = async (file: File) => {
-        setUploading(true);
-
+    const handleCreatePost = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (content.trim().length < 5) return alert("Nội dung quá ngắn");
+        setIsSubmitting(true);
         const formData = new FormData();
-        formData.append("type", "post");
-        formData.append("id", "0");
-        formData.append("files[]", file);
+        formData.append('content', content);
+        formData.append('type', 'user_post');
+        formData.append('phone_contact', phone || user.phone || "");
+        selectedFiles.forEach(file => formData.append('images[]', file));
 
-        try {
-            const res = await fetch("http://localhost:8000/api/upload", {
-                method: "POST",
-                headers: {
-                    // Chỉ để Authorization, KHÔNG thêm Content-Type
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    Accept: "application/json",
-                },
-                body: formData,
-            });
-
-            const data = await res.json();
-
-            if (data.success) {
-                setUploadedImages((prev) => [...prev, ...data.images]);
-                message.success("Upload ảnh thành công");
-            } else {
-                console.error("Upload failed:", data);
-                message.error(data.message || "Upload ảnh thất bại");
-            }
-        } catch (error) {
-            console.error("Upload error:", error);
-            message.error("Lỗi upload ảnh");
-        } finally {
-            setUploading(false);
-        }
-
-        return false;
+        mutate(formData, {
+            onSuccess: () => {
+                setContent(""); setPhone(""); setSelectedFiles([]); setPreviews([]);
+                refetch();
+            },
+            onSettled: () => setIsSubmitting(false)
+        });
     };
 
-    const removeImage = (id: number) => {
-        setUploadedImages(prev => prev.filter(img => img.id !== id));
-    };
-
-    /* ================= CREATE POST ================= */
-    const handleCreatePost = async () => {
-        if (!content.trim()) return;
-
-        try {
-            await createPostMutation.mutateAsync({
-                title: "Bài viết mới",
-                content,
-                image_ids: uploadedImages.map((img) => img.id),
-                tag_id: Array.isArray(selectedTags) ? selectedTags[0] : selectedTags,
-            });
-
-            message.success("Đã đăng bài viết 🎉");
-            setOpenCreatePost(false);
-            setContent("");
-            setSelectedTags([]);
-            setUploadedImages([]);
-            setCurrentPage(1);
-            refetch?.();
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || "Không thể đăng bài");
-        }
-    };
-
-    return (
-        <div className="bg-gray-100 min-h-screen">
-            {/* ================= HEADER ================= */}
-            <div className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-blue-100">
-                <div className="w-full px-6 py-4 flex justify-center">
-                    <div className="flex items-center gap-3 group">
-                        <img
-                            src="/logo.png"
-                            alt="Logo"
-                            className="w-9 h-9 md:w-12 md:h-12 rounded-full object-cover shadow-sm
-                            group-hover:rotate-12 transition-transform duration-300"
-                        />
-                        <Title
-                            level={2}
-                            className="!mb-0 font-bold tracking-wide
-                            bg-gradient-to-r from-blue-600 to-cyan-500
-                            bg-clip-text text-transparent"
-                        >
-                            Cộng đồng Booking Court Prime
-                        </Title>
-                    </div>
+    // --- 5. SUB-COMPONENTS (CARD UI) ---
+    const SalePostCard = ({ post }: { post: any }) => (
+        <article className="bg-gradient-to-br from-amber-50 to-white rounded-2xl border border-amber-200 overflow-hidden shadow-sm">
+            <div className="p-4 flex gap-3 items-center border-b border-amber-100 bg-white/50">
+                <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white shadow-sm">
+                    <Zap className="w-4 h-4 fill-current" />
+                </div>
+                <div>
+                    <h4 className="text-sm font-black text-amber-900 uppercase leading-none">{post.venue?.name}</h4>
+                    <span className="text-[10px] text-amber-600 font-bold uppercase tracking-tighter">Ưu đãi Flash Sale</span>
                 </div>
             </div>
+            <div className="p-4">
+                <p className="text-sm text-slate-700 whitespace-pre-wrap mb-4 italic leading-relaxed">{post.content}</p>
+                {post.images?.[0] && (
+                    <img src={post.images[0].url} className="w-full h-64 object-cover rounded-xl mb-4 border border-amber-100" />
+                )}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-slate-500">
+                        <MapPin className="w-4 h-4 text-rose-500" />
+                        <span className="text-xs font-bold">{post.venue?.name}</span>
+                    </div>
+                    <button onClick={() => navigate(`/venues/${post.venue_id}`)} className="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all shadow-md shadow-amber-200">
+                        ĐẶT LỊCH NGAY <ArrowRight className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        </article>
+    );
 
-            {/* ================= CONTENT ================= */}
-            <div className="flex justify-center p-4">
-                <div className="w-full max-w-[600px]">
-                    {/* CREATE POST CARD */}
-                    <Card className="mb-[10px] shadow-sm border-none rounded-lg">
-                        <div className="flex items-center gap-3">
-                            <Avatar size={40} icon={<UserOutlined />} />
-                            <div
-                                onClick={() => setOpenCreatePost(true)}
-                                className="flex-1 bg-gray-100 hover:bg-gray-200 transition rounded-full px-4 py-2 cursor-pointer"
+    const UserPostCard = ({ post }: { post: any }) => (
+        <article className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:border-emerald-200 transition-all">
+            <div className="p-4 flex justify-between items-start">
+                <div className="flex items-center gap-3">
+                    <img src={post.author?.avt || `https://ui-avatars.com/api/?name=${post.author?.name}&background=random`} className="w-10 h-10 rounded-full border shadow-sm" />
+                    <div>
+                        <h4 className="text-sm font-bold text-slate-900">{post.author?.name}</h4>
+                        <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {dayjs(post.created_at).fromNow()}
+                        </span>
+                    </div>
+                </div>
+                <button className="text-slate-300 hover:text-slate-600"><MoreHorizontal className="w-5 h-5" /></button>
+            </div>
+            <div className="px-4 pb-3">
+                <p className="text-[15px] text-slate-700 leading-snug">{post.content}</p>
+            </div>
+            {post.images && post.images.length > 0 && (
+                <div className={`px-4 mb-3 grid gap-1 ${post.images.length >= 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    {post.images.slice(0, 4).map((img: any, idx: number) => (
+                        <img key={idx} src={img.url} className={`w-full ${post.images.length === 1 ? 'h-72' : 'h-48'} object-cover rounded-xl border border-slate-100`} />
+                    ))}
+                </div>
+            )}
+            <div className="px-4 py-3 border-t border-slate-50 bg-slate-50/50 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <button className="flex items-center gap-1 text-slate-400 hover:text-emerald-600 transition text-[11px] font-bold"><MessageCircle className="w-4 h-4" /> Quan tâm</button>
+                    <button className="flex items-center gap-1 text-slate-400 hover:text-blue-600 transition text-[11px] font-bold"><Share2 className="w-4 h-4" /> Chia sẻ</button>
+                </div>
+                {post.phone_contact && (
+                    <a href={`tel:${post.phone_contact}`} className="flex items-center gap-2 bg-[#00b67a] text-white px-4 py-1.5 rounded-full text-[11px] font-black shadow-sm">
+                        <Phone className="w-3 h-3 fill-current" /> {post.phone_contact}
+                    </a>
+                )}
+            </div>
+        </article>
+    );
+
+    // --- 6. MAIN RENDER ---
+    return (
+        <div className="bg-[#f8fafc] min-h-screen py-10 px-4">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                {/* CỘT TRÁI: BỘ LỌC (FILTER) */}
+                <aside className="hidden lg:block lg:col-span-3 space-y-4">
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 sticky top-24">
+                        <h3 className="font-black text-slate-800 uppercase text-[10px] mb-4 tracking-widest opacity-50">Danh mục bài viết</h3>
+                        <nav className="space-y-1">
+                            <button
+                                onClick={() => setActiveFilter('all')}
+                                className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeFilter === 'all' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-500 hover:bg-slate-50'}`}
                             >
-                                <Text type="secondary">
-                                    Bạn đang nghĩ gì thế?
-                                </Text>
+                                🔥 Tất cả bài viết
+                            </button>
+                            <button
+                                onClick={() => setActiveFilter('sale')}
+                                className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeFilter === 'sale' ? 'bg-amber-50 text-amber-700' : 'text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                ⚡ Ưu đãi Flash Sale
+                            </button>
+                            <button
+                                onClick={() => setActiveFilter('user_post')}
+                                className={`w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeFilter === 'user_post' ? 'bg-blue-50 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}
+                            >
+                                🤝 Tìm đối thủ
+                            </button>
+                        </nav>
+                    </div>
+                </aside>
+
+                {/* CỘT GIỮA: FEED */}
+                <main className="lg:col-span-6 space-y-6">
+                    {/* KHUNG ĐĂNG BÀI */}
+                    <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                        <div className="flex gap-4">
+                            <img src={user?.avt || `https://ui-avatars.com/api/?name=${user?.name}`} className="w-12 h-12 rounded-full border" />
+                            <div className="flex-1">
+                                <textarea
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
+                                    placeholder={`${user?.name || 'Bạn'} ơi, hôm nay có kèo gì hot không?`}
+                                    className="w-full border-none focus:ring-0 text-slate-700 placeholder:text-slate-400 min-h-[70px] text-base resize-none"
+                                />
+                                {previews.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-4">
+                                        {previews.map((url, i) => (
+                                            <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border">
+                                                <img src={url} className="w-full h-full object-cover" />
+                                                <button onClick={() => { setPreviews(p => p.filter((_, idx) => idx !== i)); setSelectedFiles(f => f.filter((_, idx) => idx !== i)); }} className="absolute top-0 right-0 bg-black/50 text-white p-0.5"><X className="w-3 h-3" /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                <div className="flex items-center justify-between pt-4 border-t">
+                                    <div className="flex items-center gap-3">
+                                        <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 text-slate-500 hover:text-emerald-600 font-bold text-xs"><ImageIcon className="w-5 h-5 text-emerald-500" /> Ảnh</button>
+                                        <input type="text" placeholder="SĐT liên hệ..." value={phone} onChange={e => setPhone(e.target.value)} className="bg-slate-50 border rounded-lg text-[11px] w-32 px-3 py-1.5 focus:ring-0 outline-none" />
+                                    </div>
+                                    <button onClick={handleCreatePost} disabled={!content.trim() || isSubmitting} className="bg-[#00b67a] hover:bg-[#009664] disabled:bg-slate-200 text-white px-6 py-2 rounded-xl font-black text-[11px] uppercase transition-all shadow-md shadow-emerald-100 flex items-center gap-2">
+                                        {isSubmitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />} Đăng bài
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </Card>
+                        <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileSelect} accept="image/*" />
+                    </section>
 
-                    {/* POSTS */}
-                    <List
-                        loading={isLoading}
-                        dataSource={posts}
-                        renderItem={(item: any) => (
-                            <List.Item style={{ padding: 0, marginBottom: 10 }} className="mt-[10px]">
-                                <Card
-                                    className="shadow-sm border-none rounded-lg"
-                                    bodyStyle={{ padding: "12px 16px" }}
-                                    actions={[
-                                        <Space key="like"><LikeOutlined /> Thích</Space>,
-                                        <Space
-                                            key="comment"
-                                            onClick={() =>
-                                                setOpenCommentPostId(
-                                                    openCommentPostId === item.id ? null : item.id
-                                                )
-                                            }
-                                        >
-                                            <MessageOutlined /> Bình luận
-                                        </Space>
-                                        ,
-                                        <Space key="share"><ShareAltOutlined /> Chia sẻ</Space>,
-                                    ]}
-                                >
-
-                                    <div className="flex justify-between items-start mb-3">
-                                        <Space size={12}>
-                                            <Avatar
-                                                size={40}
-                                                icon={<UserOutlined />}
-                                                src={item.author?.avatar}
-                                            />
-                                            <div>
-                                                <Text strong>
-                                                    {item.author?.name || "Người dùng"}
-                                                </Text>
-                                                <div className="text-xs text-gray-500">
-                                                    {dayjs(item.created_at).format("DD/MM/YYYY HH:mm")} · 🌍
-                                                </div>
-                                            </div>
-                                        </Space>
-                                        <EllipsisOutlined className="text-lg cursor-pointer text-gray-500" />
-                                    </div>
-
-                                    <Paragraph
-                                        ellipsis={{ rows: 3, expandable: true, symbol: "Xem thêm" }}
-                                        className="text-[15px] whitespace-pre-wrap"
-                                    >
-                                        {item.content}
-                                    </Paragraph>
-
-                                    {item.images?.length > 0 && (
-                                        <div className="mx-[-16px] border-y bg-black flex justify-center">
-                                            <Image
-                                                src={
-                                                    item.images.find((img: any) => img.is_primary)?.url
-                                                    || item.images[0].url
-                                                }
-                                                style={{
-                                                    width: "100%",
-                                                    maxHeight: 500,
-                                                    objectFit: "contain",
-                                                }}
-                                            />
-                                        </div>
-                                    )}
-                                    {openCommentPostId === item.id && (
-                                        <CommentSection postId={item.id} />
-                                    )}
-                                </Card>
-                            </List.Item>
+                    {/* LIST POSTS ĐÃ LỌC */}
+                    <section className="space-y-6">
+                        {isFetching ? (
+                            <div className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-300" /></div>
+                        ) : filteredPosts.length > 0 ? (
+                            filteredPosts.map((post: any) => (
+                                post.type === 'sale'
+                                    ? <SalePostCard key={post.id} post={post} />
+                                    : <UserPostCard key={post.id} post={post} />
+                            ))
+                        ) : (
+                            <div className="bg-white rounded-2xl p-20 text-center border border-dashed border-slate-200 text-slate-400 font-bold text-sm">Chưa có bài viết nào.</div>
                         )}
-                        pagination={{
-                            current: meta?.current_page,
-                            pageSize: meta?.per_page || 10,
-                            total: meta?.total || 0,
-                            hideOnSinglePage: true,
-                            onChange: (page) => {
-                                setCurrentPage(page);
-                                window.scrollTo({ top: 0, behavior: "smooth" });
-                            },
-                        }}
-                    />
-                </div>
+                    </section>
+                </main>
+
+                {/* CỘT PHẢI: QUY ĐỊNH (ĐÃ BỎ APP MOBILE) */}
+                <aside className="hidden lg:block lg:col-span-3">
+                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 sticky top-24">
+                        <div className="flex items-center gap-2 mb-4">
+                            <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Cộng đồng văn minh</h3>
+                        </div>
+                        <ul className="space-y-4">
+                            <li className="text-[11px] text-slate-500 leading-relaxed italic border-l-2 border-emerald-500 pl-3">Vui lòng không đăng tải nội dung không liên quan đến thể thao.</li>
+                            <li className="text-[11px] text-slate-500 leading-relaxed italic border-l-2 border-emerald-500 pl-3">Mọi hành vi lừa đảo sẽ bị khóa tài khoản vĩnh viễn.</li>
+                            <li className="text-[11px] text-slate-500 leading-relaxed italic border-l-2 border-emerald-500 pl-3">Hãy tôn trọng đối thủ và đồng đội trong mọi kèo đấu.</li>
+                        </ul>
+                    </div>
+                </aside>
+
             </div>
-
-            {/* ================= MODAL CREATE POST ================= */}
-            <Modal
-                open={openCreatePost}
-                onCancel={() => {
-                    setOpenCreatePost(false);
-                    setContent("");
-                    setSelectedTags([]);
-                    setUploadedImages([]);
-                }}
-                footer={null}
-                centered
-                width={500}
-                destroyOnClose
-                title={
-                    <div className="text-center font-semibold text-lg border-b pb-2">
-                        Tạo bài viết
-                    </div>
-                }
-            >
-
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                        <Avatar size={40} icon={<UserOutlined />} />
-                        <Text strong>Thanh Tung</Text>
-                    </div>
-
-                    <Select
-                        mode="multiple"
-                        allowClear
-                        showSearch={false}
-                        size="small"
-                        placeholder="Chọn tag"
-                        className="min-w-[180px]"
-                        value={selectedTags}
-                        onChange={(values) => setSelectedTags(values)}
-                        options={tags.map((tag: any) => ({
-                            label: tag.name,
-                            value: tag.id,
-                        }))}
-                    />
-                </div>
-
-                {/* ADD TO POST */}
-                <div className="relative">
-                    <Input.TextArea
-                        autoFocus
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        placeholder="Bạn đang nghĩ gì thế?"
-                        bordered={false}
-                        autoSize={{ minRows: 4, maxRows: 8 }}
-                        className="text-lg pr-10"
-                    />
-
-                    <Upload
-                        beforeUpload={handleUploadImage}
-                        showUploadList={false}
-                        multiple
-                        disabled={uploading}
-                    >
-                        <PictureOutlined
-                            className={`absolute bottom-2 right-2 text-2xl cursor-pointer ${uploading ? "text-gray-400" : "text-green-500"
-                                }`}
-                        />
-                    </Upload>
-                </div>
-                {uploadedImages.length > 0 && (
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                        {uploadedImages.map((img) => (
-                            <div key={img.id} className="relative group">
-                                <Image
-                                    src={img.url}
-                                    className="rounded w-full h-28 object-cover"
-                                    preview
-                                />
-                                <Button
-                                    type="primary"
-                                    danger
-                                    size="small"
-                                    shape="circle"
-                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition"
-                                    onClick={() => removeImage(img.id)}
-                                >
-                                    ✕
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                <Button
-                    type="primary"
-                    block
-                    size="large"
-                    className="mt-4"
-                    loading={createPostMutation.isPending}
-                    disabled={!content.trim()}
-                    onClick={handleCreatePost}
-                >
-                    Đăng
-                </Button>
-            </Modal>
         </div>
     );
 }

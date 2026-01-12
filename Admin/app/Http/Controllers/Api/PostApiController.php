@@ -3,158 +3,77 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Image;
-use App\Models\Post;
-use Auth;
+use App\Models\{Post, Image};
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Str;
+use Illuminate\Support\Facades\{Auth, DB, Log, Storage};
 
 class PostApiController extends Controller
 {
     public function index(Request $request)
     {
         try {
-            $query = Post::query()
-                ->with([
-                    'author:id,name',
-                    'tags:id,name',
-                    'images:id,imageable_id,url,is_primary'
-                ]);
+            $posts = Post::query()
+                ->where('status', 'active')
+                ->with(['author:id,name,avt', 'images', 'venue:id,name'])
+                ->latest()
+                ->paginate($request->input('per_page', 10));
 
-            $query->where('is_active', 1);
-
-            if (!$request->has('sort')) {
-                $query->latest();
-            }
-
-            $posts = $query->paginate($request->input('per_page', 10));
-
-            return response()->json([
-                'success' => true,
-                'data'    => $posts
-            ]);
+            return response()->json(['success' => true, 'data' => $posts]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error'   => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
 
     public function store(Request $request)
     {
-        if (!Auth::check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Bạn chưa đăng nhập'
-            ], 401);
-        }
-
-        $request->validate([
-            'title'      => 'required|string|max:255',
-            'content'    => 'required|string',
-            'image_ids'  => 'nullable|array',
-            'image_ids.*' => 'integer|exists:images,id',
-            'tag_id'  => 'required|exists:tags,id',
-            'tags'       => 'nullable|array',
-            'tags.*'     => 'integer',
+        // Validate nhận cả file ảnh
+        $validated = $request->validate([
+            'content'       => 'required|string|min:5',
+            'type'          => 'required|in:sale,user_post',
+            'venue_id'      => 'nullable|integer',
+            'phone_contact' => 'nullable|string|max:20',
+            'images'        => 'nullable|array',
+            'images.*'      => 'image|mimes:jpeg,png,jpg,webp|max:2048', // Max 2MB/ảnh
         ]);
 
         try {
-            return DB::transaction(function () use ($request) {
+            return DB::transaction(function () use ($request, $validated) {
+                $user = Auth::user();
 
-                // 1️⃣ Tạo bài viết
+                // 1. Tạo bài viết
                 $post = Post::create([
-                    'title'     => $request->title,
-                    'content'   => $request->content,
-                    'author_id'   => Auth::id(),
-                    'tag_id'    => $request->tag_id,
-                    'is_active' => 0,
-
+                    'user_id'       => $user->id,
+                    'type'          => $validated['type'],
+                    'venue_id'      => $request->venue_id,
+                    'content'       => $validated['content'],
+                    'phone_contact' => $request->phone_contact ?? $user->phone,
+                    'status'        => 'active',
                 ]);
 
-                // 2️⃣ Gắn tags (nếu có)
-                if ($request->filled('tags')) {
-                    $post->tags()->sync($request->tags);
-                }
+                // 2. Xử lý upload ảnh nếu có
+                if ($request->hasFile('images')) {
+                    foreach ($request->file('images') as $index => $file) {
+                        $path = $file->store('posts', 'public');
 
-                // 3️⃣ Gắn ảnh đã upload trước đó vào post (MORPH)
-                if ($request->filled('image_ids')) {
-                    Image::whereIn('id', $request->image_ids)
-                        ->update([
+                        Image::create([
                             'imageable_type' => Post::class,
                             'imageable_id'   => $post->id,
+                            'url'            => asset('storage/' . $path),
+                            'is_primary'     => $index === 0, // Ảnh đầu tiên là ảnh chính
+                            'user_id'        => $user->id
                         ]);
-
-                    // set ảnh đầu tiên làm primary
-                    Image::whereIn('id', $request->image_ids)
-                        ->orderBy('id')
-                        ->limit(1)
-                        ->update(['is_primary' => true]);
+                    }
                 }
-
-                $post->load([
-                    'author',
-                    'tags',
-                    'images'
-                ]);
-
-                broadcast(new \App\Events\DataCreated($post, 'post', 'post.created'))->toOthers();
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Đã đăng bài viết mới!',
-                    'data'    => $post->load([
-                        'author',
-                        'tags',
-                        'images'
-                    ]),
+                    'message' => 'Đăng bài thành công!',
+                    'data'    => $post->load(['author', 'images', 'venue'])
                 ], 201);
             });
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Lỗi khi tạo bài viết',
-                'error'   => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function destroy($id)
-    {
-        if (!Auth::check()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Bạn chưa đăng nhập'
-            ], 401);
-        }
-
-        try {
-            $post = Post::findOrFail($id);
-
-            // Chỉ chủ bài viết hoặc admin được xóa
-            if ($post->author_id !== Auth::id() && !Auth::user()->is_admin) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Bạn không có quyền xóa bài viết này'
-                ], 403);
-            }
-
-            $post->delete();
-
-            broadcast(new \App\Events\DataDeleted($post, 'post', 'post.deleted'))->toOthers();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Đã xóa bài viết thành công'
-            ]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Lỗi khi xóa bài viết',
-                'error'   => $e->getMessage()
-            ], 500);
+            Log::error("Lỗi đăng bài: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 }

@@ -270,6 +270,9 @@ class VenueApiController extends Controller
             'user_profiles.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
             'venue_profiles' => 'required|array',
             'venue_profiles.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'document_images' => 'required|array',
+            'document_images.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
+
         ]);
 
         DB::beginTransaction();

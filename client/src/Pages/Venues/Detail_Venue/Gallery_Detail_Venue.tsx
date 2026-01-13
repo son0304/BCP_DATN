@@ -112,7 +112,7 @@ const Gallery_Detail_Venue: React.FC<GalleryProps> = ({ venue, formatPrice }) =>
                             </span>
                             <span className="text-gray-400">|</span>
                             <span className="text-gray-500">
-                                Chủ sân: <strong>{owner?.data?.name ?? 'Hệ thống'}</strong>
+                                Chủ sân: <strong>{venue.owner?.name ?? 'Hệ thống'}</strong>
                             </span>
                         </div>
                     </div>

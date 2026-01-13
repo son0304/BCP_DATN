@@ -166,7 +166,7 @@
                                         <div class="btn-group" role="group">
                                             <a href="{{ route('admin.users.show', $user) }}"
                                                 class="btn btn-outline-primary btn-sm me-2"><i class="fas fa-eye"></i></a>
-                                            <a href="{{ route('admin.users.edit', $user) }}"
+                                            <!-- <a href="{{ route('admin.users.edit', $user) }}"
                                                 class="btn btn-outline-warning btn-sm me-2"><i class="fas fa-edit"></i></a>
                                             <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
                                                 class="d-inline"
@@ -175,7 +175,7 @@
                                                 @method('DELETE')
                                                 <button type="submit" class="btn btn-outline-danger btn-sm"><i
                                                         class="fas fa-trash"></i></button>
-                                            </form>
+                                            </form> -->
                                         </div>
                                     </td>
                                 </tr>

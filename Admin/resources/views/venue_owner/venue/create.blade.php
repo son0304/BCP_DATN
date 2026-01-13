@@ -229,7 +229,7 @@
                 {{-- CỘT PHẢI: VẬN HÀNH & HÌNH ẢNH --}}
                 <div class="col-lg-4">
                     <div class="card shadow-sm border-0 mb-4 sticky-top" style="top: 20px;">
-                        <div class="card-header bg-dark text-white py-3">
+                        <div class="card-header bg-white text-white py-3">
                             <h6 class="fw-bold mb-0"><i class="fas fa-cog me-2"></i>3. Cài đặt vận hành</h6>
                         </div>
                         <div class="card-body">

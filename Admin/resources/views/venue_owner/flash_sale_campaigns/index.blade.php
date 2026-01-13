@@ -265,7 +265,7 @@
                             <h5 class="modal-title fw-bold">Tạo Chiến Dịch Flash Sale</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
-                        <form action="{{ route('owner.flash_sale_campaigns.store') }}" method="POST">
+                        <form action="{{ route('owner.flash_sale_campaigns.store_campaign') }}" method="POST">
                             @csrf
                             <div class="modal-body p-4">
                                 <div class="mb-3">

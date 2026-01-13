@@ -42,37 +42,38 @@ class FlashSaleCampaignController extends Controller
     public function store(Request $request)
     {
         // 1. Validate dữ liệu
-        $validated = $request->validate([
+        $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            // Sử dụng sau 'now' trừ đi 1 phút để tránh lỗi lệch giây khi submit
-            'start_datetime' => 'required|date|after:' . now()->subMinute(),
+            // Nới lỏng 10 phút để tránh lỗi "thời gian quá khứ" khi người dùng thao tác chậm
+            'start_datetime' => 'required|date|after:' . now()->subMinutes(10)->toDateTimeString(),
             'end_datetime' => 'required|date|after:start_datetime',
         ], [
             'name.required' => 'Vui lòng nhập tên chiến dịch.',
+            'name.max' => 'Tên chiến dịch không quá 255 ký tự.',
+            'start_datetime.required' => 'Vui lòng chọn thời gian bắt đầu.',
+            'start_datetime.date' => 'Định dạng thời gian không hợp lệ.',
             'start_datetime.after' => 'Thời gian bắt đầu không được ở trong quá khứ.',
+            'end_datetime.required' => 'Vui lòng chọn thời gian kết thúc.',
             'end_datetime.after' => 'Thời gian kết thúc phải sau thời gian bắt đầu.',
         ]);
 
         try {
-            // 2. Gán owner_id và tạo mới
+            // 2. Tạo mới
             $campaign = FlashSaleCampaign::create([
                 'owner_id' => Auth::id(),
                 'name' => $request->name,
                 'description' => $request->description,
                 'start_datetime' => $request->start_datetime,
                 'end_datetime' => $request->end_datetime,
-                'status' => 'pending', // Mặc định là chờ
+                'status' => 'pending',
             ]);
 
-            CheckFlashSale::dispatch($campaign->id, 'active')
-                ->delay($campaign->start_datetime);
+            // Job kích hoạt
+            CheckFlashSale::dispatch($campaign->id, 'active')->delay(\Carbon\Carbon::parse($campaign->start_datetime));
+            // Job kết thúc
+            CheckFlashSale::dispatch($campaign->id, 'inactive')->delay(\Carbon\Carbon::parse($campaign->end_datetime));
 
-            // Job 2: Chuyển trạng thái sang 'ended' (kết thúc) khi đến giờ KẾT THÚC
-            CheckFlashSale::dispatch($campaign->id, 'inactive')
-                ->delay($campaign->end_datetime);
-
-            // 3. Chuyển hướng sang Bước 2 (Thiết lập giá sân)
             return redirect()->route('owner.flash_sale_campaigns.show', $campaign->id)
                 ->with('success', 'Đã tạo khung chiến dịch. Bây giờ hãy chọn sân giảm giá!');
         } catch (\Exception $e) {

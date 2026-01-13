@@ -41,27 +41,29 @@ class WebSettingController extends Controller
             'title'      => 'required|string|max:255',
             'image'      => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
             'position'   => 'required',
+            'priority'   => 'required|integer|min:0',
             'start_date' => 'required|date',
             'end_date'   => 'required|date|after_or_equal:start_date',
+        ], [
+            'title.required' => 'Tiêu đề không được để trống.',
+            'image.required' => 'Vui lòng chọn ảnh banner.',
+            'priority.required' => 'Vui lòng nhập thứ tự ưu tiên.',
         ]);
 
-        // 1. Tạo Banner (không có image_url trong fillable)
-        $banner = Banner::create($request->only([
-            'title',
-            'target_url',
-            'position',
-            'priority',
-            'start_date',
-            'end_date',
-            'is_active'
-        ]));
+        $banner = Banner::create([
+            'title'      => $request->title,
+            'target_url' => $request->target_url,
+            'position'   => $request->position,
+            'priority'   => $request->priority,
+            'start_date' => $request->start_date,
+            'end_date'   => $request->end_date,
+            'is_active'  => $request->input('is_active', 1),
+        ]);
 
-        // 2. Xử lý lưu ảnh vào bảng images thông qua relationship
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             $path = $file->store('uploads/banners', 'public');
 
-            // Tạo bản ghi vào bảng images (morphMany)
             $banner->images()->create([
                 'url' => 'storage/' . $path, // Format chuẩn: storage/uploads/reviews/ten_file.jpg
                 'description' => null,
@@ -69,7 +71,7 @@ class WebSettingController extends Controller
             ]);
         }
 
-        return redirect()->route('admin.settings.index')->with('success', 'Thêm banner thành công!');
+        return redirect()->back()->with('success', 'Thêm banner thành công!');
     }
 
     public function updateBanner(Request $request, $id)
@@ -77,40 +79,56 @@ class WebSettingController extends Controller
         $banner = Banner::findOrFail($id);
 
         $request->validate([
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'start_date' => 'date',
-            'end_date' => 'date|after_or_equal:start_date',
+            'title'      => 'required|string|max:255',
+            'image'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'position'   => 'required',
+            'priority'   => 'required|integer|min:0',
+            'start_date' => 'required|date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
+        ], [
+            'title.required' => 'Tiêu đề không được để trống.',
+            'position.required' => 'Vui lòng chọn vị trí hiển thị.',
+            'priority.required' => 'Vui lòng nhập thứ tự ưu tiên.',
         ]);
 
-        // 1. Cập nhật thông tin cơ bản
-        $banner->update($request->only([
-            'title',
-            'target_url',
-            'position',
-            'priority',
-            'start_date',
-            'end_date',
-            'is_active'
-        ]));
+        // 1. Cập nhật thông tin text
+        $banner->update([
+            'title'      => $request->title,
+            'target_url' => $request->target_url,
+            'position'   => $request->position,
+            'priority'   => $request->priority,
+            'start_date' => $request->start_date,
+            'end_date'   => $request->end_date,
+            'is_active'  => $request->input('is_active', 0),
+        ]);
 
-        // 2. Nếu có upload ảnh mới
+        // 2. Xử lý ảnh nếu có upload mới
         if ($request->hasFile('image')) {
-            // Xóa các ảnh cũ trong storage và trong DB
+            // Xóa các ảnh cũ
             foreach ($banner->images as $oldImage) {
-                Storage::disk('public')->delete($oldImage->url);
+                // Vì DB lưu là 'storage/uploads/banners/abc.jpg'
+                // Ta cần xóa chữ 'storage/' để Storage::disk('public') hiểu được đường dẫn vật lý
+                $physicalPath = str_replace('storage/', '', $oldImage->url);
+
+                if (Storage::disk('public')->exists($physicalPath)) {
+                    Storage::disk('public')->delete($physicalPath);
+                }
                 $oldImage->delete();
             }
 
-            // Lưu ảnh mới
-            $path = $request->file('image')->store('banners', 'public');
+            // Lưu ảnh mới THEO FORMAT CỦA storeBanner
+            $file = $request->file('image');
+            $path = $file->store('uploads/banners', 'public');
+
             $banner->images()->create([
-                'url' => $path,
+                'url'         => 'storage/' . $path, // Lưu giống hệt storeBanner
+                'description' => null,
+                'is_primary'  => true,
             ]);
         }
 
-        return redirect()->route('admin.settings.index')->with('success', 'Cập nhật banner thành công!');
+        return redirect()->back()->with('success', 'Cập nhật banner thành công!');
     }
-
     public function destroyBanner($id)
     {
         $banner = Banner::findOrFail($id);
@@ -124,8 +142,4 @@ class WebSettingController extends Controller
         $banner->delete();
         return redirect()->route('admin.settings.index')->with('success', 'Xóa banner thành công!');
     }
-
-
-
-
 }

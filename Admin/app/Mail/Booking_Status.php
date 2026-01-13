@@ -28,7 +28,7 @@ class Booking_Status extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Xác nhận email đăng ký tài khoản',
+            subject: 'Xác nhận thanh toán',
         );
     }
 

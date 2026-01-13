@@ -35,7 +35,7 @@
 
                 <p>Vui lòng cập nhật lại thông tin để chúng tôi xem xét lại.</p>
 
-                <a href="{{ $url }}/partner/venues" class="btn">Chỉnh sửa địa điểm</a>
+                <a href="{{ $url }}/owner/venues" class="btn">Chỉnh sửa địa điểm</a>
             </div>
         </div>
         <div class="footer"><p>&copy; {{ date('Y') }} Sport Venue System.</p></div>

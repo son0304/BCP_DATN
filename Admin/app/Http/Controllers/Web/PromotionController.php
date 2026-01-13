@@ -187,14 +187,53 @@ class PromotionController extends Controller
             abort(403);
         }
 
-        $request->validate([
-            'value'               => 'required|numeric|min:0',
-            'type'                => 'required|in:percentage,fixed',
-            'start_at'            => 'required|date',
-            'end_at'              => 'required|date|after:start_at',
-            'process_status'      => 'required|in:active,disabled',
-            'target_user_type'    => 'required|in:all,new_user',
-        ]);
+        $request->validate(
+            [
+                // Lưu ý: Thường mã code sẽ không cho sửa, nhưng nếu có thì thêm unique loại trừ ID hiện tại
+                'value'            => 'required|numeric|min:0' . ($request->type === 'percentage' ? '|max:100' : ''),
+                'type'             => 'required|in:percentage,fixed',
+                'start_at'         => 'required|date',
+                'end_at'           => 'required|date|after:start_at',
+                'usage_limit'      => 'nullable|integer',
+                'venue_id'         => 'nullable|exists:venues,id',
+                'process_status'   => 'required|in:active,disabled',
+                'target_user_type' => 'required|in:all,new_user',
+            ],
+            [
+                // value
+                'value.required' => 'Vui lòng nhập giá trị giảm.',
+                'value.numeric'  => 'Giá trị giảm phải là số.',
+                'value.min'      => 'Giá trị giảm không được nhỏ hơn 0.',
+                'value.max'      => 'Giá trị giảm theo phần trăm không được vượt quá 100%.',
+
+                // type
+                'type.required' => 'Vui lòng chọn loại giảm giá.',
+                'type.in'       => 'Loại giảm giá không hợp lệ.',
+
+                // start_at
+                'start_at.required' => 'Vui lòng chọn thời gian bắt đầu.',
+                'start_at.date'     => 'Thời gian bắt đầu không hợp lệ.',
+
+                // end_at
+                'end_at.required' => 'Vui lòng chọn thời gian kết thúc.',
+                'end_at.date'     => 'Thời gian kết thúc không hợp lệ.',
+                'end_at.after'    => 'Thời gian kết thúc phải sau thời gian bắt đầu.',
+
+                // usage_limit
+                'usage_limit.integer' => 'Giới hạn sử dụng phải là số nguyên.',
+
+                // venue_id
+                'venue_id.exists' => 'Sân được chọn không tồn tại.',
+
+                // process_status
+                'process_status.required' => 'Vui lòng chọn trạng thái.',
+                'process_status.in'       => 'Trạng thái không hợp lệ.',
+
+                // target_user_type
+                'target_user_type.required' => 'Vui lòng chọn đối tượng áp dụng.',
+                'target_user_type.in'       => 'Đối tượng áp dụng không hợp lệ.',
+            ]
+        );
 
         $usageLimit = $request->has('is_unlimited') ? -1 : ($request->usage_limit ?? 0);
 

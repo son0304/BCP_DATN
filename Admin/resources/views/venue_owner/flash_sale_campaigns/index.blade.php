@@ -51,6 +51,17 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
+        @if ($errors->any())
+            <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm" role="alert">
+                <div class="fw-bold"><i class="fas fa-exclamation-triangle me-2"></i> Có lỗi xảy ra:</div>
+                <ul class="mb-0 mt-2">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
 
         {{-- BỘ LỌC & TÌM KIẾM --}}
         <div class="card border-0 shadow-sm rounded-4 mb-4">
@@ -268,37 +279,75 @@
                         <form action="{{ route('owner.flash_sale_campaigns.store_campaign') }}" method="POST">
                             @csrf
                             <div class="modal-body p-4">
+                                {{-- Tên chiến dịch --}}
                                 <div class="mb-3">
                                     <label class="filter-label">Tên chiến dịch <span class="text-danger">*</span></label>
-                                    <input type="text" name="name" class="form-control"
-                                        placeholder="VD: Khuyến mãi mừng hè..." required>
+                                    <input type="text" name="name"
+                                        class="form-control @error('name') is-invalid @enderror"
+                                        placeholder="VD: Khuyến mãi mừng hè..." value="{{ old('name') }}">
+                                    @error('name')
+                                        <div class="invalid-feedback fw-bold">{{ $message }}</div>
+                                    @enderror
                                 </div>
+
+                                {{-- Mô tả --}}
                                 <div class="mb-3">
                                     <label class="filter-label">Mô tả (Không bắt buộc)</label>
-                                    <textarea name="description" class="form-control" rows="2"
-                                        placeholder="VD: Áp dụng cho toàn bộ các sân cầu lông..."></textarea>
+                                    <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="2"
+                                        placeholder="VD: Áp dụng cho toàn bộ các sân cầu lông...">{{ old('description') }}</textarea>
+                                    @error('description')
+                                        <div class="invalid-feedback fw-bold">{{ $message }}</div>
+                                    @enderror
                                 </div>
+
                                 <div class="row g-3">
+                                    {{-- Thời gian bắt đầu --}}
                                     <div class="col-md-6">
                                         <label class="filter-label">Thời gian bắt đầu <span
                                                 class="text-danger">*</span></label>
-                                        <input type="datetime-local" name="start_datetime" class="form-control" required>
+                                        <input type="datetime-local" name="start_datetime"
+                                            class="form-control @error('start_datetime') is-invalid @enderror"
+                                            value="{{ old('start_datetime') }}">
+                                        @error('start_datetime')
+                                            <div class="invalid-feedback fw-bold">{{ $message }}</div>
+                                        @enderror
                                     </div>
+
+                                    {{-- Thời gian kết thúc --}}
                                     <div class="col-md-6">
                                         <label class="filter-label">Thời gian kết thúc <span
                                                 class="text-danger">*</span></label>
-                                        <input type="datetime-local" name="end_datetime" class="form-control" required>
+                                        <input type="datetime-local" name="end_datetime"
+                                            class="form-control @error('end_datetime') is-invalid @enderror"
+                                            value="{{ old('end_datetime') }}">
+                                        @error('end_datetime')
+                                            <div class="invalid-feedback fw-bold">{{ $message }}</div>
+                                        @enderror
                                     </div>
                                 </div>
                             </div>
                             <div class="modal-footer bg-light border-0">
                                 <button type="button" class="btn btn-white" data-bs-dismiss="modal">Hủy</button>
-                                <button type="submit" class="btn btn-primary px-4 fw-bold">Tiếp theo <i
-                                        class="fas fa-arrow-right ms-1"></i></button>
+                                <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+                                    Tiếp theo <i class="fas fa-arrow-right ms-1"></i>
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Kiểm tra nếu có lỗi validation từ Laravel
+                @if ($errors->any())
+                    // 1. Nếu là lỗi của modal "Tạo mới" (dựa trên các field của store)
+                    @if ($errors->has('name') || $errors->has('start_datetime') || $errors->has('end_datetime'))
+                        var createModal = new bootstrap.Modal(document.getElementById('createCampaignModal'));
+                        createModal.show();
+                    @endif
+                @endif
+            });
+        </script>
     @endsection

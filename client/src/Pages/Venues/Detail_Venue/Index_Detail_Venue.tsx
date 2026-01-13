@@ -9,6 +9,7 @@ import { useNotification } from '../../../Components/Notification';
 import Order_Container from './Order/Order_Container';
 import Review_Venue from './Review';
 import type { Ticket } from '../../../Types/tiket';
+import RelatedVenue from '../RelatedVenues';
 
 const Index_Detail_Venue: React.FC = () => {
   const rawUser = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
@@ -22,7 +23,6 @@ const Index_Detail_Venue: React.FC = () => {
 
   const { showNotification } = useNotification();
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
-  const [relatedVenues, setRelatedVenues] = useState<Venue[]>([]);
   const [relatedLoading, setRelatedLoading] = useState<boolean>(false);
 
   const { id } = useParams<{ id: string }>();
@@ -108,17 +108,7 @@ const Index_Detail_Venue: React.FC = () => {
             {relatedLoading ? (
               <div className="text-center text-xs text-gray-400">Đang tải...</div>
             ) : (
-              <div className="space-y-4">
-                {relatedVenues.map(v => (
-                  <div key={v.id} onClick={() => window.location.href = `/venue/${v.id}`} className="flex gap-3 cursor-pointer group">
-                    <img src={(v as any).images?.[0]?.url} className="w-14 h-14 rounded-md object-cover bg-gray-100" alt="" />
-                    <div>
-                      <p className="text-sm font-bold group-hover:text-emerald-600 transition line-clamp-1">{v.name}</p>
-                      <p className="text-xs text-gray-500 line-clamp-1">{v.address_detail}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <RelatedVenue currentVenueId={venue.id} />
             )}
           </div>
         </div>

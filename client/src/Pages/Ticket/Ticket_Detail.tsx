@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react"; // Bổ sung useEffect
 import { useParams, Link } from "react-router-dom";
 import { useDeleteData, useFetchDataById } from "../../Hooks/useApi";
 import type { Ticket } from "../../Types/tiket";
@@ -8,6 +8,7 @@ import { useNotification } from "../../Components/Notification";
 import PaymentMomo from "../Payment/PaymentMomo";
 import PaymentVNPay from "../Payment/PaymentVNPay";
 import PaymentWallet from "../Payment/PaymentWallet";
+import axios from "axios"; // Đảm bảo axios đã được cài đặt
 
 const Ticket_Detail = () => {
   const [paymentMethod, setPaymentMethod] = useState<string>("");
@@ -18,6 +19,35 @@ const Ticket_Detail = () => {
 
   const destroyItem = useDeleteData<Ticket>("item");
   const destroyTicket = useDeleteData<Ticket>("ticket");
+
+  // --- LOGIC TỰ ĐỘNG KIỂM TRA TRẠNG THÁI THANH TOÁN (MỚI BỔ SUNG) ---
+  useEffect(() => {
+    let interval: any;
+
+    // Chỉ thực hiện loop khi ticket tồn tại và đang ở trạng thái chờ thanh toán (pending)
+    if (data?.data && data.data.status === "pending") {
+      interval = setInterval(async () => {
+        try {
+          // Gọi API check status cụ thể
+          // Lưu ý: Thay đổi prefix URL nếu cần thiết (ví dụ: /api/payment/...)
+          const response = await axios.get(`/payment/check-status/${id}`);
+
+          // Nếu trạng thái trả về từ server khác "pending", cập nhật lại dữ liệu trang
+          if (response.data && response.data.status !== "pending") {
+            refetch();
+            clearInterval(interval);
+          }
+        } catch (error) {
+          console.error("Error checking payment status:", error);
+        }
+      }, 1000); // 1 giây một lần
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [data?.data?.status, id, refetch]);
+  // -----------------------------------------------------------
 
   const handleApiError = (error: any, defaultMsg: string) => {
     const serverMessage = error?.response?.data?.message;
@@ -208,7 +238,7 @@ const Ticket_Detail = () => {
 
         <div className="p-6 md:p-8 space-y-8">
 
-          {/* === BOX CHÍNH SÁCH HOÀN TIỀN (BỔ SUNG) === */}
+          {/* === BOX CHÍNH SÁCH HOÀN TIỀN === */}
           {!isTicketCancelled && !isTicketCompleted && !isTicketCheckin && (
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-xl">
               <div className="flex items-center gap-2 mb-1">

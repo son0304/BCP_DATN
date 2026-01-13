@@ -27,8 +27,6 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
     const formatPrice = (price: number | string) =>
         Number(price).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
 
-    // 1. TÍNH TỔNG TIỀN GỐC (Chưa giảm giá)
-    // Phải tách ra useMemo riêng để dùng được trong useEffect phía dưới
     const rawTotalPrice = useMemo(() => {
         const bookingTotal = selectedItems.reduce((sum, item) => {
             const effectivePrice = (item.sale_price && item.sale_price > 0) ? item.sale_price : item.price;
@@ -42,28 +40,21 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
         return bookingTotal + serviceTotal;
     }, [selectedItems, selectedServices]);
 
-    // 2. SAFETY CHECK: Tự động hủy Voucher nếu tổng tiền tụt xuống dưới mức tối thiểu
-    // Sử dụng useEffect để đảm bảo state update xảy ra SAU khi render, fix lỗi "Cannot update..."
     useEffect(() => {
         if (selectedVoucher) {
             if (rawTotalPrice < selectedVoucher.min_order_value) {
                 setSelectedVoucher(null);
-                // Có thể show toast thông báo nếu muốn
-                // showNotification('Voucher đã bị hủy do đơn hàng chưa đủ giá trị tối thiểu', 'warning');
             }
         }
     }, [rawTotalPrice, selectedVoucher]);
 
-    // 3. TÍNH TOÁN FINAL PRICE
     const { finalPrice, discountAmount } = useMemo(() => {
         let discount = 0;
-
         if (selectedVoucher) {
             const now = new Date();
             const start = new Date(selectedVoucher.start_at);
             const end = new Date(selectedVoucher.end_at);
 
-            // Check cơ bản (phòng hờ, dù useEffect đã check min_order)
             const isValid =
                 selectedVoucher.process_status === 'active' &&
                 now >= start &&
@@ -72,7 +63,6 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
 
             if (isValid) {
                 const voucherVal = parseFloat(selectedVoucher.value);
-
                 if (selectedVoucher.type === 'percentage') {
                     discount = (rawTotalPrice * voucherVal) / 100;
                     if (selectedVoucher.max_discount_amount > 0 && discount > selectedVoucher.max_discount_amount) {
@@ -83,28 +73,23 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
                 }
             }
         }
-
         const validDiscount = Math.min(discount, rawTotalPrice);
-
         return {
             discountAmount: validDiscount,
             finalPrice: Math.max(0, rawTotalPrice - validDiscount)
         };
     }, [rawTotalPrice, selectedVoucher]);
 
-    // --- SUBMIT ---
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !user.id) return showNotification('Vui lòng đăng nhập để đặt sân.', 'error');
         if (selectedItems.length === 0) return showNotification('Vui lòng chọn ít nhất 1 khung giờ.', 'error');
 
-        // Check lại lần cuối trước khi submit
         if (selectedVoucher && rawTotalPrice < selectedVoucher.min_order_value) {
             return showNotification(`Đơn hàng không đủ điều kiện áp dụng mã giảm giá (Tối thiểu ${formatPrice(selectedVoucher.min_order_value)})`, 'error');
         }
 
         setIsSubmitting(true);
-
         const payload = {
             user_id: user.id,
             venue_id: id,
@@ -146,7 +131,6 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
     return (
         <div className="bg-gray-50 min-h-screen py-8">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* PAGE HEADER */}
                 <div className="mb-8">
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                         <span className="bg-[#10B981] text-white p-2 rounded-lg">
@@ -157,7 +141,6 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                    {/* --- CỘT TRÁI --- */}
                     <div className="lg:col-span-8 space-y-8">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                             <Order_Booking
@@ -177,10 +160,8 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
                         </div>
                     </div>
 
-                    {/* --- CỘT PHẢI: CHECKOUT --- */}
                     <div className="lg:col-span-4 sticky top-24 self-start">
                         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-                            {/* Header */}
                             <div className="bg-gray-900 px-5 py-4 flex justify-between items-center">
                                 <h3 className="text-white font-bold text-base flex items-center gap-2">
                                     <i className="fa-solid fa-receipt text-[#10B981]"></i> Thông tin thanh toán
@@ -191,7 +172,6 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
                             </div>
 
                             <div className="p-5">
-                                {/* List Booking */}
                                 {selectedItems.length > 0 ? (
                                     <div className="mb-4">
                                         <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
@@ -207,7 +187,6 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
                                     <p className="text-center text-gray-400 text-sm py-4">Chưa chọn lịch</p>
                                 )}
 
-                                {/* List Services */}
                                 {selectedServices.length > 0 && (
                                     <div className="border-t pt-2 mb-2">
                                         {selectedServices.map((s, idx) => (
@@ -219,17 +198,15 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
                                     </div>
                                 )}
 
-                                {/* VOUCHER */}
                                 <div className="pt-4 border-t border-gray-100">
                                     <Voucher_Detail_Venue
                                         availableVouchers={promotions}
                                         onVoucherApply={setSelectedVoucher}
                                         totalPrice={rawTotalPrice}
-                                        selectedVoucher={selectedVoucher} // TRUYỀN SELECTED VOUCHER XUỐNG
+                                        selectedVoucher={selectedVoucher}
                                     />
                                 </div>
 
-                                {/* TOTAL SUMMARY */}
                                 <div className="mt-6 space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
                                     <div className="flex justify-between text-sm text-gray-600">
                                         <span>Tạm tính</span>
@@ -249,7 +226,18 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
                                     </div>
                                 </div>
 
-                                {/* BUTTON SUBMIT */}
+                                {/* POLICY NOTICE */}
+                                <div className="mt-6 p-3 bg-amber-50 border-l-4 border-amber-400 rounded-r-xl text-[13px] text-gray-700 leading-relaxed">
+                                    <h4 className="font-bold text-amber-800 mb-1 flex items-center gap-1">
+                                        <i className="fa-solid fa-circle-info"></i> Lưu ý hoàn tiền về ví:
+                                    </h4>
+                                    <ul className="list-disc ml-4 space-y-1">
+                                        <li><span className="font-semibold text-gray-800">Sân bóng:</span> Trước 24h (Hoàn 100%), 2h - 24h (Hoàn 50%), dưới 2h (Phạt 100%).</li>
+                                        <li><span className="font-semibold text-gray-800">Dịch vụ:</span> Hoàn 100% nếu mục đó chưa được sử dụng/check-in.</li>
+                                        <li><span className="font-semibold text-gray-800">Voucher:</span> Hệ thống sẽ tính lại mức giảm giá dựa trên đơn hàng mới khi hủy lẻ.</li>
+                                    </ul>
+                                </div>
+
                                 <button
                                     onClick={handleSubmit}
                                     disabled={selectedItems.length === 0 || isSubmitting}

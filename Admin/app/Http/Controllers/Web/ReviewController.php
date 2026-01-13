@@ -11,23 +11,19 @@ class ReviewController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $reviews = collect();
+        // Nạp sẵn user, venue và images để tránh lỗi N+1
+        $query = Review::with(['user', 'venue', 'images'])->latest();
 
         if ($user->role->name === 'admin') {
-            $reviews = Review::with(['user', 'venue'])
-                ->latest()
-                ->get();
+            $reviews = $query->get();
             return view('admin.reviews.index', compact('reviews'));
         } elseif ($user->role->name === 'venue_owner') {
             $venueIds = $user->venues->pluck('id');
-            $reviews = Review::with(['user', 'venue'])
-                ->whereIn('venue_id', $venueIds)
-                ->latest()
-                ->get();
+            $reviews = $query->whereIn('venue_id', $venueIds)->get();
             return view('venue_owner.reviews.index', compact('reviews'));
-        } else {
-            return redirect()->back()->with('error', 'Bạn không có quyền truy cập trang này.');
         }
+
+        return redirect()->back()->with('error', 'Bạn không có quyền truy cập.');
     }
     public function destroy($id)
     {

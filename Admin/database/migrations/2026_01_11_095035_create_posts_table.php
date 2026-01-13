@@ -22,6 +22,7 @@ return new class extends Migration
 
             // Link tới chiến dịch sale (nếu type là sale)
             $table->unsignedBigInteger('reference_id')->nullable();
+            $table->foreignId('venue_id')->nullable()->constrained('venues');
 
             // Nội dung bài đăng
             $table->text('content');

@@ -5,97 +5,121 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PostController extends Controller
 {
     /**
-     * Danh sách bài viết
+     * Khởi tạo middleware để đảm bảo chỉ Admin mới vào được các hàm này.
+     * (Hoặc bạn có thể cài đặt ở file web.php)
      */
-    public function index()
+    public function __construct()
     {
-        $user = Auth::user();
-
-        // ADMIN: xem tất cả
-        if ($user->role->name === 'admin') {
-            $posts = Post::with(['author', 'tags'])
-                ->latest()
-                ->paginate(10);
-
-            return view('admin.posts.index', compact('posts'));
-        }
-
-        abort(403, 'Bạn không có quyền truy cập trang này.');
+        // $this->middleware(['auth', 'admin']);
     }
 
     /**
-     * Chi tiết bài viết
+     * Danh sách bài viết (Cả Sale và User Post)
+     */
+    public function index(Request $request)
+    {
+        $query = Post::with(['author', 'venue'])
+            ->latest();
+
+        // Lọc theo loại bài viết nếu cần (sale/user_post)
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // Lọc theo trạng thái (pending/active/rejected)
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $posts = $query->paginate(15)->withQueryString();
+
+        return view('admin.posts.index', compact('posts'));
+    }
+
+    /**
+     * Xem chi tiết bài viết
      */
     public function show(Post $post)
     {
-        $post->load(['author', 'tags', 'images']);
+        // Load đầy đủ thông tin: Tác giả, Sân, và các hình ảnh liên quan
+        $post->load(['author', 'venue', 'images']);
 
-        $user = Auth::user();
+        return view('admin.posts.show', compact('post'));
+    }
 
-        if (
-            $user->role->name !== 'admin'
-        ) {
-            abort(403, 'Bạn không có quyền truy cập bài viết này.');
-        }
+    /**
+     * Duyệt bài viết (Chuyển trạng thái sang ACTIVE)
+     */
+    public function updateStatus(Request $request, Post $post)
+    {
+        // Validate input status để đảm bảo an toàn dữ liệu
+        $request->validate([
+            'status' => 'required|in:active,pending,rejected',
+        ]);
 
-        if ($user->role->name === 'admin') {
-            return view('admin.posts.show', compact('post'));
+        try {
+            DB::beginTransaction();
+
+            $post->update([
+                'status' => $request->status,
+                'note'   => null, // Reset ghi chú khi đã duyệt
+            ]);
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.posts.index')
+                ->with('success', 'Bài viết đã được chuyển sang trạng thái: ' . strtoupper($request->status));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
 
     /**
-     * Cập nhật trạng thái bài viết
+     * Từ chối bài viết hoặc Ẩn bài viết (Kèm lý do)
      */
-    public function updateStatus(Request $request, Post $post)
-    {
-        // Chỉ admin được đổi trạng thái
-        if ($request->user()->role->name !== 'admin') {
-            abort(403, 'Bạn không có quyền thực hiện hành động này.');
-        }
-
-        $validated = $request->validate([
-            'is_active' => 'required|in:0,1',
-        ]);
-
-        $post->update([
-            'is_active' => $validated['is_active'],
-        ]);
-
-        return redirect()
-            ->route('admin.posts.index')
-            ->with('success', 'Cập nhật trạng thái bài viết thành công!');
-    }
-
     public function rejectOrHide(Request $request, Post $post)
     {
-        if ($request->user()->role->name !== 'admin') {
-            abort(403);
-        }
-
         $request->validate([
             'note' => 'required|string|max:1000',
         ]);
 
-        if ($post->is_active) {
+        try {
+            // Cập nhật trạng thái thành rejected và lưu lý do
             $post->update([
-                'is_active' => 0,
-                'note' => '[CANCELLED] ' . $request->note,
+                'status' => 'rejected',
+                'note'   => $request->note,
             ]);
-        }
-        else {
-            $post->update([
-                'is_active' => 0,
-                'note' => $request->note,
-            ]);
-        }
 
-        return redirect()
-            ->route('admin.posts.show', $post)
-            ->with('success', 'Cập nhật trạng thái thành công');
+            return redirect()
+                ->route('admin.posts.show', $post)
+                ->with('success', 'Đã từ chối bài viết và gửi phản hồi cho người dùng.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Không thể thực hiện thao tác này.');
+        }
+    }
+
+    /**
+     * (Tùy chọn) Xóa bài viết nếu cần thiết
+     */
+    public function destroy(Post $post)
+    {
+        try {
+            // Xóa ảnh liên quan trước khi xóa post (nếu dùng morphMany)
+            $post->images()->delete();
+            $post->delete();
+
+            return redirect()
+                ->route('admin.posts.index')
+                ->with('success', 'Đã xóa bài viết vĩnh viễn.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Lỗi khi xóa bài viết.');
+        }
     }
 }

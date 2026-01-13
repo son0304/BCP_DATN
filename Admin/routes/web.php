@@ -33,6 +33,7 @@ use App\Http\Controllers\Web\{
 };
 use App\Models\FlashSaleCampaign;
 use App\Models\WithdrawalRequest;
+use Illuminate\Support\Facades\Auth;
 
 // ==============================
 // ====== AUTH & PUBLIC ROUTES ======
@@ -48,6 +49,16 @@ Route::get('/api-proxy/districts/{code}', function ($code) {
     $response = Http::get("https://provinces.open-api.vn/api/p/{$code}?depth=2");
     return $response->json()['districts'] ?? [];
 });
+
+Route::get('/notifications/{id}/read', function ($id) {
+    $noti = App\Models\Notification::findOrFail($id);
+    if ($noti->user_id == Auth::id()) {
+        $noti->markAsRead(); // Hàm bạn đã viết trong Model
+    }
+    // Lấy link từ data để redirect
+    $link = $noti->data['link'] ?? '/';
+    return redirect($link);
+})->name('notifications.read');
 // Auth
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
 Route::post('/register', [AuthController::class, 'register']);
@@ -151,21 +162,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('/', [TransactionController::class, 'index'])->name('index');
     });
 
-    Route::prefix('flash-sale')->name('flash_sale_campaigns.')->group(function () {
-        Route::get('/', [FlashSaleCampaignController::class, 'index'])->name('index');
 
-        Route::get('create', [FlashSaleCampaignController::class, 'create'])->name('create');
-        Route::post('store', [FlashSaleCampaignController::class, 'store'])->name('store');
-    });
-    // --- TAGS MANAGEMENT ---
-    Route::prefix('tags')->name('tags.')->group(function () {
-        Route::get('/', [TagController::class, 'index'])->name('index');
-        Route::get('create', [TagController::class, 'create'])->name('create');
-        Route::post('/', [TagController::class, 'store'])->name('store');
-        Route::get('{tag}/edit', [TagController::class, 'edit'])->name('edit');
-        Route::put('{tag}', [TagController::class, 'update'])->name('update');
-        Route::delete('{tag}', [TagController::class, 'destroy'])->name('destroy');
-    });
+
 
     //Post
     Route::prefix('posts')->name('posts.')->group(function () {
@@ -300,6 +298,8 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
         Route::post('/store-campaign', [FlashSaleCampaignController::class, 'store'])->name('store_campaign');
         Route::get('show/{id}', [FlashSaleCampaignController::class, 'show'])->name('show');
         Route::post('store', [FlashSaleItemController::class, 'create_flash_sale_items'])->name('store');
+        Route::put('update/{id}', [FlashSaleCampaignController::class, 'update'])->name('update');
+        Route::delete('{id}', [FlashSaleCampaignController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('services')->name('services.')->group(function () {

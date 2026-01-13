@@ -30,4 +30,19 @@ class Notification extends Model
     {
         $this->update(['read_at' => now()]);
     }
+    public function getPresentationAttribute()
+    {
+        $style = match ($this->type) {
+            'danger', 'error' => ['bg' => 'bg-soft-danger', 'icon' => 'fe-alert-circle', 'text' => 'text-danger'],
+            'warning' => ['bg' => 'bg-soft-warning', 'icon' => 'fe-alert-triangle', 'text' => 'text-warning'],
+            'success' => ['bg' => 'bg-soft-success', 'icon' => 'fe-check-circle', 'text' => 'text-success'],
+            default   => ['bg' => 'bg-soft-info',    'icon' => 'fe-bell',          'text' => 'text-primary'],
+        };
+
+        return (object) [
+            'style' => (object) $style,
+            'link' => $this->data['link'] ?? '#',
+            'time' => $this->created_at->diffForHumans(),
+        ];
+    }
 }

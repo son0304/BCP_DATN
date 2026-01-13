@@ -3,7 +3,7 @@
 @section('content')
     <div class="main-content bg-light pb-5" style="min-height: 100vh;">
         {{-- HEADER --}}
-        <div class="bg-white border-bottom sticky-top" style="z-index: 100;">
+        <div class="bg-white border-bottom " style="z-index: 100;">
             <div class="container-fluid px-4 py-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-3">
                     <a href="{{ route('owner.flash_sale_campaigns.index') }}"
@@ -127,7 +127,7 @@
 
                     {{-- SIDEBAR --}}
                     <div class="col-lg-3">
-                        <div class="sticky-top" style="top: 6rem;">
+                        <div class="" style="top: 6rem;">
                             <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-3">
                                 <div class="card-header bg-dark text-white py-3 px-4">
                                     <h6 class="mb-0 fw-bold">Tóm tắt</h6>

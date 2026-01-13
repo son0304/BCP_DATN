@@ -26,29 +26,27 @@ class NotifyOwnerJob implements ShouldQueue
 
     public function handle(): void
     {
-        try {
-            $customerName = $this->ticket->user->name ?? 'Khách';
-            $msg = "Đơn hàng #{$this->ticket->id} của khách {$customerName} sắp hết thời gian chơi (còn 10 phút).";
+        $ownerId = $this->ticket->getOwnerId();
+        if (!$ownerId || $this->ticket->status === 'canceled') return;
 
-            Log::info("THÔNG BÁO HẾT GIỜ: " . $msg);
-            $ownerId = $this->ticket->getOwnerId();
+        // Tránh gửi trùng nếu job retry
+        $exists = Notification::where('user_id', $ownerId)
+            ->where('type', 'warning')
+            ->where('data->booking_id', $this->ticket->id)
+            ->exists();
 
-            if ($ownerId && $this->ticket->status !== 'canceled') {
-                Notification::create([
-                    'id' => Str::uuid(),
-                    'user_id' => $ownerId,
-                    'type' => 'warning',
-                    'title' => 'Sắp hết giờ',
-                    'message' => $msg,
-                    'data' => [
-                        'booking_id' => $this->ticket->id,
-                        'link' => '/owner/bookings?search=' . $this->ticket->booking_code,
-                    ],
-                    'read_at' => null,
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::error("Lỗi Job NotifyOwner: " . $e->getMessage());
+        if (!$exists) {
+            Notification::create([
+                'id' => \Illuminate\Support\Str::uuid(),
+                'user_id' => $ownerId,
+                'type' => 'warning',
+                'title' => 'Sắp hết giờ',
+                'message' => "Đơn hàng #{$this->ticket->id} sắp hết thời gian.",
+                'data' => [
+                    'booking_id' => $this->ticket->id,
+                    'link' => '/owner/bookings?search=' . $this->ticket->booking_code,
+                ],
+            ]);
         }
     }
 }

@@ -1,8 +1,7 @@
 <!-- ========================================== -->
-<!-- 1. CSS (Giữ nguyên hiệu ứng rung & màu)    -->
+<!-- 1. CSS (Hiệu ứng & Màu sắc)                -->
 <!-- ========================================== -->
 <style>
-    /* Hiệu ứng rung chuông */
     @keyframes pulse-ring {
         0% {
             transform: scale(0.8);
@@ -36,7 +35,6 @@
         display: block;
     }
 
-    /* Màu nền & Animation */
     .bg-soft-danger {
         background-color: rgba(255, 59, 48, 0.1);
         border-left: 4px solid #ff3b30;
@@ -79,11 +77,14 @@
 <!-- ========================================== -->
 <div class="modal fade" id="notificationModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
+        <div class="modal-content shadow-lg border-0">
             <div class="modal-header border-bottom py-3 bg-light">
                 <h5 class="modal-title d-flex align-items-center text-dark font-weight-bold">
                     <i class="fe-bell text-primary mr-2"></i> Thông báo
-                    <span id="modalBadgeCount" class="badge badge-danger ml-2 shadow-sm">{{ $unreadCount ?? 0 }}</span>
+                    <span id="modalBadgeCount"
+                        class="badge badge-danger ml-2 shadow-sm {{ ($unreadCount ?? 0) > 0 ? '' : 'd-none' }}">
+                        {{ $unreadCount ?? 0 }}
+                    </span>
                 </h5>
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
             </div>
@@ -91,20 +92,21 @@
             <div class="modal-body p-0">
                 <div id="notificationList" class="list-group list-group-flush">
                     @forelse($notifications ?? [] as $item)
-                        <!-- Link được lấy trực tiếp từ controller -->
-                        <a href="{{ $item->link }}"
-                            class="list-group-item list-group-item-action {{ $item->style->bg }} py-3">
+                        @php $p = $item->presentation; @endphp
+                        {{-- Đã sửa lỗi cú pháp thẻ a ở đây --}}
+                        <a href="{{ route('notifications.read', $item->id) }}"
+                            class="list-group-item list-group-item-action {{ $p->style->bg }} py-3 border-bottom">
                             <div class="d-flex w-100 justify-content-between align-items-center mb-1">
                                 <h6 class="mb-0 font-weight-bold text-dark">
-                                    <i class="{{ $item->style->icon }} {{ $item->style->text }} mr-1"></i>
+                                    <i class="{{ $p->style->icon }} {{ $p->style->text }} mr-1"></i>
                                     {{ $item->title }}
                                 </h6>
-                                <small class="text-muted" style="font-size: 0.75rem">{{ $item->time }}</small>
+                                <small class="text-muted" style="font-size: 0.75rem">{{ $p->time }}</small>
                             </div>
                             <p class="mb-0 text-secondary small pl-4">{{ $item->message }}</p>
                         </a>
                     @empty
-                        <div class="text-center py-5 empty-state">
+                        <div id="emptyNotiState" class="text-center py-5">
                             <i class="fe-bell-off text-muted opacity-50" style="font-size: 3rem;"></i>
                             <p class="mt-3 text-muted">Hiện tại không có thông báo nào.</p>
                         </div>
@@ -112,15 +114,15 @@
                 </div>
             </div>
 
-            <div class="modal-footer bg-light py-2">
-                <button type="button" class="btn btn-sm btn-light text-muted" data-dismiss="modal">Đóng</button>
+            <div class="modal-footer bg-light py-2 text-center">
+                <small class="text-muted w-100">Hệ thống thông báo thời gian thực</small>
             </div>
         </div>
     </div>
 </div>
 
 <!-- ========================================== -->
-<!-- 3. JAVASCRIPT REALTIME                     -->
+<!-- 3. JAVASCRIPT LOGIC                        -->
 <!-- ========================================== -->
 <script>
     document.addEventListener("DOMContentLoaded", function() {
@@ -128,87 +130,105 @@
             navBadge: document.getElementById('lblNotificationCount'),
             modalBadge: document.getElementById('modalBadgeCount'),
             navIconLi: document.getElementById('notificationLi'),
-            list: document.getElementById('notificationList')
+            list: document.getElementById('notificationList'),
+            emptyState: document.getElementById('emptyNotiState')
         };
+
         const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
 
+        // Hàm xử lý khi có thông báo mới (Realtime)
         function handleNotification(eventData) {
-            // 1. Lấy dữ liệu
-            const noti = eventData.data; // Đây là model Notification
-            console.log('🔔 New Notification:', noti);
-
-            // Phát âm thanh
+            const noti = eventData.notification;
             audio.play().catch(() => {});
 
-            // 2. Parse dữ liệu cột 'data' (JSON)
-            let extraData = {};
-            if (typeof noti.data === 'string') {
-                try {
-                    extraData = JSON.parse(noti.data);
-                } catch (e) {}
-            } else {
-                extraData = noti.data || {};
-            }
-
-            // 3. Cập nhật Badge số lượng
-            let currentCount = parseInt(elements.navBadge?.innerText || '0');
+            // Cập nhật Badge số lượng
+            let currentCount = parseInt(elements.modalBadge?.innerText || '0');
             let newCount = currentCount + 1;
-            if (elements.navBadge) {
-                elements.navBadge.innerText = newCount;
-                elements.navBadge.style.display = 'inline-block';
-            }
-            if (elements.modalBadge) elements.modalBadge.innerText = newCount;
+
+            [elements.navBadge, elements.modalBadge].forEach(el => {
+                if (el) {
+                    el.innerText = newCount;
+                    el.classList.remove('d-none');
+                }
+            });
             if (elements.navIconLi) elements.navIconLi.classList.add('has-urgent');
 
-            // 4. Xác định Link & Style (Logic JS tương tự PHP để đồng bộ)
-            const link = extraData.link || '#';
-            const title = noti.title || 'Thông báo mới';
-            const message = noti.message || '';
+            // Render Item mới
+            const styles = {
+                danger: {
+                    bg: 'bg-soft-danger',
+                    icon: 'fe-alert-circle',
+                    text: 'text-danger'
+                },
+                warning: {
+                    bg: 'bg-soft-warning',
+                    icon: 'fe-alert-triangle',
+                    text: 'text-warning'
+                },
+                success: {
+                    bg: 'bg-soft-success',
+                    icon: 'fe-check-circle',
+                    text: 'text-success'
+                },
+                default: {
+                    bg: 'bg-soft-info',
+                    icon: 'fe-bell',
+                    text: 'text-primary'
+                }
+            };
 
-            // Map màu sắc theo type
-            let bgClass = 'bg-soft-info';
-            let iconClass = 'fe-bell text-primary';
+            const s = styles[noti.type] || styles.default;
+            // Link cho realtime: Nên dẫn qua route read để tự động đánh dấu đã đọc khi click
+            const readRoute = `/notifications/${noti.id}/read`;
 
-            switch (noti.type) {
-                case 'danger':
-                    bgClass = 'bg-soft-danger';
-                    iconClass = 'fe-alert-circle text-danger';
-                    break;
-                case 'warning':
-                    bgClass = 'bg-soft-warning';
-                    iconClass = 'fe-alert-triangle text-warning';
-                    break;
-                case 'success':
-                    bgClass = 'bg-soft-success';
-                    iconClass = 'fe-check-circle text-success';
-                    break;
-            }
-
-            // 5. Tạo HTML
             const htmlItem = `
-                <a href="${link}" class="list-group-item list-group-item-action ${bgClass} new-noti-item py-3">
+                <a href="${readRoute}" class="list-group-item list-group-item-action ${s.bg} new-noti-item py-3 border-bottom">
                     <div class="d-flex w-100 justify-content-between align-items-center mb-1">
                         <h6 class="mb-0 font-weight-bold text-dark">
-                            <i class="${iconClass} mr-1"></i> ${title}
+                            <i class="${s.icon} ${s.text} mr-1"></i> ${noti.title || 'Thông báo'}
                         </h6>
                         <small class="text-success font-weight-bold" style="font-size: 0.75rem">Vừa xong</small>
                     </div>
-                    <p class="mb-0 text-secondary small pl-4">${message}</p>
+                    <p class="mb-0 text-secondary small pl-4">${noti.message}</p>
                 </a>
             `;
 
-            // 6. Chèn vào danh sách
             if (elements.list) {
-                const emptyState = elements.list.querySelector('.empty-state');
-                if (emptyState) emptyState.remove();
+                if (elements.emptyState) elements.emptyState.remove();
                 elements.list.insertAdjacentHTML('afterbegin', htmlItem);
             }
         }
 
-        // --- SOCKET LISTENER ---
+        // Lắng nghe sự kiện mở Modal để đánh dấu đã đọc tất cả
+        $('#notificationModal').on('show.bs.modal', function() {
+            // Kiểm tra nếu đang có thông báo chưa đọc mới gửi request
+            const currentCount = parseInt(elements.modalBadge?.innerText || '0');
+            if (currentCount <= 0) return;
+
+            fetch('/notifications/mark-all-as-read', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    // Xóa badge sau khi server đã xử lý
+                    if (elements.navBadge) elements.navBadge.classList.add('d-none');
+                    if (elements.modalBadge) elements.modalBadge.classList.add('d-none');
+                    if (elements.navIconLi) elements.navIconLi.classList.remove('has-urgent');
+                }
+            }).catch(err => console.error('Lỗi khi đánh dấu đã đọc:', err));
+        });
+
+        // --- SOCKET LISTENER (Laravel Echo) ---
         if (typeof Echo !== 'undefined') {
-            Echo.channel('notification')
-                .listen('.notification.created', (e) => handleNotification(e));
+            Echo.private(`App.Models.User.${window.userId}`)
+                .notification((notification) => {
+                    handleNotification({
+                        notification
+                    });
+                });
         }
     });
 </script>

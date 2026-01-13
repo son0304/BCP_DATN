@@ -1,4 +1,5 @@
 // Fixed RelatedVenue component - proper data handling
+// Fixed RelatedVenue component - proper data handling
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFetchData } from "../../Hooks/useApi";
@@ -8,13 +9,17 @@ import type { Image } from "../../Types/image";
 interface RelatedVenueProps {
     currentVenueId: number;
     limit?: number;
+    limit?: number;
 }
 
 const RelatedVenue = ({ currentVenueId, limit = 3 }: RelatedVenueProps) => {
+const RelatedVenue = ({ currentVenueId, limit = 3 }: RelatedVenueProps) => {
     const navigate = useNavigate();
+    const [refreshKey, setRefreshKey] = useState(0);
     const [refreshKey, setRefreshKey] = useState(0);
 
     const offset = refreshKey * limit;
+    const apiEndpoint = `venues?limit=${limit + 1}&offset=${offset}`;
     const apiEndpoint = `venues?limit=${limit + 1}&offset=${offset}`;
 
     const { data: venueData, isLoading, isError } = useFetchData<any>(apiEndpoint);
@@ -86,12 +91,42 @@ const RelatedVenue = ({ currentVenueId, limit = 3 }: RelatedVenueProps) => {
             </div>
         );
     }
+        try {
+            navigate(`/venues/${venueId}`);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (error) {
+            console.error("Navigation error:", error);
+        }
+    };
+
+    const handleRefresh = () => {
+        setRefreshKey((prev) => prev + 1);
+    };
+
+    // Error state
+    if (isError) {
+        return (
+            <div className="text-center text-red-500 text-xs py-4">
+                <p>Không thể tải dữ liệu sân.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full">
             {/* Vertical list of venues */}
             <div className="space-y-4">
+            {/* Vertical list of venues */}
+            <div className="space-y-4">
                 {isLoading ? (
+                    // Loading skeletons
+                    Array.from({ length: 3 }).map((_, i) => (
+                        <div key={`skeleton-${i}`} className="flex gap-3 animate-pulse">
+                            <div className="w-20 h-20 bg-gray-200 rounded-md flex-shrink-0"></div>
+                            <div className="flex-1 space-y-2">
+                                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                                <div className="h-3 bg-gray-200 rounded w-full"></div>
+                                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                     // Loading skeletons
                     Array.from({ length: 3 }).map((_, i) => (
                         <div key={`skeleton-${i}`} className="flex gap-3 animate-pulse">
@@ -112,16 +147,42 @@ const RelatedVenue = ({ currentVenueId, limit = 3 }: RelatedVenueProps) => {
                         const rating = venue.reviews_avg_rating ? Number(venue.reviews_avg_rating).toFixed(1) : "0.0";
                         const startTime = venue.start_time?.slice(0, 5) || "00:00";
                         const endTime = venue.end_time?.slice(0, 5) || "23:59";
+                ) : venues.length > 0 ? (
+                    venues.map((venue: Venue) => {
+                        if (!venue || !venue.id) return null;
+
+                        const primaryImage = venue.images?.find((img: Image) => img?.is_primary === 1);
+                        const imageUrl = primaryImage?.url || "https://via.placeholder.com/400x300?text=BCP+Sports";
+                        const rating = venue.reviews_avg_rating ? Number(venue.reviews_avg_rating).toFixed(1) : "0.0";
+                        const startTime = venue.start_time?.slice(0, 5) || "00:00";
+                        const endTime = venue.end_time?.slice(0, 5) || "23:59";
 
                         return (
                             <div
+                                key={`venue-${venue.id}`}
                                 key={`venue-${venue.id}`}
                                 onClick={() => handleVenueNavigation(venue.id)}
                                 className="flex gap-3 cursor-pointer group hover:bg-gray-50 p-2 rounded-lg transition-all duration-200"
                             >
                                 {/* Venue Image */}
                                 <div className="relative w-20 h-20 flex-shrink-0">
+                                className="flex gap-3 cursor-pointer group hover:bg-gray-50 p-2 rounded-lg transition-all duration-200"
+                            >
+                                {/* Venue Image */}
+                                <div className="relative w-20 h-20 flex-shrink-0">
                                     <img
+                                        src={imageUrl}
+                                        alt={venue.name || "Venue"}
+                                        className="w-full h-full rounded-md object-cover"
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.src = "https://via.placeholder.com/400x300?text=BCP+Sports";
+                                        }}
+                                    />
+                                    {/* Rating badge */}
+                                    <div className="absolute -top-1 -right-1 bg-emerald-500 text-white px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-sm text-[10px]">
+                                        <i className="fa-solid fa-star text-yellow-300"></i>
+                                        <span>{rating}</span>
                                         src={imageUrl}
                                         alt={venue.name || "Venue"}
                                         className="w-full h-full rounded-md object-cover"
@@ -175,11 +236,33 @@ const RelatedVenue = ({ currentVenueId, limit = 3 }: RelatedVenueProps) => {
                                             )}
                                         </div>
                                     )}
+
+                                    {/* Venue types */}
+                                    {venue.venue_types && Array.isArray(venue.venue_types) && venue.venue_types.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {venue.venue_types.slice(0, 2).map((type, i) => (
+                                                type && type.name ? (
+                                                    <span
+                                                        key={`type-${venue.id}-${i}`}
+                                                        className="text-[9px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium"
+                                                    >
+                                                        {type.name}
+                                                    </span>
+                                                ) : null
+                                            ))}
+                                            {venue.venue_types.length > 2 && (
+                                                <span className="text-[9px] text-gray-500">+{venue.venue_types.length - 2}</span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );
                     })
                 ) : (
+                    <p className="text-center text-gray-500 text-xs italic py-4">
+                        Không có sân gợi ý nào.
+                    </p>
                     <p className="text-center text-gray-500 text-xs italic py-4">
                         Không có sân gợi ý nào.
                     </p>
@@ -189,4 +272,5 @@ const RelatedVenue = ({ currentVenueId, limit = 3 }: RelatedVenueProps) => {
     );
 };
 
+export default RelatedVenue;
 export default RelatedVenue;

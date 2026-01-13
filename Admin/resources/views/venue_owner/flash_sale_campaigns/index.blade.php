@@ -1,169 +1,304 @@
 @extends('app')
 
 @section('content')
-    <div class="container-fluid py-4">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h4 class="fw-bold text-primary mb-0"><i class="bi bi-lightning-charge-fill me-2"></i>QUẢN LÝ FLASH SALE</h4>
-                <p class="text-muted small mb-0">Tự tạo chương trình giảm giá cho các sân của bạn</p>
-            </div>
-            <button type="button" class="btn btn-primary shadow-sm px-4" data-bs-toggle="modal"
-                data-bs-target="#createCampaignModal">
-                <i class="bi bi-plus-lg me-1"></i> Tạo chiến dịch mới
-            </button>
-        </div>
-
-        @if (session('success'))
-            <div class="alert alert-success border-0 shadow-sm mb-4">{{ session('success') }}</div>
-        @endif
-
-        <!-- Danh sách Cards -->
-        <div class="row g-4">
-            @forelse($flashSaleCampaigns as $campaign)
-                @php
-                    $now = now();
-                    $start = \Carbon\Carbon::parse($campaign->start_datetime);
-                    $end = \Carbon\Carbon::parse($campaign->end_datetime);
-                    $isLive = $now->between($start, $end);
-                    $themeColor = $isLive ? 'danger' : 'info';
-                @endphp
-                <div class="col-12 col-md-6 col-xl-4">
-                    <div class="card h-100 border-0 shadow-sm campaign-card {{ $isLive ? 'border-live' : '' }}">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-3">
-                                <span class="badge bg-{{ $themeColor }} bg-opacity-10 text-white px-3 py-2 rounded-pill">
-                                    <i class="bi {{ $isLive ? 'bi-record-circle-fill' : 'bi-clock' }} me-1"></i>
-                                    {{ $isLive ? 'Đang diễn ra' : 'Sắp diễn ra' }}
-                                </span>
-                                <small class="text-muted">#{{ $campaign->id }}</small>
-                            </div>
-
-                            <h5 class="fw-bold mb-2">{{ $campaign->name }}</h5>
-                            <p class="text-muted small mb-3 text-truncate-2">
-                                {{ $campaign->description ?: 'Không có mô tả.' }}</p>
-
-                            <div class="bg-light rounded-3 p-3 mb-3 border">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="small text-muted">Bắt đầu:</span>
-                                    <span class="small fw-bold">{{ $start->format('d/m H:i') }}</span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span class="small text-muted">Kết thúc:</span>
-                                    <span class="small fw-bold">{{ $end->format('d/m H:i') }}</span>
-                                </div>
-                            </div>
-
-                            <div class="d-grid mt-4">
-                                <a href="{{ route('owner.flash_sale_campaigns.show', $campaign->id) }}"
-                                    class="btn btn-{{ $themeColor }} fw-bold">
-                                    <i class="bi bi-gear-wide-connected me-1"></i> Cấu hình giảm giá sân
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            @empty
-                <div class="col-12 text-center py-5">
-                    <i class="bi bi-calendar2-x display-1 text-light"></i>
-                    <p class="text-muted mt-3">Bạn chưa có chiến dịch nào sắp tới.</p>
-                </div>
-            @endforelse
-        </div>
-    </div>
-
-    <!-- Modal Thêm Mới -->
-    <div class="modal fade" id="createCampaignModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title fw-bold">Tạo Chiến Dịch Flash Sale</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-
-                {{-- Form gửi đến controller --}}
-                <form action="{{ route('owner.flash_sale_campaigns.store_campaign') }}" method="POST">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Tên chiến dịch <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
-                                value="{{ old('name') }}" placeholder="VD: Giảm giá giờ vàng tối nay" required>
-                            @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Mô tả (không bắt buộc)</label>
-                            <textarea name="description" class="form-control" rows="2">{{ old('description') }}</textarea>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <label class="form-label fw-semibold text-success small">Thời gian bắt đầu</label>
-                                <input type="datetime-local" name="start_datetime"
-                                    class="form-control @error('start_datetime') is-invalid @enderror"
-                                    value="{{ old('start_datetime') }}" required>
-                                @error('start_datetime')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-6 mb-3">
-                                <label class="form-label fw-semibold text-danger small">Thời gian kết thúc</label>
-                                <input type="datetime-local" name="end_datetime"
-                                    class="form-control @error('end_datetime') is-invalid @enderror"
-                                    value="{{ old('end_datetime') }}" required>
-                                @error('end_datetime')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="alert alert-warning py-2 small mb-0 mt-2">
-                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Sau khi tạo thành công, hệ thống sẽ tự động
-                            chuyển sang trang **Chọn sân giảm giá**.
-                        </div>
-                    </div>
-                    <div class="modal-footer bg-light border-top-0">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-                        <button type="submit" class="btn btn-primary px-4 fw-bold">Tiếp tục bước 2</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <style>
         .campaign-card {
             transition: all 0.3s ease;
-            border-top: 4px solid #dee2e6;
+            border-radius: 12px;
         }
 
         .campaign-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 1rem 3rem rgba(0, 0, 0, .175) !important;
         }
 
-        .border-live {
-            border-top-color: #dc3545 !important;
+        .status-badge {
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 5px 12px;
         }
 
-        .text-truncate-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            height: 38px;
+        .filter-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #6c757d;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .table-nowrap td {
+            white-space: nowrap;
         }
     </style>
 
-    @if ($errors->any())
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                var myModal = new bootstrap.Modal(document.getElementById('createCampaignModal'));
-                myModal.show();
-            });
-        </script>
-    @endif
-@endsection
+    <div class="container-fluid py-4">
+        {{-- Header & Nút Tạo mới --}}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="fw-bold mb-0 text-dark">Chiến Dịch Flash Sale</h4>
+                <p class="text-muted small mb-0">Quản lý các chương trình giảm giá giờ vàng của bạn</p>
+            </div>
+            <button type="button" class="btn btn-primary px-4 rounded-pill fw-bold shadow-sm" data-bs-toggle="modal"
+                data-bs-target="#createCampaignModal">
+                <i class="fas fa-plus me-2"></i>Tạo chiến dịch mới
+            </button>
+        </div>
+
+        {{-- Thông báo --}}
+        @if (session('success'))
+            <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
+                <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+
+        {{-- BỘ LỌC & TÌM KIẾM --}}
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-4">
+                <form action="{{ route('owner.flash_sale_campaigns.index') }}" method="GET"
+                    class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label class="filter-label">Tìm kiếm</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" name="search" class="form-control border-0 bg-light"
+                                placeholder="Tên chiến dịch..." value="{{ request('search') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="filter-label">Trạng thái</label>
+                        <select name="status" class="form-select border-0 bg-light">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Chờ kích hoạt
+                            </option>
+                            <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Đang diễn ra
+                            </option>
+                            <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Tạm dừng
+                            </option>
+                            <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Đã kết thúc
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-dark px-4 fw-bold flex-grow-1">Lọc dữ liệu</button>
+                        @if (request()->anyFilled(['search', 'status']))
+                            <a href="{{ route('owner.flash_sale_campaigns.index') }}" class="btn btn-light border px-3">
+                                <i class="fas fa-undo"></i>
+                            </a>
+                        @endif
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {{-- DANH SÁCH CHIẾN DỊCH --}}
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 table-nowrap">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4 py-3 text-muted small fw-bold">TÊN CHIẾN DỊCH</th>
+                                <th class="text-muted small fw-bold">THỜI GIAN DIỄN RA</th>
+                                <th class="text-muted small fw-bold">SỐ LƯỢNG SLOT</th>
+                                <th class="text-muted small fw-bold">TRẠNG THÁI</th>
+                                <th class="text-end pe-4 text-muted small fw-bold">THAO TÁC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($flashSaleCampaigns as $campaign)
+                                <tr>
+                                    <td class="ps-4">
+                                        <h6 class="mb-1 fw-bold text-dark">{{ $campaign->name }}</h6>
+                                        <small class="text-muted">{{ Str::limit($campaign->description, 40) }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="small fw-bold">
+                                            {{ \Carbon\Carbon::parse($campaign->start_datetime)->format('H:i d/m/Y') }}
+                                        </div>
+                                        <div class="text-muted small">đến
+                                            {{ \Carbon\Carbon::parse($campaign->end_datetime)->format('H:i d/m/Y') }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="fas fa-clock me-1 text-primary"></i> {{ $campaign->items->count() }}
+                                            khung giờ
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @switch($campaign->status)
+                                            @case('pending')
+                                                <span
+                                                    class="badge bg-info bg-opacity-10 text-white border border-info rounded-pill status-badge">Chờ
+                                                    giờ</span>
+                                            @break
+
+                                            @case('active')
+                                                <span
+                                                    class="badge bg-success bg-opacity-10 text-white border border-success rounded-pill status-badge">Đang
+                                                    chạy</span>
+                                            @break
+
+                                            @case('inactive')
+                                                <span
+                                                    class="badge bg-secondary bg-opacity-10 text-white border border-secondary rounded-pill status-badge">Tạm
+                                                    dừng</span>
+                                            @break
+
+                                            @case('completed')
+                                                <span
+                                                    class="badge bg-dark bg-opacity-10 text-white border border-dark rounded-pill status-badge">Đã
+                                                    kết thúc</span>
+                                            @break
+                                        @endswitch
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-light border dropdown-toggle" type="button"
+                                                data-bs-toggle="dropdown">Thao tác</button>
+                                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
+                                                <li><a class="dropdown-item"
+                                                        href="{{ route('owner.flash_sale_campaigns.show', $campaign->id) }}"><i
+                                                            class="fas fa-cog me-2"></i>Thiết lập khung giờ</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#editCampaign{{ $campaign->id }}"><i
+                                                            class="fas fa-edit me-2"></i>Sửa thông tin</a></li>
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+                                                <li>
+                                                    <form
+                                                        action="{{ route('owner.flash_sale_campaigns.destroy', $campaign->id) }}"
+                                                        method="POST">
+                                                        @csrf @method('DELETE')
+                                                        <button type="submit" class="dropdown-item text-danger"
+                                                            onclick="return confirm('Bạn có chắc chắn muốn xóa chiến dịch này?')"><i
+                                                                class="fas fa-trash-alt me-2"></i>Xóa chiến dịch</button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                {{-- MODAL CẬP NHẬT CHIẾN DỊCH (UPDATE) --}}
+                                <div class="modal fade" id="editCampaign{{ $campaign->id }}" tabindex="-1"
+                                    aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 shadow">
+                                            <div class="modal-header bg-dark text-white">
+                                                <h5 class="modal-title fw-bold">Sửa Chiến Dịch</h5>
+                                                <button type="button" class="btn-close btn-close-white"
+                                                    data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form action="{{ route('owner.flash_sale_campaigns.update', $campaign->id) }}"
+                                                method="POST">
+                                                @csrf
+                                                @method('PUT')
+                                                <div class="modal-body p-4">
+                                                    <div class="mb-3">
+                                                        <label class="filter-label">Tên chiến dịch <span
+                                                                class="text-danger">*</span></label>
+                                                        <input type="text" name="name" class="form-control"
+                                                            value="{{ $campaign->name }}" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="filter-label">Mô tả</label>
+                                                        <textarea name="description" class="form-control" rows="2">{{ $campaign->description }}</textarea>
+                                                    </div>
+                                                    <div class="row g-3">
+                                                        <div class="col-md-6">
+                                                            <label class="filter-label">Bắt đầu <span
+                                                                    class="text-danger">*</span></label>
+                                                            <input type="datetime-local" name="start_datetime"
+                                                                class="form-control"
+                                                                value="{{ \Carbon\Carbon::parse($campaign->start_datetime)->format('Y-m-d\TH:i') }}"
+                                                                required>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="filter-label">Kết thúc <span
+                                                                    class="text-danger">*</span></label>
+                                                            <input type="datetime-local" name="end_datetime"
+                                                                class="form-control"
+                                                                value="{{ \Carbon\Carbon::parse($campaign->end_datetime)->format('Y-m-d\TH:i') }}"
+                                                                required>
+                                                        </div>
+                                                    </div>
+                                                    <div class="alert alert-info mt-3 small border-0">
+                                                        <i class="fas fa-info-circle me-1"></i> Lưu ý: Khi đổi thời gian,
+                                                        các slot đã chọn không nằm trong khoảng thời gian mới sẽ bị tự động
+                                                        gỡ bỏ.
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer bg-light border-0">
+                                                    <button type="button" class="btn btn-white"
+                                                        data-bs-dismiss="modal">Hủy</button>
+                                                    <button type="submit"
+                                                        class="btn btn-dark px-4 fw-bold text-white">Lưu thay đổi</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="text-center py-5 text-muted">Không tìm thấy chiến dịch Flash
+                                            Sale nào.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="px-4 py-3 border-top">
+                        {{ $flashSaleCampaigns->links() }}
+                    </div>
+                </div>
+            </div>
+
+            {{-- MODAL TẠO CHIẾN DỊCH (BƯỚC 1) --}}
+            <div class="modal fade" id="createCampaignModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered border-0 shadow">
+                    <div class="modal-content border-0">
+                        <div class="modal-header bg-primary text-white border-0">
+                            <h5 class="modal-title fw-bold">Tạo Chiến Dịch Flash Sale</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form action="{{ route('owner.flash_sale_campaigns.store') }}" method="POST">
+                            @csrf
+                            <div class="modal-body p-4">
+                                <div class="mb-3">
+                                    <label class="filter-label">Tên chiến dịch <span class="text-danger">*</span></label>
+                                    <input type="text" name="name" class="form-control"
+                                        placeholder="VD: Khuyến mãi mừng hè..." required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="filter-label">Mô tả (Không bắt buộc)</label>
+                                    <textarea name="description" class="form-control" rows="2"
+                                        placeholder="VD: Áp dụng cho toàn bộ các sân cầu lông..."></textarea>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="filter-label">Thời gian bắt đầu <span
+                                                class="text-danger">*</span></label>
+                                        <input type="datetime-local" name="start_datetime" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="filter-label">Thời gian kết thúc <span
+                                                class="text-danger">*</span></label>
+                                        <input type="datetime-local" name="end_datetime" class="form-control" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer bg-light border-0">
+                                <button type="button" class="btn btn-white" data-bs-dismiss="modal">Hủy</button>
+                                <button type="submit" class="btn btn-primary px-4 fw-bold">Tiếp theo <i
+                                        class="fas fa-arrow-right ms-1"></i></button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endsection

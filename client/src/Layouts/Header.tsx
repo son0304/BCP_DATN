@@ -108,7 +108,7 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-white border-b border-gray-100 sticky top-0 z-40 h-16 md:h-20 transition-all duration-300">
+    <header className="bg-white border-b border-gray-100 sticky top-0 z-10000 h-16 md:h-20 transition-all duration-300">
       <div className="max-w-7xl mx-auto flex justify-between items-center px-4 md:px-6 h-full relative z-10">
 
         {/* LOGO */}

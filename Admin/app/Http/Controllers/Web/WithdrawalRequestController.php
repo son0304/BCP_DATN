@@ -130,14 +130,13 @@ class WithdrawalRequestController extends Controller
         $withdrawal = WithdrawalRequest::findOrFail($id);
         $user = $withdrawal->user;
 
-        // Kiểm tra nếu đơn đã xử lý rồi thì không cho xử lý tiếp
         if ($withdrawal->status !== 'pending') {
             return back()->with('error', 'Yêu cầu này đã được xử lý hoặc hủy bỏ trước đó.');
         }
 
-        $status = $request->input('status'); // 'approved' hoặc 'rejected'
+        $status = $request->input('status');
 
-        // TRƯỜNG HỢP 1: PHÊ DUYỆT (ADMIN ĐÃ CHUYỂN TIỀN)
+        // TRƯỜNG HỢP 1: PHÊ DUYỆT (Xác nhận đã chuyển tiền cho sân)
         if ($status === 'approved') {
             $request->validate([
                 'transaction_code' => 'required|string|max:100',
@@ -145,55 +144,49 @@ class WithdrawalRequestController extends Controller
                 'transaction_code.required' => 'Vui lòng nhập mã giao dịch ngân hàng để xác nhận.'
             ]);
 
+            // Cập nhật trạng thái thành 'approved'
+            // Sau khi update xong, Dashboard sẽ tự động tính số tiền này vào cột "CHI TRẢ SÂN"
             $withdrawal->update([
                 'status' => 'approved',
                 'transaction_code' => $request->transaction_code,
                 'processed_at' => now(),
             ]);
 
-            return back()->with('success', 'Đã phê duyệt và xác nhận chuyển tiền thành công.');
+            return back()->with('success', 'Đã phê duyệt. Tiền đã được ghi nhận chi ra từ ngân hàng.');
         }
 
-        // TRƯỜNG HỢP 2: TỪ CHỐI (HOÀN TIỀN LẠI VÀO VÍ)
+        // TRƯỜNG HỢP 2: TỪ CHỐI (Hoàn trả tiền về ví như cũ của bạn)
         if ($status === 'rejected') {
             $request->validate([
                 'admin_note' => 'required|string|max:255',
             ], [
-                'admin_note.required' => 'Vui lòng nhập lý do từ chối để thông báo cho chủ sân.'
+                'admin_note.required' => 'Vui lòng nhập lý do từ chối.'
             ]);
 
-            // Sử dụng Transaction để đảm bảo an toàn dữ liệu (tránh lỗi trừ tiền xong nhưng ko cập nhật đc trạng thái)
-            \DB::transaction(function () use ($withdrawal, $user, $request) {
-                // 1. Cập nhật trạng thái yêu cầu rút tiền
+            DB::transaction(function () use ($withdrawal, $user, $request) {
                 $withdrawal->update([
                     'status' => 'rejected',
                     'admin_note' => $request->admin_note,
                     'processed_at' => now(),
                 ]);
 
-                // 2. Tìm ví của người dùng
-                $wallet = \App\Models\Wallet::where('user_id', $user->id)->first();
-
+                $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->first();
                 if ($wallet) {
                     $beforeBalance = $wallet->balance;
-
-                    // 3. Hoàn lại số tiền (Cộng lại tiền vào ví)
-                    // Lưu ý: Hoàn lại amount (tổng tiền gốc) hay actual_amount tùy vào chính sách của bạn
                     $wallet->increment('balance', $withdrawal->amount);
 
-                    // 4. Ghi Log lịch sử ví
-                    \App\Models\WalletLog::create([
+                    WalletLog::create([
                         'wallet_id'      => $wallet->id,
                         'before_balance' => $beforeBalance,
                         'after_balance'  => $beforeBalance + $withdrawal->amount,
                         'amount'         => $withdrawal->amount,
-                        'type'           => 'refund', // Loại: Hoàn tiền
-                        'description'    => "Hoàn tiền cho yêu cầu rút tiền bị từ chối mã #{$withdrawal->id}. Lý do: {$request->admin_note}"
+                        'type'           => 'refund',
+                        'description'    => "Hoàn tiền cho yêu cầu rút tiền #{$withdrawal->id} bị từ chối."
                     ]);
                 }
             });
 
-            return back()->with('success', 'Đã từ chối yêu cầu và hoàn lại tiền vào ví cho chủ sân.');
+            return back()->with('success', 'Đã từ chối và hoàn tiền lại ví chủ sân.');
         }
 
         return back()->with('error', 'Hành động không hợp lệ.');

@@ -6,10 +6,23 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
+        .is-invalid {
+            border-color: #dc3545 !important;
+            background-image: none !important;
+        }
+
+        .invalid-feedback {
+            display: block;
+            font-size: 0.75rem;
+            color: #dc3545;
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+
         #map {
-            height: 380px;
+            height: 350px;
             width: 100%;
-            border-radius: 8px;
+            border-radius: 12px;
             border: 2px solid #e9ecef;
             z-index: 1;
         }
@@ -18,7 +31,7 @@
             position: relative;
             width: 100%;
             padding-top: 75%;
-            border-radius: 6px;
+            border-radius: 8px;
             overflow: hidden;
             border: 1px solid #dee2e6;
             background: #f8f9fa;
@@ -37,24 +50,18 @@
             position: absolute;
             top: 5px;
             right: 5px;
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
-            background: rgba(220, 53, 69, 0.9);
+            background: #dc3545;
             color: #fff;
             border: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
             z-index: 10;
-            transition: all 0.2s;
-        }
-
-        .btn-del-img:hover {
-            background: #dc3545;
-            transform: scale(1.1);
+            cursor: pointer;
         }
 
         .primary-badge {
@@ -64,89 +71,102 @@
             width: 100%;
             background: rgba(0, 0, 0, 0.6);
             color: #fff;
-            font-size: 11px;
+            font-size: 10px;
             text-align: center;
             padding: 4px 0;
             cursor: pointer;
-            backdrop-filter: blur(2px);
         }
 
         .primary-badge.active {
-            background: rgba(25, 135, 84, 0.9);
+            background: #198754;
             font-weight: bold;
         }
 
         .court-item {
-            border: 1px solid #e2e8f0;
+            border: 2px solid #f1f5f9;
+            border-radius: 12px;
+            background: #fff;
+            margin-bottom: 2rem;
             transition: all 0.3s;
         }
 
         .court-item:hover {
-            border-color: #3b82f6;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-color: #0d6efd;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .court-header {
+            background: #f8fafc;
+            padding: 12px 20px;
+            border-radius: 12px 12px 0 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .table th {
+            font-size: 11px;
+            text-transform: uppercase;
+            background: #f8f9fa;
+            color: #666;
         }
     </style>
 
     <div class="container-fluid py-4">
-        {{-- HEADER --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h2 class="h4 fw-bold text-uppercase mb-1">Đăng ký sân mới</h2>
-                <p class="text-muted small mb-0">Điền thông tin chi tiết để bắt đầu vận hành.</p>
+                <h2 class="h4 fw-bold text-uppercase mb-1">Thiết lập hệ thống sân mới</h2>
+                <p class="text-muted small mb-0">Vui lòng điền đầy đủ thông tin để hoàn tất hồ sơ đăng ký.</p>
             </div>
-            <a href="{{ url()->previous() }}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>
-                Quay lại</a>
+            <a href="{{ url()->previous() }}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="fas fa-arrow-left me-1"></i> Quay lại
+            </a>
         </div>
 
         <form id="venue-form"
             action="{{ route(auth()->user()->role->name === 'admin' ? 'admin.venues.store' : 'owner.venues.store') }}"
-            method="POST" enctype="multipart/form-data">
+            method="POST" enctype="multipart/form-data" novalidate>
             @csrf
 
             <div class="row g-4">
-                {{-- CỘT TRÁI: THÔNG TIN CHÍNH --}}
+                {{-- CỘT TRÁI: THÔNG TIN CHUNG & SÂN CON --}}
                 <div class="col-lg-8">
-                    {{-- 1. THÔNG TIN CHUNG --}}
                     <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-header bg-white py-3">
-                            <h6 class="fw-bold mb-0 text-primary"><i class="fas fa-info-circle me-2"></i>1. Thông tin cơ bản
-                                & Vị trí</h6>
+                        <div class="card-header bg-white py-3 border-bottom">
+                            <h6 class="fw-bold mb-0 text-primary uppercase"><i class="fas fa-id-card me-2"></i>1. Thông tin
+                                thương hiệu & Vị trí</h6>
                         </div>
                         <div class="card-body">
-                            <div class="row g-3 mb-3">
+                            <div class="row g-3">
                                 <div class="col-md-7">
-                                    <label class="form-label fw-bold small">Tên sân/Thương hiệu <span
-                                            class="text-danger">*</span></label>
-                                    <input type="text" name="name" class="form-control" value="{{ old('name') }}"
-                                        placeholder="VD: Sân Bóng Đá Mỹ Đình" required>
+                                    <label class="form-label fw-bold small">Tên thương hiệu *</label>
+                                    <input type="text" name="name"
+                                        class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}"
+                                        placeholder="VD: Sân bóng Hùng Vương">
                                     @error('name')
-                                        <span class="text-danger small">{{ $message }}</span>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                                 <div class="col-md-5">
                                     <label class="form-label fw-bold small">Chủ sở hữu</label>
                                     @if (auth()->user()->role->name === 'admin')
-                                        <select name="owner_id" class="form-select" required>
-                                            <option value="">-- Chọn chủ sân --</option>
+                                        <select name="owner_id" class="form-select @error('owner_id') is-invalid @enderror">
+                                            <option value="">-- Chọn chủ sở hữu --</option>
                                             @foreach ($owners as $o)
-                                                <option value="{{ $o->id }}"
-                                                    {{ old('owner_id') == $o->id ? 'selected' : '' }}>{{ $o->name }}
-                                                </option>
+                                                <option value="{{ $o->id }}">{{ $o->name }}</option>
                                             @endforeach
                                         </select>
                                     @else
                                         <input type="text" class="form-control bg-light"
                                             value="{{ auth()->user()->name }}" disabled>
                                     @endif
+                                    @error('owner_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
-                            </div>
-
-                            <div class="row g-3 mb-3">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold small">Tỉnh/Thành phố <span
-                                            class="text-danger">*</span></label>
-                                    <select name="province_id" id="province_id" class="form-select" required>
-                                        <option value="">-- Chọn --</option>
+                                    <label class="form-label fw-bold small">Tỉnh/Thành phố *</label>
+                                    <select name="province_id" id="province_id"
+                                        class="form-select @error('province_id') is-invalid @enderror">
+                                        <option value="">-- Chọn Tỉnh --</option>
                                         @foreach ($provinces as $p)
                                             <option value="{{ $p->id }}"
                                                 {{ old('province_id') == $p->id ? 'selected' : '' }}>{{ $p->name }}
@@ -154,158 +174,127 @@
                                         @endforeach
                                     </select>
                                     @error('province_id')
-                                        <span class="text-danger small">{{ $message }}</span>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold small">Quận/Huyện <span
-                                            class="text-danger">*</span></label>
-                                    <select name="district_id" id="district_id" class="form-select" required disabled>
-                                        <option value="">-- Chọn Tỉnh trước --</option>
+                                    <label class="form-label fw-bold small">Quận/Huyện *</label>
+                                    <select name="district_id" id="district_id"
+                                        class="form-select @error('district_id') is-invalid @enderror" disabled>
+                                        <option value="">-- Chọn Quận --</option>
                                     </select>
                                     @error('district_id')
-                                        <span class="text-danger small">{{ $message }}</span>
+                                        <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold small">Địa chỉ chi tiết <span
-                                        class="text-danger">*</span></label>
-                                <input type="text" name="address_detail" class="form-control"
-                                    value="{{ old('address_detail') }}" placeholder="Số nhà, ngõ, đường..." required>
-                            </div>
-
-                            <div class="mb-2">
-                                <label class="form-label fw-bold small text-success"><i
-                                        class="fas fa-map-marker-alt me-1"></i> Chọn vị trí trên bản đồ</label>
-                                <div id="map"></div>
-                                <div class="row g-2 mt-2">
-                                    <div class="col-6"><input type="text" name="lat" id="lat"
-                                            class="form-control form-control-sm bg-light"
-                                            value="{{ old('lat', '21.0285') }}" readonly title="Vĩ độ"></div>
-                                    <div class="col-6"><input type="text" name="lng" id="lng"
-                                            class="form-control form-control-sm bg-light"
-                                            value="{{ old('lng', '105.8544') }}" readonly title="Kinh độ"></div>
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold small">Địa chỉ chi tiết *</label>
+                                    <input type="text" name="address_detail"
+                                        class="form-control @error('address_detail') is-invalid @enderror"
+                                        value="{{ old('address_detail') }}" placeholder="Số nhà, đường...">
+                                    @error('address_detail')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-12">
+                                    <label class="small fw-bold text-success mb-2 d-block">Vị trí bản đồ (Kéo thả marker
+                                        hoặc click bản đồ)</label>
+                                    <div id="map"></div>
+                                    <div class="row g-2 mt-2">
+                                        <div class="col-6"><input type="text" name="lat" id="lat"
+                                                class="form-control form-control-sm bg-light"
+                                                value="{{ old('lat', '21.0285') }}" readonly></div>
+                                        <div class="col-6"><input type="text" name="lng" id="lng"
+                                                class="form-control form-control-sm bg-light"
+                                                value="{{ old('lng', '105.8544') }}" readonly></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {{-- 2. CHI TIẾT SÂN CON --}}
                     <div class="card shadow-sm border-0 mb-4">
                         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold mb-0 text-success"><i class="fas fa-layer-group me-2"></i>2. Danh sách Sân &
-                                Giá</h6>
-                            <button type="button" class="btn btn-sm btn-success shadow-sm" id="btn-add-court"><i
-                                    class="fas fa-plus me-1"></i> Thêm sân con</button>
+                            <h6 class="fw-bold mb-0 text-success uppercase"><i class="fas fa-volleyball-ball me-2"></i>2.
+                                Danh sách sân con & Giá</h6>
+                            <button type="button" class="btn btn-sm btn-success px-3 shadow-sm" id="btn-add-court">Thêm sân
+                                con</button>
                         </div>
-                        <div class="card-body bg-light" id="courts-wrapper">
-                            {{-- Sân con sẽ được JS render vào đây --}}
-                            <div id="empty-court-msg" class="text-center text-muted py-4">
-                                <i class="fas fa-plus-circle fa-2x mb-2 opacity-50"></i>
-                                <p class="small">Chưa có sân nào. Nhấn "Thêm sân con" để bắt đầu.</p>
-                            </div>
+                        <div class="card-body bg-light p-4" id="courts-wrapper">
+                            {{-- JS render sân con --}}
                         </div>
                     </div>
                 </div>
 
-                {{-- CỘT PHẢI: CẤU HÌNH & ẢNH --}}
+                {{-- CỘT PHẢI: VẬN HÀNH & HÌNH ẢNH --}}
                 <div class="col-lg-4">
-                    {{-- 3. CÀI ĐẶT VẬN HÀNH --}}
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-header bg-white py-3">
-                            <h6 class="fw-bold mb-0"><i class="fas fa-cogs me-2"></i>3. Cài đặt vận hành</h6>
+                    <div class="card shadow-sm border-0 mb-4 sticky-top" style="top: 20px;">
+                        <div class="card-header bg-dark text-white py-3">
+                            <h6 class="fw-bold mb-0"><i class="fas fa-cog me-2"></i>3. Cài đặt vận hành</h6>
                         </div>
                         <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold small">Mô hình kinh doanh <span
-                                        class="text-danger">*</span></label>
-                                <div class="border rounded p-2 bg-white" style="max-height: 150px; overflow-y: auto;">
+                            <div class="mb-4">
+                                <label class="fw-bold small mb-2 d-block">Loại hình kinh doanh *</label>
+                                <div class="p-3 border rounded bg-white @error('venue_types') is-invalid @enderror"
+                                    id="venue_types_container" style="max-height: 180px; overflow-y: auto;">
                                     @foreach ($venue_types as $vt)
-                                        <div class="form-check">
+                                        <div class="form-check mb-2">
                                             <input class="form-check-input chk-venue-type" type="checkbox"
                                                 name="venue_types[]" value="{{ $vt->id }}"
-                                                id="vt_{{ $vt->id }}"
-                                                {{ in_array($vt->id, old('venue_types', [])) ? 'checked' : '' }}>
+                                                id="vt_{{ $vt->id }}">
                                             <label class="form-check-label small"
                                                 for="vt_{{ $vt->id }}">{{ $vt->name }}</label>
                                         </div>
                                     @endforeach
                                 </div>
                                 @error('venue_types')
-                                    <span class="text-danger small d-block">{{ $message }}</span>
+                                    <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
 
-                            <div class="row g-2 mb-3">
+                            <div class="row g-2 mb-4">
                                 <div class="col-6">
-                                    <label class="fw-bold small">Mở cửa</label>
+                                    <label class="small fw-bold">Giờ mở cửa *</label>
                                     <input type="text" name="start_time"
-                                        class="form-control flatpickr-time text-center"
-                                        value="{{ old('start_time', '05:00') }}">
+                                        class="form-control flatpickr-time text-center" value="05:00">
                                 </div>
                                 <div class="col-6">
-                                    <label class="fw-bold small">Đóng cửa</label>
+                                    <label class="small fw-bold">Giờ đóng cửa *</label>
                                     <input type="text" name="end_time" class="form-control flatpickr-time text-center"
-                                        value="{{ old('end_time', '23:00') }}">
+                                        value="23:00">
                                 </div>
                             </div>
 
-                            <div class="mb-2">
-                                <label class="fw-bold small">Hotline liên hệ</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light"><i class="fas fa-phone"></i></span>
-                                    <input type="text" name="phone" class="form-control"
-                                        value="{{ old('phone') }}" placeholder="0912...">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- 4. HÌNH ẢNH --}}
-                    <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-header bg-white py-3">
-                            <h6 class="fw-bold mb-0"><i class="fas fa-images me-2"></i>4. Hình ảnh & Giấy tờ</h6>
-                        </div>
-                        <div class="card-body">
-                            {{-- Ảnh sân --}}
                             <div class="mb-4">
-                                <label class="form-label fw-bold small">Ảnh sân (Tối đa 5) <span
-                                        class="text-danger">*</span></label>
+                                <label class="small fw-bold">Hotline liên hệ</label>
+                                <input type="text" name="phone" class="form-control" placeholder="VD: 0912345678">
+                            </div>
+
+                            <hr>
+
+                            <div class="mb-4">
+                                <label class="small fw-bold mb-2 d-block">Ảnh sân (Tối đa 5) *</label>
                                 <input type="file" id="input-venue-imgs" class="form-control form-control-sm mb-2"
                                     accept="image/*" multiple>
                                 <input type="hidden" name="primary_image_index" id="primary_image_index"
                                     value="0">
                                 <div class="row g-2" id="preview-venue-imgs"></div>
-                                @error('images')
-                                    <span class="text-danger small">{{ $message }}</span>
-                                @enderror
                             </div>
 
-                            <hr class="text-muted">
-
-                            {{-- Giấy tờ --}}
-                            <div class="mb-2">
-                                <label class="form-label fw-bold small">Giấy tờ pháp lý <span
-                                        class="text-danger">*</span></label>
+                            <div class="mb-4">
+                                <label class="small fw-bold mb-2 d-block">Giấy tờ pháp lý *</label>
                                 <input type="file" id="input-doc-imgs" class="form-control form-control-sm mb-2"
                                     accept="image/*" multiple>
                                 <div class="row g-2" id="preview-doc-imgs"></div>
-                                @error('document_images')
-                                    <span class="text-danger small">{{ $message }}</span>
-                                @enderror
                             </div>
+
+                            <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow">HOÀN TẤT ĐĂNG
+                                KÝ</button>
                         </div>
                     </div>
-
-                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm text-uppercase">
-                        <i class="fas fa-check-circle me-2"></i> Hoàn tất đăng ký
-                    </button>
                 </div>
             </div>
 
-            {{-- FILE INPUTS ẨN (Dùng để submit) --}}
             <div class="d-none">
                 <input type="file" name="images[]" id="final-venue-imgs" multiple>
                 <input type="file" name="document_images[]" id="final-doc-imgs" multiple>
@@ -321,272 +310,328 @@
     <script>
         $(document).ready(function() {
             // ===============================================
-            // 1. LOGIC LỌC QUẬN HUYỆN (CLIENT-SIDE)
+            // 1. UTILS (TIME CONVERSION)
             // ===============================================
-            const allDistricts = @json($allDistricts);
-            const oldDistrictId = "{{ old('district_id') }}";
-            const oldProvinceId = "{{ old('province_id') }}";
-
-            function filterDistricts(provinceId) {
-                const $d = $('#district_id');
-                $d.empty();
-
-                if (!provinceId) {
-                    $d.html('<option value="">-- Chọn Tỉnh trước --</option>').prop('disabled', true);
-                    return;
-                }
-
-                const filtered = allDistricts.filter(item => item.province_id == provinceId);
-
-                if (filtered.length > 0) {
-                    let html = '<option value="">-- Chọn Quận/Huyện --</option>';
-                    filtered.forEach(item => {
-                        const isSelected = (item.id == oldDistrictId) ? 'selected' : '';
-                        html += `<option value="${item.id}" ${isSelected}>${item.name}</option>`;
-                    });
-                    $d.html(html).prop('disabled', false);
-                } else {
-                    $d.html('<option value="">-- Không có dữ liệu --</option>');
-                }
+            function timeToMinutes(str) {
+                if (!str) return 0;
+                let [h, m] = str.split(':').map(Number);
+                if (str === "24:00") return 1440;
+                return h * 60 + m;
             }
 
-            $('#province_id').on('change', function() {
-                filterDistricts($(this).val());
-            });
+            function minutesToTime(mins) {
+                let h = Math.floor(mins / 60);
+                let m = mins % 60;
+                if (h === 24) return "24:00";
+                return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+            }
 
-            // Init on load
-            if (oldProvinceId) {
-                filterDistricts(oldProvinceId);
+            function initTimePicker(selector) {
+                flatpickr(selector, {
+                    enableTime: true,
+                    noCalendar: true,
+                    dateFormat: "H:i",
+                    time_24hr: true,
+                    minuteIncrement: 30,
+                    allowInput: true
+                });
             }
 
             // ===============================================
-            // 2. MAP LOGIC (CLICK & DRAG)
-            // ===============================================
-            const latInput = $('#lat');
-            const lngInput = $('#lng');
-            const map = L.map('map').setView([latInput.val(), lngInput.val()], 15);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-            const marker = L.marker([latInput.val(), lngInput.val()], {
-                draggable: true
-            }).addTo(map);
-
-            function updateMarker(lat, lng) {
-                marker.setLatLng([lat, lng]);
-                latInput.val(lat.toFixed(6));
-                lngInput.val(lng.toFixed(6));
-            }
-
-            marker.on('dragend', function(e) {
-                const pos = marker.getLatLng();
-                updateMarker(pos.lat, pos.lng);
-            });
-
-            map.on('click', function(e) {
-                updateMarker(e.latlng.lat, e.latlng.lng);
-            });
-
-            // ===============================================
-            // 3. IMAGE HANDLING (FILE LIST & PREVIEW)
+            // 2. IMAGE HANDLING
             // ===============================================
             let venueFiles = [];
             let docFiles = [];
 
-            function renderPreview(files, containerId, isVenue = false) {
+            function renderPreviews(files, containerId, isVenue = false) {
                 const $cont = $(`#${containerId}`).empty();
-                files.forEach((file, index) => {
+                files.forEach((file, i) => {
                     const url = URL.createObjectURL(file);
-                    const isPrimary = isVenue && index == $('#primary_image_index').val();
-
-                    let html = `
+                    const isPrimary = isVenue && i == $('#primary_image_index').val();
+                    $cont.append(`
                         <div class="col-4">
                             <div class="preview-box">
                                 <img src="${url}">
-                                <button type="button" class="btn-del-img" onclick="removeFile('${containerId}', ${index})">&times;</button>
-                                ${isVenue ? `<div class="primary-badge ${isPrimary ? 'active' : ''}" onclick="setPrimary(${index})"><i class="far ${isPrimary ? 'fa-check-circle' : 'fa-circle'}"></i> Chính</div>` : ''}
+                                <button type="button" class="btn-del-img" onclick="removeImg('${containerId}', ${i})">&times;</button>
+                                ${isVenue ? `<div class="primary-badge ${isPrimary ? 'active' : ''}" onclick="setPrimary(${i})">${isPrimary ? 'ẢNH CHÍNH' : 'ĐẶT CHÍNH'}</div>` : ''}
                             </div>
-                        </div>`;
-                    $cont.append(html);
+                        </div>
+                    `);
                 });
             }
 
-            window.setPrimary = function(index) {
-                $('#primary_image_index').val(index);
-                renderPreview(venueFiles, 'preview-venue-imgs', true);
-            }
-
-            window.removeFile = function(contId, index) {
-                if (contId === 'preview-venue-imgs') {
-                    venueFiles.splice(index, 1);
-                    let currPrimary = parseInt($('#primary_image_index').val());
-                    if (currPrimary == index) $('#primary_image_index').val(0);
-                    else if (currPrimary > index) $('#primary_image_index').val(currPrimary - 1);
-                    renderPreview(venueFiles, contId, true);
+            window.setPrimary = (i) => {
+                $('#primary_image_index').val(i);
+                renderPreviews(venueFiles, 'preview-venue-imgs', true);
+            };
+            window.removeImg = (id, i) => {
+                if (id.includes('venue')) {
+                    venueFiles.splice(i, 1);
+                    renderPreviews(venueFiles, id, true);
                 } else {
-                    docFiles.splice(index, 1);
-                    renderPreview(docFiles, contId, false);
+                    docFiles.splice(i, 1);
+                    renderPreviews(docFiles, id);
                 }
-            }
+            };
 
             $('#input-venue-imgs').change(function() {
                 venueFiles = [...venueFiles, ...Array.from(this.files)].slice(0, 5);
-                renderPreview(venueFiles, 'preview-venue-imgs', true);
+                renderPreviews(venueFiles, 'preview-venue-imgs', true);
                 $(this).val('');
             });
-
             $('#input-doc-imgs').change(function() {
                 docFiles = [...docFiles, ...Array.from(this.files)];
-                renderPreview(docFiles, 'preview-doc-imgs', false);
+                renderPreviews(docFiles, 'preview-doc-imgs');
                 $(this).val('');
             });
 
             // ===============================================
-            // 4. DYNAMIC COURTS (SÂN CON & TIME SLOTS)
+            // 3. MAP
+            // ===============================================
+            const map = L.map('map').setView([21.0285, 105.8544], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            let marker = L.marker([21.0285, 105.8544], {
+                draggable: true
+            }).addTo(map);
+            marker.on('dragend', () => {
+                $('#lat').val(marker.getLatLng().lat.toFixed(6));
+                $('#lng').val(marker.getLatLng().lng.toFixed(6));
+            });
+            map.on('click', (e) => {
+                marker.setLatLng(e.latlng);
+                $('#lat').val(e.latlng.lat.toFixed(6));
+                $('#lng').val(e.latlng.lng.toFixed(6));
+            });
+
+            // ===============================================
+            // 4. DISTRICT FILTER
+            // ===============================================
+            const allDistricts = @json($allDistricts);
+            $('#province_id').change(function() {
+                const pid = $(this).val();
+                const $d = $('#district_id').empty().prop('disabled', !pid);
+                if (pid) {
+                    $d.append('<option value="">-- Chọn Quận --</option>');
+                    allDistricts.filter(i => i.province_id == pid).forEach(i => $d.append(
+                        `<option value="${i.id}">${i.name}</option>`));
+                }
+            });
+
+            // ===============================================
+            // 5. DYNAMIC COURT & SLOTS
             // ===============================================
             let courtIdx = 0;
 
-            function updateCourtTypeSelects() {
-                let types = [];
-                $('.chk-venue-type:checked').each(function() {
-                    types.push({
-                        id: $(this).val(),
-                        name: $(this).next('label').text()
-                    });
-                });
-
-                let opts = '<option value="">-- Chọn --</option>';
-                types.forEach(t => opts += `<option value="${t.id}">${t.name}</option>`);
-
-                $('.court-type-select').each(function() {
-                    const oldVal = $(this).val();
-                    $(this).html(opts).val(oldVal);
-                });
+            function createSlotRowHtml(cIdx, start = '', end = '', price = '') {
+                const sIdx = Math.floor(Math.random() * 1000000);
+                return `
+                <tr class="slot-row">
+                    <td><input type="text" name="courts[${cIdx}][time_slots][${sIdx}][start_time]" class="form-control form-control-sm time-start time-pick" value="${start}" placeholder="00:00" required></td>
+                    <td><input type="text" name="courts[${cIdx}][time_slots][${sIdx}][end_time]" class="form-control form-control-sm time-end time-pick" value="${end}" placeholder="00:00" required></td>
+                    <td><input type="number" name="courts[${cIdx}][time_slots][${sIdx}][price]" class="form-control form-control-sm time-price" value="${price}" placeholder="Giá VNĐ" required></td>
+                    <td class="text-center"><button type="button" class="btn btn-sm text-danger remove-slot-btn"><i class="fas fa-trash"></i></button></td>
+                </tr>`;
             }
 
-            $('.chk-venue-type').change(updateCourtTypeSelects);
+            function updateTypeOptions() {
+                let opts = '<option value="">-- Loại sân --</option>';
+                $('.chk-venue-type:checked').each(function() {
+                    opts += `<option value="${$(this).val()}">${$(this).next('label').text()}</option>`;
+                });
+                $('.court-type-select').each(function() {
+                    const val = $(this).val();
+                    $(this).html(opts).val(val);
+                });
+                return opts;
+            }
+
+            $('.chk-venue-type').change(updateTypeOptions);
 
             $('#btn-add-court').click(function() {
-                $('#empty-court-msg').hide();
                 const idx = courtIdx++;
-
-                // Get current types
-                let types = [];
-                $('.chk-venue-type:checked').each(function() {
-                    types.push({
-                        id: $(this).val(),
-                        name: $(this).next('label').text()
-                    });
-                });
-                let typeOpts = '<option value="">-- Chọn --</option>';
-                types.forEach(t => typeOpts += `<option value="${t.id}">${t.name}</option>`);
-
+                const types = updateTypeOptions();
                 const html = `
-                <div class="court-item bg-white p-3 mb-3 rounded position-relative shadow-sm">
-                    <button type="button" class="btn-close position-absolute top-0 end-0 m-2 btn-remove-court"></button>
-                    <h6 class="text-primary fw-bold text-uppercase mb-3">Sân Con #${idx + 1}</h6>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-4">
-                            <label class="small fw-bold">Tên sân</label>
-                            <input type="text" name="courts[${idx}][name]" class="form-control form-control-sm" placeholder="Sân 1..." required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="small fw-bold">Loại hình</label>
-                            <select name="courts[${idx}][venue_type_id]" class="form-select form-select-sm court-type-select" required>${typeOpts}</select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="small fw-bold">Trong nhà/Ngoài trời</label>
-                            <select name="courts[${idx}][is_indoor]" class="form-select form-select-sm">
-                                <option value="0">Ngoài trời</option>
-                                <option value="1">Trong nhà</option>
-                            </select>
-                        </div>
+                <div class="court-item shadow-sm" data-idx="${idx}">
+                    <div class="court-header d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-primary">SÂN CON #${idx + 1}</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-court-btn">&times; Xóa sân</button>
                     </div>
-
-                    <div class="bg-light p-2 rounded border">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="small fw-bold text-muted" style="font-size:11px">BẢNG GIÁ & KHUNG GIỜ</span>
-                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none btn-add-slot" style="font-size:11px">+ Thêm khung giờ</button>
+                    <div class="p-3">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-5">
+                                <label class="small fw-bold">Tên sân hiển thị *</label>
+                                <input type="text" name="courts[${idx}][name]" class="form-control form-control-sm court-name-input" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small fw-bold">Loại hình kinh doanh *</label>
+                                <select name="courts[${idx}][venue_type_id]" class="form-select form-select-sm court-type-select" required>${types}</select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="small fw-bold">Trong nhà/Ngoài trời</label>
+                                <select name="courts[${idx}][is_indoor]" class="form-select form-select-sm">
+                                    <option value="0">Ngoài trời</option>
+                                    <option value="1">Trong nhà</option>
+                                </select>
+                            </div>
                         </div>
-                        <table class="table table-sm table-borderless mb-0">
-                            <tbody class="slot-body">
-                                <tr>
-                                    <td width="30%"><input type="text" name="courts[${idx}][time_slots][0][start_time]" class="form-control form-control-sm time-pick text-center" placeholder="Bắt đầu" required></td>
-                                    <td width="30%"><input type="text" name="courts[${idx}][time_slots][0][end_time]" class="form-control form-control-sm time-pick text-center" placeholder="Kết thúc" required></td>
-                                    <td width="30%"><input type="number" name="courts[${idx}][time_slots][0][price]" class="form-control form-control-sm text-center" placeholder="Giá" required></td>
-                                    <td width="10%" class="text-center"><button type="button" class="btn btn-link text-success btn-add-slot p-0"><i class="fas fa-plus-circle"></i></button></td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="bg-light p-3 rounded-3 border">
+                            <div class="d-flex justify-content-between mb-2 align-items-center">
+                                <span class="small fw-bold uppercase text-muted" style="font-size:10px">Khung giờ & Giá (Tự động chia nhỏ nếu > 60p)</span>
+                                <button type="button" class="btn btn-xs btn-outline-success add-slot-btn" style="font-size:10px">+ Thêm giờ</button>
+                            </div>
+                            <table class="table table-sm table-bordered bg-white mb-0">
+                                <thead><tr class="text-center small"><th>Bắt đầu</th><th>Kết thúc</th><th>Giá (VNĐ)</th><th>#</th></tr></thead>
+                                <tbody class="slot-container">${createSlotRowHtml(idx)}</tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>`;
-
                 $('#courts-wrapper').append(html);
-                initTimePicker();
+                initTimePicker('.time-pick');
             });
 
-            $(document).on('click', '.btn-remove-court', function() {
+            // ===============================================
+            // 6. SPLIT SLOT LOGIC (60 MINS)
+            // ===============================================
+            $(document).on('change', '.time-end, .time-price', function() {
+                const row = $(this).closest('tr');
+                const cIdx = $(this).closest('.court-item').data('idx');
+                const startVal = row.find('.time-start').val();
+                const endVal = row.find('.time-end').val();
+                const priceVal = row.find('.time-price').val();
+
+                if (!startVal || !endVal || !priceVal) return;
+                const startMin = timeToMinutes(startVal);
+                const endMin = (endVal === "00:00" || endVal === "24:00") ? 1440 : timeToMinutes(endVal);
+
+                if (endMin <= startMin) {
+                    if ($(this).hasClass('time-end')) {
+                        alert('Giờ kết thúc phải lớn hơn giờ bắt đầu!');
+                        $(this).val('');
+                    }
+                    return;
+                }
+
+                if ((endMin - startMin) > 60) {
+                    if (confirm(
+                            `Bạn nhập khoảng ${(endMin-startMin)} phút. Có muốn tự động chia thành các khung 60 phút không?`
+                            )) {
+                        const container = row.closest('.slot-container');
+                        row.remove();
+                        let curr = startMin;
+                        while (curr < endMin) {
+                            let next = Math.min(curr + 60, endMin);
+                            const newRow = $(createSlotRowHtml(cIdx, minutesToTime(curr), minutesToTime(
+                                next), priceVal));
+                            container.append(newRow);
+                            initTimePicker(newRow.find('.time-pick'));
+                            curr = next;
+                        }
+                    }
+                }
+            });
+
+            $(document).on('click', '.add-slot-btn', function() {
+                const cIdx = $(this).closest('.court-item').data('idx');
+                const row = $(createSlotRowHtml(cIdx));
+                $(this).closest('.court-item').find('.slot-container').append(row);
+                initTimePicker(row.find('.time-pick'));
+            });
+
+            $(document).on('click', '.remove-slot-btn', function() {
+                const container = $(this).closest('.slot-container');
+                if (container.find('tr').length > 1) $(this).closest('tr').remove();
+            });
+
+            $(document).on('click', '.remove-court-btn', function() {
                 $(this).closest('.court-item').remove();
-                if ($('#courts-wrapper').children('.court-item').length === 0) $('#empty-court-msg').show();
             });
 
-            $(document).on('click', '.btn-add-slot', function() {
-                const tbody = $(this).closest('.court-item').find('.slot-body');
-                const courtNameAttr = tbody.find('input').first().attr('name');
-                const cIdx = courtNameAttr.match(/courts\[(\d+)\]/)[1];
-                const sIdx = Date.now();
+            // ===============================================
+            // 7. FINAL SUBMIT VALIDATION
+            // ===============================================
+            $('#venue-form').on('submit', function(e) {
+                let valid = true;
+                $('.is-invalid').removeClass('is-invalid');
+                $('.invalid-feedback').remove();
 
-                const tr = `
-                <tr>
-                    <td><input type="text" name="courts[${cIdx}][time_slots][${sIdx}][start_time]" class="form-control form-control-sm time-pick text-center" required></td>
-                    <td><input type="text" name="courts[${cIdx}][time_slots][${sIdx}][end_time]" class="form-control form-control-sm time-pick text-center" required></td>
-                    <td><input type="number" name="courts[${cIdx}][time_slots][${sIdx}][price]" class="form-control form-control-sm text-center" required></td>
-                    <td class="text-center"><button type="button" class="btn btn-link text-danger btn-rem-slot p-0"><i class="fas fa-minus-circle"></i></button></td>
-                </tr>`;
-                tbody.append(tr);
-                initTimePicker();
-            });
+                function setErr($el, msg) {
+                    valid = false;
+                    $el.addClass('is-invalid');
+                    if ($el.next('.invalid-feedback').length === 0) {
+                        $el.after(`<div class="invalid-feedback">${msg}</div>`);
+                    }
+                }
 
-            $(document).on('click', '.btn-rem-slot', function() {
-                $(this).closest('tr').remove();
-            });
+                // Brand Validation
+                if (!$('input[name="name"]').val()) setErr($('input[name="name"]'),
+                    'Tên thương hiệu không được trống.');
+                if (!$('#province_id').val()) setErr($('#province_id'), 'Vui lòng chọn Tỉnh.');
+                if (!$('#district_id').val()) setErr($('#district_id'), 'Vui lòng chọn Huyện.');
+                if (!$('input[name="address_detail"]').val()) setErr($('input[name="address_detail"]'),
+                    'Vui lòng nhập địa chỉ.');
+                if (!$('.chk-venue-type:checked').length) {
+                    $('#venue_types_container').addClass('is-invalid');
+                    $('#venue_types_container').after(
+                        '<div class="invalid-feedback">Chọn ít nhất 1 loại hình kinh doanh.</div>');
+                    valid = false;
+                }
 
-            function initTimePicker() {
-                flatpickr(".time-pick, .flatpickr-time", {
-                    enableTime: true,
-                    noCalendar: true,
-                    dateFormat: "H:i",
-                    time_24hr: true
+                // Court Validation
+                if ($('.court-item').length === 0) {
+                    alert('Vui lòng thêm ít nhất 1 sân.');
+                    valid = false;
+                }
+
+                $('.court-item').each(function() {
+                    const name = $(this).find('.court-name-input');
+                    if (!name.val()) setErr(name, 'Nhập tên sân.');
+
+                    const typeS = $(this).find('.court-type-select');
+                    if (!typeS.val()) setErr(typeS, 'Chọn loại hình cho sân này.');
+
+                    $(this).find('.slot-row').each(function() {
+                        const s = $(this).find('.time-start'),
+                            e = $(this).find('.time-end'),
+                            p = $(this).find('.time-price');
+                        if (!s.val()) s.addClass('is-invalid');
+                        if (!e.val()) e.addClass('is-invalid');
+                        if (!p.val()) p.addClass('is-invalid');
+                        if (s.val() && e.val() && timeToMinutes(e.val()) <= timeToMinutes(s
+                                .val())) {
+                            setErr(e, 'Giờ không hợp lệ.');
+                        }
+                    });
                 });
-            }
-            initTimePicker();
 
-            // ===============================================
-            // 5. SUBMIT FORM
-            // ===============================================
-            $('#venue-form').submit(function(e) {
-                // Sync Files
-                const dtVenue = new DataTransfer();
-                venueFiles.forEach(f => dtVenue.items.add(f));
-                document.getElementById('final-venue-imgs').files = dtVenue.files;
-
-                const dtDoc = new DataTransfer();
-                docFiles.forEach(f => dtDoc.items.add(f));
-                document.getElementById('final-doc-imgs').files = dtDoc.files;
-
-                // Validate sơ bộ
-                if ($('.chk-venue-type:checked').length === 0) {
-                    alert('Vui lòng chọn ít nhất 1 loại hình kinh doanh.');
-                    e.preventDefault();
-                    return;
-                }
+                // Image Validation
                 if (venueFiles.length === 0) {
-                    alert('Vui lòng tải lên ít nhất 1 ảnh sân.');
+                    alert('Phải có ít nhất 1 ảnh sân.');
+                    valid = false;
+                }
+                if (docFiles.length === 0) {
+                    alert('Phải có ít nhất 1 ảnh giấy tờ.');
+                    valid = false;
+                }
+
+                if (!valid) {
                     e.preventDefault();
-                    return;
+                    $('html, body').animate({
+                        scrollTop: $('.is-invalid').first().offset().top - 120
+                    }, 200);
+                } else {
+                    // Sync Files
+                    const dtV = new DataTransfer();
+                    venueFiles.forEach(f => dtV.items.add(f));
+                    document.getElementById('final-venue-imgs').files = dtV.files;
+                    const dtD = new DataTransfer();
+                    docFiles.forEach(f => dtD.items.add(f));
+                    document.getElementById('final-doc-imgs').files = dtD.files;
                 }
             });
+
+            initTimePicker('.flatpickr-time');
+            $('#btn-add-court').trigger('click');
         });
     </script>
 @endsection

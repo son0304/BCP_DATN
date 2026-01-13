@@ -14,6 +14,7 @@ class PostApiController extends Controller
         try {
             $posts = Post::query()
                 ->where('status', 'active')
+                ->where('type', 'sale') // <--- THÊM DÒNG NÀY: Chỉ lấy bài Sale
                 ->with(['author:id,name,avt', 'images', 'venue:id,name'])
                 ->latest()
                 ->paginate($request->input('per_page', 10));
@@ -24,23 +25,24 @@ class PostApiController extends Controller
         }
     }
 
+    // Hàm store giữ nguyên để Admin/Chủ sân có thể gọi API này tạo bài Sale (từ trang quản trị)
+    // Hoặc bạn có thể phân quyền middleware để chặn user thường gọi vào đây.
     public function store(Request $request)
     {
-        // Validate nhận cả file ảnh
+        // ... Code cũ giữ nguyên hoặc thêm logic check admin ...
+        // Tạm thời giữ nguyên để tránh lỗi nếu bạn dùng nó cho admin panel
         $validated = $request->validate([
             'content'       => 'required|string|min:5',
             'type'          => 'required|in:sale,user_post',
             'venue_id'      => 'nullable|integer',
             'phone_contact' => 'nullable|string|max:20',
             'images'        => 'nullable|array',
-            'images.*'      => 'image|mimes:jpeg,png,jpg,webp|max:2048', // Max 2MB/ảnh
+            'images.*'      => 'image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
         try {
             return DB::transaction(function () use ($request, $validated) {
                 $user = Auth::user();
-
-                // 1. Tạo bài viết
                 $post = Post::create([
                     'user_id'       => $user->id,
                     'type'          => $validated['type'],
@@ -50,29 +52,21 @@ class PostApiController extends Controller
                     'status'        => 'active',
                 ]);
 
-                // 2. Xử lý upload ảnh nếu có
                 if ($request->hasFile('images')) {
                     foreach ($request->file('images') as $index => $file) {
                         $path = $file->store('posts', 'public');
-
                         Image::create([
                             'imageable_type' => Post::class,
                             'imageable_id'   => $post->id,
                             'url'            => asset('storage/' . $path),
-                            'is_primary'     => $index === 0, // Ảnh đầu tiên là ảnh chính
+                            'is_primary'     => $index === 0,
                             'user_id'        => $user->id
                         ]);
                     }
                 }
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Đăng bài thành công!',
-                    'data'    => $post->load(['author', 'images', 'venue'])
-                ], 201);
+                return response()->json(['success' => true, 'data' => $post], 201);
             });
         } catch (\Exception $e) {
-            Log::error("Lỗi đăng bài: " . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }

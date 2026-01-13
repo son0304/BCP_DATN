@@ -162,6 +162,17 @@
                     </thead>
                     <tbody style="font-size: 0.875rem;">
                         @forelse($transactions as $t)
+                            @php
+                                // Logic tính toán khuyến mãi hiển thị
+                                $displayPromotion = 0;
+                                if ($t->promotion) {
+                                    $creatorRole = $t->promotion->creator->role->name ?? '';
+                                    // Chỉ hiển thị số tiền nếu người tạo không phải là admin
+                                    if (!in_array($creatorRole, ['admin', 'super_admin'])) {
+                                        $displayPromotion = $t->promotion_amount;
+                                    }
+                                }
+                            @endphp
                             <tr>
                                 <td class="ps-4">
                                     <span class="fw-bold text-dark">#{{ $t->id }}</span><br>
@@ -179,7 +190,12 @@
                                 </td>
                                 <td class="text-dark">{{ $t->venue->name ?? 'N/A' }}</td>
                                 <td class="text-end fw-bold">{{ number_format($t->total_amount) }}đ</td>
-                                <td class="text-end text-danger">-{{ number_format($t->promotion_amount) }}đ</td>
+
+                                {{-- CỘT KHUYẾN MÃI ĐÃ SỬA --}}
+                                <td class="text-end text-danger">
+                                    {{ $displayPromotion > 0 ? '-' . number_format($displayPromotion) . 'đ' : '0đ' }}
+                                </td>
+
                                 <td class="text-end text-muted">{{ number_format($t->admin_amount) }}đ</td>
                                 <td class="text-end fw-bold text-success">{{ number_format($t->venue_owner_amount) }}đ
                                 </td>

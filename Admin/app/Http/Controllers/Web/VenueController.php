@@ -207,7 +207,7 @@ class VenueController extends Controller
     {
         $user = Auth::user();
 
-        // 1. Validate dữ liệu
+        // 1. Định nghĩa luật Validate
         $rules = [
             'name' => 'required|string|max:255',
             'province_id' => 'required|exists:provinces,id',
@@ -215,119 +215,151 @@ class VenueController extends Controller
             'address_detail' => 'required|string',
             'lat' => 'required|numeric',
             'lng' => 'required|numeric',
-            'start_time' => 'required',
-            'end_time' => 'required',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => ['required', 'regex:/^(?:[01]\d|2[0-3]):[0-5]\d$|^24:00$/'],
             'venue_types' => 'required|array|min:1',
+            'phone' => 'nullable|string',
 
             // Validate Sân con
-            'courts' => 'nullable|array',
-            'courts.*.name' => 'required|string',
+            'courts' => 'required|array|min:1',
+            'courts.*.name' => 'required|string|max:255',
             'courts.*.venue_type_id' => 'required|exists:venue_types,id',
+            'courts.*.is_indoor' => 'required|in:0,1',
 
-            // Validate Khung giờ
-            'courts.*.time_slots' => 'nullable|array',
-            'courts.*.time_slots.*.start_time' => 'required',
-            'courts.*.time_slots.*.end_time' => 'required',
+            // Validate Khung giờ lồng trong sân con
+            'courts.*.time_slots' => 'required|array|min:1',
+            'courts.*.time_slots.*.start_time' => 'required|date_format:H:i',
+            'courts.*.time_slots.*.end_time' => ['required', 'regex:/^(?:[01]\d|2[0-3]):[0-5]\d$|^24:00$/'],
             'courts.*.time_slots.*.price' => 'required|numeric|min:0',
 
-            // Validate Ảnh
-            'images' => 'required|array|min:1', // Bắt buộc có ảnh sân
+            // Ảnh
+            'images' => 'required|array|min:1',
             'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
-            'document_images' => 'required|array|min:1', // Bắt buộc có giấy tờ
+            'document_images' => 'required|array|min:1',
             'document_images.*' => 'image|mimes:jpeg,png,jpg,webp|max:5120',
         ];
 
-        if (isset($user->role) && $user->role->name === 'admin') {
+        if ($user->role->name === 'admin') {
             $rules['owner_id'] = 'required|exists:users,id';
         }
 
         $validator = Validator::make($request->all(), $rules);
 
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
+        // 2. Logic so sánh khung giờ của Sân Con phải nằm trong giờ của Venue
+        $validator->after(function ($validator) use ($request) {
+            $vStartStr = $request->input('start_time');
+            $vEndStr = $request->input('end_time');
+            if (!$vStartStr || !$vEndStr) return;
 
-        $data = $validator->validated();
-        $owner_id = (isset($user->role) && $user->role->name === 'admin') ? $data['owner_id'] : $user->id;
+            // Chuẩn hóa giờ Venue
+            $venueStart = Carbon::createFromFormat('H:i', $vStartStr);
+            $venueEnd = Carbon::createFromFormat('H:i', $vEndStr === '24:00' ? '00:00' : $vEndStr);
+            if ($vEndStr === '24:00' || $venueEnd->lte($venueStart)) $venueEnd->addDay();
 
+            foreach ($request->input('courts', []) as $cIdx => $court) {
+                foreach ($court['time_slots'] ?? [] as $sIdx => $slot) {
+                    if (empty($slot['start_time']) || empty($slot['end_time'])) continue;
+
+                    $slotStart = Carbon::createFromFormat('H:i', $slot['start_time']);
+                    $slotEnd = Carbon::createFromFormat('H:i', $slot['end_time'] === '24:00' ? '00:00' : $slot['end_time']);
+                    if ($slot['end_time'] === '24:00' || $slotEnd->lte($slotStart)) $slotEnd->addDay();
+
+                    // Kiểm tra slot nằm trong venue
+                    if ($slotStart->lt($venueStart) || $slotEnd->gt($venueEnd)) {
+                        $validator->errors()->add("courts.{$cIdx}.time_slots.{$sIdx}.start_time", "Khung giờ phải nằm trong khoảng hoạt động ($vStartStr - $vEndStr)");
+                    }
+                }
+            }
+        });
+
+        if ($validator->fails()) return back()->withErrors($validator)->withInput();
+
+        // 3. Thực hiện Transaction lưu dữ liệu
         DB::beginTransaction();
         try {
-            // 2. Tạo Venue
+            $owner_id = ($user->role->name === 'admin') ? $request->owner_id : $user->id;
+
+            // B1: Tạo Venue
             $venue = Venue::create([
-                'name' => $data['name'],
+                'name' => $request->name,
                 'owner_id' => $owner_id,
-                'province_id' => $data['province_id'],
-                'district_id' => $data['district_id'],
-                'address_detail' => $data['address_detail'],
-                'lat' => $data['lat'],
-                'lng' => $data['lng'],
+                'province_id' => $request->province_id,
+                'district_id' => $request->district_id,
+                'address_detail' => $request->address_detail,
+                'lat' => $request->lat,
+                'lng' => $request->lng,
                 'phone' => $request->phone,
-                'start_time' => $data['start_time'],
-                'end_time' => $data['end_time'],
-                'is_active' => 0, // Mặc định chưa kích hoạt
+                'start_time' => $request->start_time . ':00',
+                'end_time' => $request->end_time === '24:00' ? '23:59:59' : $request->end_time . ':00',
+                'is_active' => 0,
             ]);
 
-            // 3. Gán loại hình kinh doanh
-            $venue->venueTypes()->attach($data['venue_types']);
+            $venue->venueTypes()->attach($request->venue_types);
 
-            // 4. Upload Ảnh Sân (Venue Images)
+            // B2: Lưu ảnh (Sân & Giấy tờ)
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $idx => $file) {
                     $path = $file->store('uploads/venues', 'public');
                     $venue->images()->create([
                         'url' => 'storage/' . $path,
                         'is_primary' => ($idx == $request->input('primary_image_index', 0)),
-                        'type' => 'venue' // Cần đảm bảo DB bảng images có cột 'type'
+                        'type' => 'venue'
                     ]);
                 }
             }
-
-            // 5. Upload Giấy tờ (Document Images)
             if ($request->hasFile('document_images')) {
                 foreach ($request->file('document_images') as $file) {
                     $path = $file->store('uploads/documents', 'public');
-                    $venue->images()->create([
-                        'url' => 'storage/' . $path,
-                        'is_primary' => 0,
-                        'type' => 'document'
-                    ]);
+                    $venue->images()->create(['url' => 'storage/' . $path, 'is_primary' => 0, 'type' => 'document']);
                 }
             }
 
-            // 6. Tạo Sân Con & TimeSlots (Đã bổ sung logic thiếu)
-            if (!empty($data['courts'])) {
-                foreach ($data['courts'] as $courtData) {
-                    $court = Court::create([
-                        'name' => $courtData['name'],
-                        'venue_id' => $venue->id,
-                        'venue_type_id' => $courtData['venue_type_id'],
-                        'surface' => $courtData['surface'] ?? null,
-                        'is_indoor' => $courtData['is_indoor'] ?? 0,
+            // B3: Tạo Sân con, TimeSlots và Availability 30 ngày
+            foreach ($request->input('courts') as $courtData) {
+                $court = Court::create([
+                    'venue_id' => $venue->id,
+                    'name' => $courtData['name'],
+                    'venue_type_id' => $courtData['venue_type_id'],
+                    'surface' => $courtData['surface'] ?? null,
+                    'is_indoor' => $courtData['is_indoor'],
+                ]);
+
+                $availabilityToInsert = [];
+                foreach ($courtData['time_slots'] as $slot) {
+                    $startTime = $slot['start_time'] . ':00';
+                    $endTime = ($slot['end_time'] === '24:00') ? '23:59:59' : $slot['end_time'] . ':00';
+
+                    $timeSlot = TimeSlot::create([
+                        'court_id' => $court->id,
+                        'start_time' => $startTime,
+                        'end_time' => $endTime,
+                        'label' => $slot['start_time'] . ' - ' . $slot['end_time']
                     ]);
 
-                    // --- LOGIC LƯU KHUNG GIỜ ---
-                    if (!empty($courtData['time_slots'])) {
-                        foreach ($courtData['time_slots'] as $slot) {
-                            $court->timeSlots()->create([
-                                'start_time' => $slot['start_time'],
-                                'end_time' => $slot['end_time'],
-                                'price' => $slot['price'],
-                            ]);
-                        }
+                    // Tạo Availability cho 30 ngày tới
+                    for ($i = 0; $i < 30; $i++) {
+                        $availabilityToInsert[] = [
+                            'court_id' => $court->id,
+                            'slot_id' => $timeSlot->id,
+                            'date' => Carbon::today()->addDays($i)->toDateString(),
+                            'price' => $slot['price'],
+                            'status' => 'open',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
                     }
-
-                    // (Optional) Gọi hàm tạo Availability cho 30 ngày tại đây nếu cần
+                }
+                if (!empty($availabilityToInsert)) {
+                    Availability::insert($availabilityToInsert);
                 }
             }
 
             DB::commit();
-            // Redirect đúng route của bạn
-            $redirectRoute = (isset($user->role) && $user->role->name === 'admin') ? 'admin.venues.index' : 'owner.venues.index';
-            return redirect()->route($redirectRoute)->with('success', 'Đăng ký sân thành công!');
+            $route = ($user->role->name === 'admin') ? 'admin.venues.index' : 'owner.venues.index';
+            return redirect()->route($route)->with('success', 'Đăng ký thương hiệu và hệ thống sân thành công!');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error($e);
-            return back()->withInput()->with('error', 'Lỗi hệ thống: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Lỗi: ' . $e->getMessage());
         }
     }
 

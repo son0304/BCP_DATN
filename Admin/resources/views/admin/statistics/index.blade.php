@@ -7,135 +7,110 @@
         <div class="row mb-4 align-items-center">
             <div class="col-md-6">
                 <h4 class="fw-bold text-dark mb-1">
-                    <i class="fas fa-chart-pie me-2 text-primary"></i>Thống kê Doanh thu Admin
+                    <i class="fas fa-university me-2 text-primary"></i>Quản trị Tài chính Admin
                 </h4>
-                <p class="text-muted small mb-0">Báo cáo chi tiết nguồn thu từ Hoa hồng và Quảng cáo</p>
+                <p class="text-muted small mb-0">Đối soát Dòng tiền Bank, Lợi nhuận và Nghĩa vụ nợ</p>
             </div>
-            <div class="col-md-6">
-                <form class="d-flex gap-2 justify-content-md-end bg-white p-2 rounded-3 shadow-sm border">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-light border-0"><i class="fas fa-calendar-alt"></i></span>
-                        <input type="date" name="date_from" class="form-control border-0 bg-light"
-                            value="{{ $start->format('Y-m-d') }}">
-                    </div>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-light border-0">đến</span>
-                        <input type="date" name="date_to" class="form-control border-0 bg-light"
-                            value="{{ $end->format('Y-m-d') }}">
-                    </div>
-                    <button class="btn btn-primary btn-sm px-4 fw-bold">Xem báo cáo</button>
+            <div class="col-md-6 text-end">
+                <form class="d-inline-flex gap-2 bg-white p-2 rounded-3 shadow-sm border">
+                    <input type="date" name="date_from" class="form-control form-control-sm border-0 bg-light"
+                        value="{{ $start->format('Y-m-d') }}">
+                    <input type="date" name="date_to" class="form-control form-control-sm border-0 bg-light"
+                        value="{{ $end->format('Y-m-d') }}">
+                    <button class="btn btn-primary btn-sm px-3 fw-bold">Lọc</button>
                 </form>
             </div>
         </div>
 
-        <!-- 1. KPI CARDS - TÁCH BIỆT DOANH THU -->
+        <!-- 1. KPI CARDS - BỐ CỤC ĐỐI SOÁT -->
         <div class="row g-3 mb-4">
-            <!-- TỔNG LỢI NHUẬN -->
+            <!-- TIỀN MẶT TRONG BANK -->
             <div class="col-md-3">
                 <div class="card border-0 shadow-sm rounded-4 bg-primary text-white h-100">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="badge bg-white text-primary bg-opacity-75">Tổng Thực Thu</span>
-                            <i class="fas fa-wallet fa-lg opacity-50"></i>
-                        </div>
-                        <h3 class="fw-bold mb-0">{{ number_format($finance->total_profit ?? 0) }}đ</h3>
-                        <p class="small mb-0 opacity-75 mt-1">Tổng lợi nhuận ròng của Admin</p>
+                    <div class="card-body">
+                        <small class="opacity-75 fw-bold text-uppercase">Số dư Bank thực tế</small>
+                        <h3 class="fw-bold my-1">{{ number_format($actualBankBalance) }}đ</h3>
+                        <p class="small mb-0 opacity-75">Tiền mặt hiện có trong ví MoMo/VNPAY</p>
                     </div>
                 </div>
             </div>
 
-            <!-- HOA HỒNG ĐẶT SÂN -->
+            <!-- LỢI NHUẬN RÒNG -->
             <div class="col-md-3">
-                <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-4 border-success">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-success fw-bold small text-uppercase">Hoa hồng Đặt sân</span>
-                            <div class="icon-shape bg-success-soft text-success rounded-circle p-2">
-                                <i class="fas fa-ticket-alt"></i>
-                            </div>
-                        </div>
-                        <h4 class="fw-bold mb-0 text-dark">{{ number_format($finance->commission_revenue ?? 0) }}đ</h4>
-                        <p class="text-muted small mb-0 mt-1">Từ {{ number_format($finance->total_txns ?? 0) }} giao dịch
-                            booking</p>
+                <div class="card border-0 shadow-sm rounded-4 bg-dark text-white h-100">
+                    <div class="card-body">
+                        <small class="text-success fw-bold text-uppercase">Lợi nhuận của bạn (Ví)</small>
+                        <h3 class="fw-bold my-1 text-success">{{ number_format($adminWallet) }}đ</h3>
+                        <p class="small mb-0 opacity-50">Sau khi trừ Voucher:
+                            {{ number_format($finance->admin_voucher_cost ?? 0) }}đ</p>
                     </div>
                 </div>
             </div>
 
-            <!-- DOANH THU QUẢNG CÁO -->
+            <!-- NỢ VENUE -->
             <div class="col-md-3">
-                <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-4 border-warning">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-warning fw-bold small text-uppercase">Gói Quảng cáo</span>
-                            <div class="icon-shape bg-warning-soft text-warning rounded-circle p-2">
-                                <i class="fas fa-ad"></i>
-                            </div>
-                        </div>
-                        <h4 class="fw-bold mb-0 text-dark">{{ number_format($finance->ads_revenue ?? 0) }}đ</h4>
-                        <p class="text-muted small mb-0 mt-1">Bán gói tài trợ/ưu tiên hiển thị</p>
+                <div class="card border-0 shadow-sm rounded-4 bg-white border-start border-4 border-danger h-100">
+                    <div class="card-body">
+                        <small class="text-danger fw-bold text-uppercase">Đang giữ hộ Venue (Nợ)</small>
+                        <h3 class="fw-bold my-1">{{ number_format($totalOwnerLiability) }}đ</h3>
+                        <p class="small mb-0 text-muted">Số dư ví của tất cả các chủ sân</p>
                     </div>
                 </div>
             </div>
 
-            <!-- GMV -->
+            <!-- THU CHI TRONG KỲ -->
             <div class="col-md-3">
-                <div class="card border-0 shadow-sm rounded-4 h-100">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-muted small text-uppercase">Tổng GMV</span>
-                            <i class="fas fa-exchange-alt text-muted"></i>
+                <div class="card border-0 shadow-sm rounded-4 bg-white h-100">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between border-bottom py-1">
+                            <span class="small text-muted">Thu (In):</span>
+                            <span class="small text-primary fw-bold">+{{ number_format($cashIn) }}</span>
                         </div>
-                        <h4 class="fw-bold mb-0 text-muted">{{ number_format($finance->gmv ?? 0) }}đ</h4>
-                        <p class="text-muted small mb-0 mt-1">Dòng tiền qua hệ thống</p>
+                        <div class="d-flex justify-content-between border-bottom py-1">
+                            <span class="small text-muted">Chi (Out):</span>
+                            <span class="small text-danger fw-bold">-{{ number_format($cashOut) }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-1">
+                            <span class="small text-muted">GMV:</span>
+                            <span class="small fw-bold text-dark">{{ number_format($finance->gmv ?? 0) }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="row g-4">
-            <!-- 2. BIỂU ĐỒ STACKED (QUAN TRỌNG) -->
+            <!-- 2. BIỂU ĐỒ DOANH THU THEO LOẠI -->
             <div class="col-lg-8">
-                <div class="card border-0 shadow-sm rounded-4 h-100">
-                    <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
-                        <h6 class="fw-bold mb-0">Biểu đồ Lợi nhuận theo ngày</h6>
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white py-3 border-0">
+                        <h6 class="fw-bold mb-0 text-dark">Phân tích nguồn thu: Booking vs Quảng cáo</h6>
                     </div>
                     <div class="card-body">
-                        <div style="height: 350px;">
+                        <div style="height: 300px;">
                             <canvas id="profitChart"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 3. CƠ CẤU & TOP ĐỐI TÁC -->
+            <!-- 3. CƠ CẤU NGUỒN THU & TOP PARTNER -->
             <div class="col-lg-4">
-                <!-- Biểu đồ tròn cơ cấu -->
                 <div class="card border-0 shadow-sm rounded-4 mb-4">
                     <div class="card-body">
-                        <h6 class="fw-bold mb-3 small text-uppercase text-muted">Tỷ trọng nguồn thu</h6>
-                        <div style="height: 200px; position: relative;">
+                        <h6 class="fw-bold mb-3 small text-uppercase text-muted text-center">Tỷ trọng nguồn thu Admin</h6>
+                        <div style="height: 180px;">
                             <canvas id="structureChart"></canvas>
-                        </div>
-                        <div class="mt-3 text-center d-flex justify-content-center gap-3">
-                            <div class="small"><span class="dot bg-success me-1"></span>Hoa hồng</div>
-                            <div class="small"><span class="dot bg-warning me-1"></span>Quảng cáo</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Top Venue -->
                 <div class="card border-0 shadow-sm rounded-4">
                     <div class="card-header bg-white py-3 border-0">
-                        <h6 class="fw-bold mb-0 small text-uppercase text-primary">Top Sân (Đóng góp Hoa hồng)</h6>
+                        <h6 class="fw-bold mb-0 small text-uppercase text-primary">Top Sân Đóng Góp Hoa Hồng</h6>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 small">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th class="border-0 ps-3">Tên sân</th>
-                                    <th class="border-0 text-end pe-3">Hoa hồng</th>
-                                </tr>
-                            </thead>
+                        <table class="table table-hover align-middle mb-0 small text-nowrap">
                             <tbody>
                                 @foreach ($topVenues as $v)
                                     <tr>
@@ -145,60 +120,69 @@
                                         </td>
                                     </tr>
                                 @endforeach
-                                @if ($topVenues->isEmpty())
-                                    <tr>
-                                        <td colspan="2" class="text-center py-3 text-muted">Chưa có dữ liệu</td>
-                                    </tr>
-                                @endif
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- 4. SỔ CÁI CHI TIẾT -->
+        <div class="card border-0 shadow-sm rounded-4 bg-white mt-4">
+            <div class="card-header bg-white border-0 fw-bold py-3">Chi tiết phân phối dòng tiền (Money Flow)</div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 small">
+                    <thead class="bg-light text-muted text-uppercase">
+                        <tr>
+                            <th class="ps-4">Nguồn tiền</th>
+                            <th class="text-end">Doanh số</th>
+                            <th class="text-end text-danger">Voucher Admin</th>
+                            <th class="text-end text-primary">Lợi nhuận ròng</th>
+                            <th class="text-end">Ví sân nhận</th>
+                            <th class="pe-4 text-end">Thời gian</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($recentTransactions as $t)
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark">{{ $t->money_flowable->booking_code ?? 'Tài trợ' }}
+                                    </div>
+                                    <div class="text-muted small">{{ $t->venue->name ?? 'Hệ thống' }}</div>
+                                </td>
+                                <td class="text-end fw-bold">{{ number_format($t->total_amount) }}đ</td>
+                                <td class="text-end text-danger">-{{ number_format($t->promotion_amount) }}đ</td>
+                                <td class="text-end fw-bold text-primary bg-light">{{ number_format($t->admin_amount) }}đ
+                                </td>
+                                <td class="text-end text-success">{{ number_format($t->venue_owner_amount) }}đ</td>
+                                <td class="pe-4 text-end text-muted">{{ $t->created_at->format('d/m H:i') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer bg-white border-0 py-3">{{ $recentTransactions->links('pagination::bootstrap-5') }}
+            </div>
+        </div>
     </div>
-
-    <style>
-        .bg-success-soft {
-            background-color: rgba(25, 135, 84, 0.1);
-        }
-
-        .bg-warning-soft {
-            background-color: rgba(255, 193, 7, 0.1);
-        }
-
-        .dot {
-            height: 10px;
-            width: 10px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .bg-warning {
-            background-color: #ffc107 !important;
-        }
-    </style>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             // 1. BIỂU ĐỒ CỘT CHỒNG (STACKED BAR)
-            const ctxBar = document.getElementById('profitChart').getContext('2d');
-            new Chart(ctxBar, {
+            new Chart(document.getElementById('profitChart'), {
                 type: 'bar',
                 data: {
                     labels: @json($chartData->pluck('date')),
                     datasets: [{
                             label: 'Hoa hồng Booking',
                             data: @json($chartData->pluck('commission')),
-                            backgroundColor: '#198754', // Xanh lá
-                            borderRadius: 4,
+                            backgroundColor: '#198754'
                         },
                         {
                             label: 'Quảng cáo',
                             data: @json($chartData->pluck('ads')),
-                            backgroundColor: '#ffc107', // Vàng
-                            borderRadius: 4,
+                            backgroundColor: '#ffc107'
                         }
                     ]
                 },
@@ -207,51 +191,33 @@
                     maintainAspectRatio: false,
                     scales: {
                         x: {
-                            stacked: true,
-                            grid: {
-                                display: false
-                            }
+                            stacked: true
                         },
                         y: {
-                            stacked: true,
-                            beginAtZero: true,
-                            grid: {
-                                borderDash: [5, 5]
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false
+                            stacked: true
                         }
                     }
                 }
             });
 
-            // 2. BIỂU ĐỒ TRÒN (DOUGHNUT)
-            const ctxPie = document.getElementById('structureChart').getContext('2d');
-            new Chart(ctxPie, {
+            // 2. BIỂU ĐỒ TRÒN
+            new Chart(document.getElementById('structureChart'), {
                 type: 'doughnut',
                 data: {
-                    labels: ['Hoa hồng Booking', 'Quảng cáo'],
+                    labels: ['Booking', 'Quảng cáo'],
                     datasets: [{
                         data: [{{ $finance->commission_revenue ?? 0 }},
                             {{ $finance->ads_revenue ?? 0 }}
                         ],
                         backgroundColor: ['#198754', '#ffc107'],
-                        borderWidth: 0,
-                        hoverOffset: 4
+                        borderWidth: 0
                     }]
                 },
                 options: {
                     cutout: '70%',
                     plugins: {
                         legend: {
-                            display: false
+                            position: 'bottom'
                         }
                     }
                 }

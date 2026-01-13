@@ -13,16 +13,27 @@ use Illuminate\Support\Facades\Log;
 class FlashSaleCampaignController extends Controller
 {
     // Trang danh sách (Index)
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
-        $now = now();
 
-        // Chỉ lấy các chiến dịch của tôi và chưa kết thúc
-        $flashSaleCampaigns = FlashSaleCampaign::where('owner_id', $user->id)
-            ->where('end_datetime', '>', $now)
-            ->orderBy('start_datetime', 'asc')
-            ->get();
+        // Khởi tạo query
+        $query = FlashSaleCampaign::where('owner_id', $user->id);
+
+        // 1. Tìm kiếm theo tên chiến dịch
+        if ($request->filled('search')) {
+            $query->where('name', 'LIKE', '%' . $request->search . '%');
+        }
+
+        // 2. Lọc theo trạng thái
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // 3. Sắp xếp và phân trang
+        $flashSaleCampaigns = $query->orderBy('start_datetime', 'desc')
+            ->paginate(10)
+            ->withQueryString(); // Giữ các tham số lọc khi chuyển trang
 
         return view('venue_owner.flash_sale_campaigns.index', compact('flashSaleCampaigns'));
     }
@@ -114,5 +125,105 @@ class FlashSaleCampaignController extends Controller
             'joinedIds',
             'oldPrice'
         ));
+    }
+
+    // ... imports
+
+    public function update(Request $request, $id)
+    {
+        $user = Auth::user();
+
+        // 1. Validate dữ liệu mới
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'start_datetime' => 'required|date', // Có thể bỏ after:now nếu cho phép sửa quá khứ nhẹ, tùy logic
+            'end_datetime' => 'required|date|after:start_datetime',
+        ]);
+
+        $campaign = FlashSaleCampaign::where('id', $id)
+            ->where('owner_id', $user->id)
+            ->firstOrFail();
+
+        // 2. Cập nhật thông tin Campaign
+        $campaign->update([
+            'name' => $request->name,
+            'description' => $request->description,
+            'start_datetime' => $request->start_datetime,
+            'end_datetime' => $request->end_datetime,
+        ]);
+
+
+        \App\Models\FlashSaleItem::where('campaign_id', $campaign->id)
+            ->whereHas('availability', function ($query) use ($request) {
+                // Sử dụng relationship 'timeSlot' đã khai báo trong Model Availability
+                // Laravel sẽ tự biết cột nối là 'time_slot_id' hay 'timeslot_id'
+                $query->whereHas('timeSlot', function ($qTime) use ($request) {
+                    $qTime->where(function ($q) use ($request) {
+                        // Logic: (Ngày + Giờ bắt đầu < Campaign Start) HOẶC (Ngày + Giờ kết thúc > Campaign End)
+                        // Lưu ý: availabilities.date vẫn gọi được vì nó nằm trong query cha
+                        $q->whereRaw("TIMESTAMP(availabilities.date, time_slots.start_time) < ?", [$request->start_datetime])
+                            ->orWhereRaw("TIMESTAMP(availabilities.date, time_slots.end_time) > ?", [$request->end_datetime]);
+                    });
+                });
+            })
+            ->delete();
+
+        // 4. Xử lý đồng bộ lại bài đăng (Post)
+        // Sau khi xóa item lỗi, có thể có những Venue không còn item nào nữa -> Cần xóa bài Post của Venue đó
+
+        // Lấy danh sách các Venue ID hiện còn item trong campaign này
+        $remainingVenueIds = \App\Models\FlashSaleItem::where('campaign_id', $campaign->id)
+            ->join('availabilities', 'flash_sale_items.availability_id', '=', 'availabilities.id')
+            ->join('courts', 'availabilities.court_id', '=', 'courts.id')
+            ->join('venues', 'courts.venue_id', '=', 'venues.id')
+            ->distinct()
+            ->pluck('venues.id')
+            ->toArray();
+
+        // Xóa các bài Post của Campaign này nếu Venue đó không còn trong danh sách còn lại
+        \App\Models\Post::where('type', 'sale')
+            ->where('reference_id', $campaign->id)
+            ->whereNotIn('venue_id', $remainingVenueIds)
+            ->delete();
+        \App\Models\Post::where('type', 'sale')
+            ->where('reference_id', $campaign->id)
+            ->update([
+                'content' => "🔥 SIÊU GIẢM GIÁ: Chiến dịch " . $request->name . " đang diễn ra..."
+            ]);
+        CheckFlashSale::dispatch($campaign->id, 'active')->delay($request->start_datetime);
+        CheckFlashSale::dispatch($campaign->id, 'inactive')->delay($request->end_datetime);
+
+        return redirect()->route('owner.flash_sale_campaigns.index')
+            ->with('success', 'Cập nhật chiến dịch thành công. Các slot không hợp lệ đã bị loại bỏ.');
+    }
+
+    public function destroy($id)
+    {
+        $user = Auth::user();
+
+        // 1. Tìm chiến dịch và đảm bảo thuộc về chủ sân này
+        $campaign = FlashSaleCampaign::where('id', $id)
+            ->where('owner_id', $user->id)
+            ->firstOrFail();
+
+        try {
+            // 2. Thực hiện xóa các dữ liệu liên quan trước (nếu database chưa cài đặt cascade delete)
+
+            // Xóa các mặt hàng trong flash sale (Items)
+            \App\Models\FlashSaleItem::where('campaign_id', $campaign->id)->delete();
+
+            // Xóa các bài Post (bài đăng khuyến mãi) liên quan đến campaign này
+            \App\Models\Post::where('type', 'sale')
+                ->where('reference_id', $campaign->id)
+                ->delete();
+
+            // 3. Cuối cùng xóa chiến dịch
+            $campaign->delete();
+
+            return redirect()->route('owner.flash_sale_campaigns.index')
+                ->with('success', 'Đã xóa chiến dịch Flash Sale thành công.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Có lỗi xảy ra khi xóa chiến dịch: ' . $e->getMessage());
+        }
     }
 }

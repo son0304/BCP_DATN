@@ -83,10 +83,6 @@ class VenueApiController extends Controller
             $query->where('venues.district_id', $request->district_id);
         }
 
-        // 4. Sắp xếp ưu tiên:
-        // Ưu tiên 1: Sân Nổi bật (Ads)
-        // Ưu tiên 2: Sân đang SALE (Để kích thích người dùng)
-        // Ưu tiên 3: Điểm ưu tiên (Ads Search)
         $query->orderByRaw('CASE WHEN MAX(ad_featured_venues.id) IS NOT NULL THEN 1 ELSE 2 END ASC')
             ->orderByRaw('CASE WHEN MAX(flash_sale_items.id) IS NOT NULL THEN 1 ELSE 2 END ASC')
             ->orderByRaw('MAX(ad_top_searches.priority_point) DESC')
@@ -112,16 +108,13 @@ class VenueApiController extends Controller
     }
 
 
-
-    /**
-     * Lấy chi tiết venue
-     */
     public function show(Request $request, $id)
     {
+        // 1. Validate ngày (mặc định là ngày hôm nay nếu không truyền)
         $validated = $request->validate(['date' => 'nullable|date_format:Y-m-d']);
         $date = $validated['date'] ?? now()->toDateString();
 
-        // 1. Lấy Venue và các quan hệ cơ bản
+        // 2. Truy vấn Venue với đầy đủ các quan hệ để tối ưu hiệu năng (Eager Loading)
         $venue = Venue::with([
             'images:id,imageable_id,imageable_type,url,is_primary,type,description',
             'venueTypes:id,name',
@@ -135,8 +128,7 @@ class VenueApiController extends Controller
             'reviews.user.images:id,imageable_id,imageable_type,url',
         ])
             ->withAvg('reviews', 'rating')
-            ->where('id', $id)
-            ->first();
+            ->find($id);
 
         if (!$venue) {
             return response()->json([
@@ -145,9 +137,10 @@ class VenueApiController extends Controller
             ], 404);
         }
 
+        // 3. Xử lý trạng thái Sân (Availability) và Flash Sale
         $courtIds = $venue->courts->pluck('id');
 
-        // 2. Lấy Availability và LỌC FLASH SALE THEO TRẠNG THÁI ACTIVE
+        // Lấy danh sách khung giờ trống kèm Flash Sale đang hoạt động
         $availabilities = Availability::whereIn('court_id', $courtIds)
             ->where('date', $date)
             ->with(['flashSaleItem' => function ($query) {
@@ -157,70 +150,64 @@ class VenueApiController extends Controller
             }])
             ->get()
             ->groupBy('court_id')
-            // Lưu ý: Kiểm tra kỹ tên cột trong DB là 'time_slot_id' hay 'slot_id'
-            // Thường Laravel convention là 'time_slot_id'
-            ->map(fn($items) => $items->keyBy('slot_id'));
+            ->map(fn($items) => $items->keyBy('time_slot_id')); // Đảm bảo cột đúng là time_slot_id
 
-        // 3. Map dữ liệu vào TimeSlots để trả về Frontend
+        // Map dữ liệu Availability vào từng TimeSlot của mỗi Court
         foreach ($venue->courts as $court) {
             $courtAvailabilities = $availabilities->get($court->id, collect());
 
             foreach ($court->timeSlots as $slot) {
-                // Tìm availability tương ứng với slot này
                 $availability = $courtAvailabilities->get($slot->id);
 
-                // Gán dữ liệu cơ bản
-                // Quan trọng: Phải trả về availability_id để frontend biết đường book
                 $slot->availability_id = $availability ? $availability->id : null;
-                $slot->status          = $availability ? $availability->status : 'unavailable'; // Hoặc logic mặc định của bạn
+                $slot->status          = $availability ? $availability->status : 'unavailable';
                 $slot->price           = $availability ? $availability->price : null;
 
-                // Xử lý Flash Sale (Chỉ hiện nếu availability load được flashSaleItem active)
                 if ($availability && $availability->flashSaleItem) {
-                    $slot->sale_price   = $availability->flashSaleItem->sale_price;
+                    $slot->sale_price    = $availability->flashSaleItem->sale_price;
                     $slot->is_flash_sale = true;
                 } else {
                     $slot->sale_price    = null;
                     $slot->is_flash_sale = false;
                 }
-
-                if ($availability) unset($availability->flashSaleItem);
             }
         }
 
-        $currentUser = auth('api')->user();
-        $user = Auth::user();
-        Log::info('Current User in Venue Detail', ['user_id' => $currentUser ? $currentUser->id : null]);
-        Log::info(' User in Venue Detail', ['user_id' => $user ? $user->id : null]);
+        // 4. Kiểm tra User hiện tại (Sử dụng guard API)
+        $currentUser = Auth::guard('api')->user();
 
-        // 2. Lấy ID chủ sân (để check logic voucher do chủ sân tạo)
-        // Lưu ý: $venue->owner được load từ relationship, nếu null thì gán tạm 0
-        $venueOwnerId = $venue->owner_id;
+        // 5. Xử lý PROMOTION (VOUCHER)
+        // CHỈ XỬ LÝ NẾU USER ĐÃ ĐĂNG NHẬP
+        if ($currentUser) {
+            $promotions = Promotion::query()
+                ->with(['creator.role'])
+                ->where('process_status', 'active')
+                ->where('start_at', '<=', now())
+                ->where('end_at', '>=', now())
+                // Kiểm tra giới hạn lượt dùng: (Vô hạn -1) HOẶC (Còn lượt: used < limit)
+                ->where(function ($query) {
+                    $query->where('usage_limit', '<', 0)
+                        ->orWhere(function ($subQuery) {
+                            $subQuery->where('usage_limit', '>', 0)
+                                ->whereColumn('used_count', '<', 'usage_limit');
+                        });
+                })
+                ->get()
+                // Lọc logic nghiệp vụ thông qua hàm isEligible trong Model
+                ->filter(function ($promotion) use ($venue, $currentUser) {
+                    return $promotion->isEligible(
+                        null,           // Chưa có tổng đơn nên truyền null
+                        $venue,         // Đối tượng Venue hiện tại
+                        $currentUser    // Đối tượng User đã đăng nhập
+                    );
+                })
+                ->values(); // Reset key của mảng sau khi filter
+        } else {
+            // Nếu chưa đăng nhập, trả về danh sách rỗng
+            $promotions = collect();
+        }
 
-        // 3. Query DB: Lọc các điều kiện cơ bản (Date, Status, Limit) bằng SQL cho nhanh
-        $promotions = Promotion::query()
-            ->with(['creator.role']) // Eager load để tránh lỗi N+1 khi gọi isValidForVenue
-            ->where('process_status', 'active') // Chỉ lấy active
-            ->where('start_at', '<=', now())   // Đã bắt đầu
-            ->where('end_at', '>=', now())     // Chưa kết thúc
-            ->where(function ($query) {
-                // Check giới hạn sử dụng: Limit = 0 (vô hạn) HOẶC Used < Limit
-                $query->where('usage_limit', 0)
-                    ->orWhereColumn('used_count', '<', 'usage_limit');
-            })
-            ->get() // Thực hiện query lấy Collection
-            // 4. Filter PHP: Dùng hàm logic trong Model để lọc kỹ (Phạm vi sân, User)
-            ->filter(function ($promotion) use ($venue, $venueOwnerId, $currentUser) {
-
-                // Gọi hàm isEligible trong Model Promotion
-                return $promotion->isEligible(
-                    null,           // $orderTotal: Chưa đặt sân nên chưa có tổng tiền -> Truyền null để bỏ qua check giá
-                    $venue->id,     // $venueId: ID sân hiện tại
-                    $venueOwnerId,  // $ownerId: ID chủ sân
-                    $currentUser    // $user: User đang xem (để check new_user hoặc đã dùng chưa)
-                );
-            })
-            ->values();
+        // Đính kèm voucher vào dữ liệu trả về
         $venue->promotions = $promotions;
 
         return response()->json([
@@ -231,130 +218,126 @@ class VenueApiController extends Controller
     }
 
 
-
     public function store(Request $request)
     {
-        Log::info('Request to create venue', $request->all());
+        // Log để kiểm tra dữ liệu từ frontend gửi lên
+        Log::info('Dữ liệu đăng ký Venue:', $request->all());
 
-        $validated = $request->validate([
-            // --- 1. THÔNG TIN DOANH NGHIỆP ---
-            'business_name' => 'required|string|max:255',
-            'business_address' => 'required|string|max:255',
-            'bank_name' => 'required|string|max:100',
-            'bank_account_number' => 'required|string|max:50',
-            'bank_account_name' => 'required|string|max:100',
+        try {
+            $validated = $request->validate([
+                // --- 1. THÔNG TIN CHỦ SỞ HỮU ---
+                'business_name'       => 'required|string|max:255',
+                'business_address'    => 'required|string|max:255',
+                'bank_name'           => 'required|string|max:100',
+                'bank_account_number' => 'required|string|max:50',
+                'bank_account_name'   => 'required|string|max:100',
+                'user_profiles'       => 'required|array|min:1',
+                'user_profiles.*'     => 'image|mimes:jpeg,png,jpg|max:5120',
 
-            // --- 2. THÔNG TIN ĐỊA ĐIỂM (VENUE) ---
-            'venue_name' => 'required|string|max:255',
-            'venue_phone' => 'required|string|max:20',
-            'start_time' => 'required|date_format:H:i',
-            // Lưu ý: Nếu sân hoạt động qua đêm (VD: 23h -> 1h sáng), rule 'after' sẽ gây lỗi.
-            'end_time' => 'required|date_format:H:i|after:start_time',
+                // --- 2. THÔNG TIN SÂN (VENUE) ---
+                'venue_name'          => 'required|string|max:255',
+                'venue_phone'         => 'required|string|max:20',
+                'province_id'         => 'required|integer',
+                'district_id'         => 'required|integer',
+                'address_detail'      => 'required|string|max:255',
+                'lat'                 => 'required|numeric',
+                'lng'                 => 'required|numeric',
+                'open_time'           => 'required',
+                'close_time'          => 'required',
 
-            // Nên bỏ comment exists để đảm bảo tính toàn vẹn dữ liệu
-            'province_id' => 'required|integer|exists:provinces,id',
-            'district_id' => 'required|integer|exists:districts,id',
-            'address_detail' => 'required|string|max:255',
-            'lat' => 'required|numeric|between:-90,90',
-            'lng' => 'required|numeric|between:-180,180',
-
-            // --- 3. VALIDATE MẢNG SÂN CON (COURTS) ---
-            'courts' => 'required|array|min:1',
-            'courts.*.name' => 'required|string|max:100',
-            'courts.*.venue_type_id' => 'required|integer', // Nên thêm exists:venue_types,id
-            'courts.*.surface' => 'required|string|max:50',
-            'courts.*.price_per_hour' => 'required|numeric|min:0',
-
-            // --- 4. VALIDATE FILE ẢNH ---
-            'user_profiles' => 'required|array',
-            'user_profiles.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'venue_profiles' => 'required|array',
-            'venue_profiles.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
-            'document_images' => 'required|array',
-            'document_images.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
-
-        ]);
+                // --- 3. HÌNH ẢNH SÂN & PHÁP LÝ ---
+                'venue_profiles'      => 'required|array|min:1',
+                'venue_profiles.*'    => 'image|mimes:jpeg,png,jpg|max:5120',
+                'document_images'     => 'required|array|min:1',
+                'document_images.*'   => 'image|mimes:jpeg,png,jpg|max:5120',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Dữ liệu không hợp lệ',
+                'errors'  => $e->errors()
+            ], 422);
+        }
 
         DB::beginTransaction();
         try {
             $user = Auth::user();
 
-            // 1. Tạo hoặc Cập nhật Merchant Profile (FIX LỖI A)
-            // Dùng updateOrCreate để tránh lỗi duplicate entry
-            $merchant_profile = MerchantProfile::updateOrCreate(
-                ['user_id' => $user->id], // Điều kiện tìm kiếm
+            // 1. Cập nhật hoặc tạo thông tin Merchant
+            $merchant = MerchantProfile::updateOrCreate(
+                ['user_id' => $user->id],
                 [
-                    'business_name' => $validated['business_name'],
-                    'business_address' => $validated['business_address'],
-                    'bank_name' => $validated['bank_name'],
+                    'business_name'       => $validated['business_name'],
+                    'business_address'    => $validated['business_address'],
+                    'bank_name'           => $validated['bank_name'],
                     'bank_account_number' => $validated['bank_account_number'],
-                    'bank_account_name' => $validated['bank_account_name'],
+                    'bank_account_name'   => $validated['bank_account_name'],
                 ]
             );
 
-            // 2. Tạo Venue
+            // 2. Tạo Venue (Sân)
             $venue = Venue::create([
-                'name' => $validated['venue_name'],
-                'phone' => $validated['venue_phone'],
+                'owner_id'       => $user->id,
+                'name'           => $validated['venue_name'],
+                'phone'          => $validated['venue_phone'],
+                'province_id'    => $validated['province_id'],
+                'district_id'    => $validated['district_id'],
                 'address_detail' => $validated['address_detail'],
-                'province_id' => $validated['province_id'],
-                'district_id' => $validated['district_id'],
-                'lat' => $validated['lat'],
-                'lng' => $validated['lng'],
-                'start_time' => $validated['start_time'],
-                'end_time' => $validated['end_time'],
-                'owner_id' => $user->id,
-                'is_active' => 0
+                'lat'            => $validated['lat'],
+                'lng'            => $validated['lng'],
+                'start_time'     => $validated['open_time'], // Map lại khớp DB
+                'end_time'       => $validated['close_time'], // Map lại khớp DB
+                'is_active'      => 0, // Chờ duyệt
             ]);
 
-            // 3. Xử lý ảnh Venue
-            if ($request->hasFile('venue_profiles')) {
-                foreach ($request->file('venue_profiles') as $file) {
-                    $path = $file->store('uploads/venues', 'public');
-                    $venue->images()->create([
-                        'url' => 'storage/' . $path, // Nên lưu path gốc, dùng Accessor để lấy full URL
-                        // FIX LỖI B: Dùng $venue->id thay vì $request->venue_id
-                        'description' => 'Review image for venue ' . $venue->id,
-                        'is_primary' => true,
-                    ]);
-                }
+            // 3. Lưu ảnh CCCD/GPKD (Merchant Images)
+            foreach ($request->file('user_profiles') as $file) {
+                $path = $file->store('uploads/merchant_profiles', 'public');
+                $merchant->images()->create([
+                    'url'         => 'storage/' . $path,
+                    'description' => 'Merchant Document',
+                    'is_primary'  => false
+                ]);
             }
 
-
-            if ($request->hasFile('user_profiles')) {
-                foreach ($request->file('user_profiles') as $file) {
-                    $path = $file->store('uploads/user_docs', 'public');
-                    $merchant_profile->images()->create([
-                        'url' => 'storage/' . $path,
-                        'description' => 'Document image for user ' . $merchant_profile->id,
-                        'is_primary' => false,
-                    ]);
-                }
+            // 4. Lưu ảnh thực tế của Sân (Venue Profiles)
+            foreach ($request->file('venue_profiles') as $file) {
+                $path = $file->store('uploads/venues', 'public');
+                $venue->images()->create([
+                    'url'         => 'storage/' . $path,
+                    'description' => 'Venue Profile Image',
+                    'is_primary'  => true,
+                    'type'        => 'venue',
+                ]);
             }
 
-            // 5. Tạo Courts
-            foreach ($validated['courts'] as $courtData) {
-                $venue->courts()->create([
-                    'name' => $courtData['name'],
-                    'venue_type_id' => $courtData['venue_type_id'],
-                    'surface' => $courtData['surface'],
-                    'price_per_hour' => $courtData['price_per_hour'],
+            // 5. Lưu ảnh pháp lý của Sân (Document Images)
+            foreach ($request->file('document_images') as $file) {
+                $path = $file->store('uploads/documents', 'public');
+                $venue->images()->create([
+                    'url'         => 'storage/' . $path,
+                    'description' => 'Venue Legal Document',
+                    'is_primary'  => false,
+                    'type'        => 'document',
                 ]);
             }
 
             DB::commit();
 
-            $venue->load(['owner', 'province']);
+            // Phát sự kiện (nếu có)
             broadcast(new DataCreated($venue, 'venues', 'venue.created'))->toOthers();
-            return response()->json(['message' => 'Gửi đăng kí thành công', 'data' => $venue], 201);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Hồ sơ đã được gửi thành công. Vui lòng chờ quản trị viên phê duyệt!',
+                'data'    => $venue
+            ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Venue Store Error: ' . $e->getMessage()); // Log lỗi để debug
+            Log::error('Lỗi Store Venue: ' . $e->getMessage());
 
-            // Không nên trả về $e->getMessage() trực tiếp cho client ở môi trường Production (bảo mật)
             return response()->json([
-                'message' => 'Đã xảy ra lỗi khi tạo sân.',
-                'error' => env('APP_DEBUG') ? $e->getMessage() : 'Internal Server Error'
+                'status'  => 'error',
+                'message' => 'Lỗi hệ thống: ' . $e->getMessage(),
             ], 500);
         }
     }

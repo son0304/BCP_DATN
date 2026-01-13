@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Models\{MoneyFlow, Venue, Booking, Ticket}; // Thêm Ticket vào
+use App\Models\{MoneyFlow, Venue, Booking, Ticket};
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{Auth, DB};
-use Log;
 
 class OwnerStatisticController extends Controller
 {
@@ -25,7 +24,6 @@ class OwnerStatisticController extends Controller
         $filterVenueIds = $vId ? [$vId] : $myVenueIds;
 
         // 1. Lấy thống kê tổng quan
-        // COUNT được tính dựa trên Ticket (đặt sân), loại trừ các dòng tiền khác như Quảng cáo (nếu có)
         $stats = MoneyFlow::whereIn('venue_id', $filterVenueIds)
             ->whereBetween('created_at', [$start, $end])
             ->where('status', 'completed')
@@ -34,7 +32,7 @@ class OwnerStatisticController extends Controller
                 SUM(venue_owner_amount) as total_net,
                 SUM(admin_amount) as total_fee,
                 COUNT(CASE WHEN money_flowable_type = ? THEN 1 END) as total_bookings",
-                [(new Ticket())->getMorphClass()] // Sử dụng class Ticket để đếm số đơn đặt
+                [(new Ticket())->getMorphClass()]
             )
             ->first();
 
@@ -60,7 +58,7 @@ class OwnerStatisticController extends Controller
             ->select('venues.name', DB::raw('SUM(money_flows.venue_owner_amount) as total'))
             ->groupBy('venues.id', 'venues.name')->orderByDesc('total')->limit(5)->get();
 
-        // 4. Doanh thu theo dịch vụ (giữ nguyên logic bảng items)
+        // 4. Doanh thu theo dịch vụ
         $revenueByService = DB::table('items')
             ->join('venue_services', 'items.venue_service_id', '=', 'venue_services.id')
             ->join('services', 'venue_services.service_id', '=', 'services.id')
@@ -69,7 +67,7 @@ class OwnerStatisticController extends Controller
             ->select('services.name', DB::raw('SUM(items.quantity) as qty'), DB::raw('SUM(items.quantity * items.unit_price) as total_revenue'))
             ->groupBy('services.id', 'services.name')->orderByDesc('total_revenue')->limit(5)->get();
 
-        // 5. Tính toán tỉ lệ lấp đầy (Capacity vs Booked)
+        // 5. Tính toán tỉ lệ lấp đầy
         $capacityByHour = DB::table('time_slots')
             ->join('courts', 'time_slots.court_id', '=', 'courts.id')
             ->whereIn('courts.venue_id', $filterVenueIds)
@@ -98,11 +96,11 @@ class OwnerStatisticController extends Controller
         $totalPotentialSlots = array_sum(array_map(fn($c) => $c->court_count * $daysCount, $capacityByHour->toArray()));
         $occupancyRate = $totalPotentialSlots > 0 ? round(($stats->total_bookings / $totalPotentialSlots) * 100, 1) : 0;
 
-        // 6. Danh sách giao dịch gần đây (Sửa ticket sang money_flowable)
-        $transactions = MoneyFlow::with(['venue', 'money_flowable']) // Eager load quan hệ đa hình
+        // 6. Danh sách giao dịch gần đây (ĐÃ SỬA: Thêm load promotion.creator.role)
+        $transactions = MoneyFlow::with(['venue', 'money_flowable', 'promotion.creator.role'])
             ->whereIn('venue_id', $filterVenueIds)
             ->whereBetween('created_at', [$start, $end])
-            ->orderBy('created_at', 'desc') // Sắp xếp theo thời gian thay vì booking_id
+            ->orderBy('created_at', 'desc')
             ->paginate(10)->appends($request->all());
 
         return view('venue_owner.statistics.index', compact(

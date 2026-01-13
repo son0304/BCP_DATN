@@ -28,12 +28,10 @@ const Index_Detail_Venue: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const idVenue = Number(id);
   const { data: detail_venue, isLoading, refetch } = useFetchDataById<Venue>('venue', idVenue, { date: selectedDate });
-  console.log('detail_venue', detail_venue);
 
   const { data } = useFetchData('tickets')
   const tickets = data?.data as Ticket[] || [];
   const promotions = detail_venue?.data?.promotions || [];
-  console.log('promotions', promotions);
 
 
   // Logic load related giữ nguyên...

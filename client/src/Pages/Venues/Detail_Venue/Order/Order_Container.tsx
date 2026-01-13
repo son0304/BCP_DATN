@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // Import Components
@@ -8,7 +8,7 @@ import { useNotification } from '../../../../Components/Notification';
 import { usePostData } from '../../../../Hooks/useApi';
 import type { ApiResponse } from '../../../../Types/api';
 import type { User } from '../../../../Types/user';
-import Voucher_Detail_Venue, { type Voucher } from '../Voucher_Detail_Venue'; // Import Type từ file con
+import Voucher_Detail_Venue, { type Voucher } from '../Voucher_Detail_Venue';
 
 const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] }) => {
     const navigate = useNavigate();
@@ -24,69 +24,73 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    // --- LOGIC TÍNH TIỀN (CHUẨN HÓA LOGIC MIN/MAX) ---
-    const { rawTotalPrice, finalPrice, discountAmount } = useMemo(() => {
-        // 1. Tổng tiền Booking
+    const formatPrice = (price: number | string) =>
+        Number(price).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+
+    // 1. TÍNH TỔNG TIỀN GỐC (Chưa giảm giá)
+    // Phải tách ra useMemo riêng để dùng được trong useEffect phía dưới
+    const rawTotalPrice = useMemo(() => {
         const bookingTotal = selectedItems.reduce((sum, item) => {
             const effectivePrice = (item.sale_price && item.sale_price > 0) ? item.sale_price : item.price;
             return sum + Number(effectivePrice);
         }, 0);
 
-        // 2. Tổng tiền Dịch vụ
         const serviceTotal = selectedServices.reduce((sum, item) => {
             return sum + (Number(item.price) * item.quantity);
         }, 0);
 
-        const total = bookingTotal + serviceTotal;
+        return bookingTotal + serviceTotal;
+    }, [selectedItems, selectedServices]);
+
+    // 2. SAFETY CHECK: Tự động hủy Voucher nếu tổng tiền tụt xuống dưới mức tối thiểu
+    // Sử dụng useEffect để đảm bảo state update xảy ra SAU khi render, fix lỗi "Cannot update..."
+    useEffect(() => {
+        if (selectedVoucher) {
+            if (rawTotalPrice < selectedVoucher.min_order_value) {
+                setSelectedVoucher(null);
+                // Có thể show toast thông báo nếu muốn
+                // showNotification('Voucher đã bị hủy do đơn hàng chưa đủ giá trị tối thiểu', 'warning');
+            }
+        }
+    }, [rawTotalPrice, selectedVoucher]);
+
+    // 3. TÍNH TOÁN FINAL PRICE
+    const { finalPrice, discountAmount } = useMemo(() => {
         let discount = 0;
 
-        // 3. Tính giảm giá
         if (selectedVoucher) {
             const now = new Date();
             const start = new Date(selectedVoucher.start_at);
             const end = new Date(selectedVoucher.end_at);
 
-            // 3.1 Check lại điều kiện cơ bản (Status, Date, Min Order)
-            const isValid = 
+            // Check cơ bản (phòng hờ, dù useEffect đã check min_order)
+            const isValid =
                 selectedVoucher.process_status === 'active' &&
                 now >= start &&
                 now <= end &&
-                (selectedVoucher.min_order_value === 0 || total >= selectedVoucher.min_order_value);
+                (selectedVoucher.min_order_value === 0 || rawTotalPrice >= selectedVoucher.min_order_value);
 
             if (isValid) {
-                const voucherVal = parseFloat(selectedVoucher.value); // Parse string value
+                const voucherVal = parseFloat(selectedVoucher.value);
 
                 if (selectedVoucher.type === 'percentage') {
-                    // Tính %
-                    discount = (total * voucherVal) / 100;
-                    
-                    // Check Max Discount Amount (chỉ check nếu setting > 0)
+                    discount = (rawTotalPrice * voucherVal) / 100;
                     if (selectedVoucher.max_discount_amount > 0 && discount > selectedVoucher.max_discount_amount) {
                         discount = selectedVoucher.max_discount_amount;
                     }
                 } else {
-                    // Fixed Amount
                     discount = voucherVal;
                 }
-            } else {
-                // Nếu đang chọn voucher mà tổng tiền tụt xuống dưới Min Order -> Tự động hủy giảm giá
-                // (Optional: Có thể set SelectedVoucher = null ở đây nhưng trong useMemo không nên setState)
-                discount = 0; 
             }
         }
 
-        // 4. Final Safety: Không giảm quá tổng đơn
-        const validDiscount = Math.min(discount, total);
+        const validDiscount = Math.min(discount, rawTotalPrice);
 
         return {
-            rawTotalPrice: total,
             discountAmount: validDiscount,
-            finalPrice: Math.max(0, total - validDiscount)
+            finalPrice: Math.max(0, rawTotalPrice - validDiscount)
         };
-    }, [selectedItems, selectedServices, selectedVoucher]);
-
-    const formatPrice = (price: number | string) =>
-        Number(price).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
+    }, [rawTotalPrice, selectedVoucher]);
 
     // --- SUBMIT ---
     const handleSubmit = (e: React.FormEvent) => {
@@ -94,9 +98,9 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
         if (!user || !user.id) return showNotification('Vui lòng đăng nhập để đặt sân.', 'error');
         if (selectedItems.length === 0) return showNotification('Vui lòng chọn ít nhất 1 khung giờ.', 'error');
 
-        // Check lại lần cuối trước khi submit xem voucher còn valid không (trường hợp user xóa bớt item)
+        // Check lại lần cuối trước khi submit
         if (selectedVoucher && rawTotalPrice < selectedVoucher.min_order_value) {
-             return showNotification(`Đơn hàng không đủ điều kiện áp dụng mã giảm giá (Tối thiểu ${formatPrice(selectedVoucher.min_order_value)})`, 'error');
+            return showNotification(`Đơn hàng không đủ điều kiện áp dụng mã giảm giá (Tối thiểu ${formatPrice(selectedVoucher.min_order_value)})`, 'error');
         }
 
         setIsSubmitting(true);
@@ -104,7 +108,7 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
         const payload = {
             user_id: user.id,
             venue_id: id,
-            promotion_id: (selectedVoucher && discountAmount > 0) ? selectedVoucher.id : null, // Chỉ gửi ID nếu có giảm giá thực
+            promotion_id: (selectedVoucher && discountAmount > 0) ? selectedVoucher.id : null,
             discount_amount: discountAmount,
             total_amount: finalPrice,
             bookings: selectedItems.map((item) => ({
@@ -202,16 +206,16 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
                                 ) : (
                                     <p className="text-center text-gray-400 text-sm py-4">Chưa chọn lịch</p>
                                 )}
-                                
-                                {/* List Services (nếu có) */}
+
+                                {/* List Services */}
                                 {selectedServices.length > 0 && (
                                     <div className="border-t pt-2 mb-2">
-                                         {selectedServices.map((s, idx) => (
-                                             <div key={idx} className="flex justify-between text-sm text-gray-600">
-                                                 <span>{s.name} (x{s.quantity})</span>
-                                                 <span>{formatPrice(s.price * s.quantity)}</span>
-                                             </div>
-                                         ))}
+                                        {selectedServices.map((s, idx) => (
+                                            <div key={idx} className="flex justify-between text-sm text-gray-600">
+                                                <span>{s.name} (x{s.quantity})</span>
+                                                <span>{formatPrice(s.price * s.quantity)}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
 
@@ -221,6 +225,7 @@ const Order_Container = ({ id, promotions }: { id: any, promotions: Voucher[] })
                                         availableVouchers={promotions}
                                         onVoucherApply={setSelectedVoucher}
                                         totalPrice={rawTotalPrice}
+                                        selectedVoucher={selectedVoucher} // TRUYỀN SELECTED VOUCHER XUỐNG
                                     />
                                 </div>
 

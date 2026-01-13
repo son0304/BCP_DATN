@@ -213,7 +213,7 @@ class TicketApiController extends Controller
                 ]);
 
                 if (!empty($validated['promotion_id'])) {
-                    Promotion::where('id', $validated['promotion_id'])->decrement('usage_limit');
+                    Promotion::where('id', $validated['promotion_id'])->increment('used_count');
                 }
 
                 // --- 2.4: Tạo các Item và Booking chi tiết ---

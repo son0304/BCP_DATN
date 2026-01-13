@@ -52,7 +52,6 @@
                                     </span>
                                 </td>
                                 <td class="text-end pe-4">
-                                    {{-- Nút Xem chi tiết: Lưu JSON vào data-withdraw --}}
                                     <button type="button"
                                         class="btn btn-sm btn-outline-primary rounded-pill px-3 btn-view-detail"
                                         data-withdraw="{{ json_encode($req) }}">
@@ -122,26 +121,19 @@
                         </div>
                     </div>
 
-                    {{-- Form Xử lý (Chỉ hiện nếu trạng thái là pending) --}}
                     <div id="md-form-area">
                         <form id="updateForm" method="POST">
                             @csrf
                             <input type="hidden" name="status" id="md-input-status" value="approved">
-
-                            <!-- Box Duyệt -->
                             <div id="box-approve" class="mb-3">
                                 <label class="form-label small fw-bold">Mã giao dịch (Transaction Code)</label>
                                 <input type="text" name="transaction_code" class="form-control"
                                     placeholder="Nhập mã FT... từ ngân hàng">
                             </div>
-
-                            <!-- Box Từ chối (Ẩn mặc định) -->
                             <div id="box-reject" class="mb-3 d-none">
                                 <label class="form-label small fw-bold text-danger">Lý do từ chối</label>
-                                <textarea name="admin_note" class="form-control" rows="2"
-                                    placeholder="Ví dụ: Sai số tài khoản, thông tin không khớp..."></textarea>
+                                <textarea name="admin_note" class="form-control" rows="2" placeholder="Ví dụ: Sai số tài khoản..."></textarea>
                             </div>
-
                             <div class="d-flex gap-2">
                                 <button type="button" id="btn-toggle-reject" class="btn btn-outline-danger w-50">Từ
                                     chối</button>
@@ -151,7 +143,6 @@
                         </form>
                     </div>
 
-                    {{-- Box Hiển thị kết quả nếu đã xử lý --}}
                     <div id="md-result-area" class="d-none border-top pt-3 text-center">
                         <h6 class="fw-bold">Thông tin xử lý</h6>
                         <p class="mb-1 small">Mã GD: <span id="res-code">---</span></p>
@@ -195,13 +186,30 @@
             const modal = new bootstrap.Modal(modalEl);
             const updateForm = document.getElementById('updateForm');
 
-            // Lắng nghe click nút Xem chi tiết
+            // --- HÀM CHUẨN HÓA MÃ NGÂN HÀNG CHO VIETQR ---
+            function getBankVietQRId(bankName) {
+                const name = bankName.toLowerCase();
+                if (name.includes('vietcombank') || name.includes('vcb')) return 'VCB';
+                if (name.includes('vietinbank')) return 'ICB';
+                if (name.includes('techcombank')) return 'TCB';
+                if (name.includes('mbbank') || name.includes('mb')) return 'MB';
+                if (name.includes('bidv')) return 'BIDV';
+                if (name.includes('agribank')) return 'VBA';
+                if (name.includes('acb')) return 'ACB';
+                if (name.includes('tpbank')) return 'TPB';
+                if (name.includes('vpbank')) return 'VPB';
+                if (name.includes('sacombank')) return 'STB';
+                if (name.includes('hdbank')) return 'HDB';
+                if (name.includes('shb')) return 'SHB';
+                if (name.includes('vib')) return 'VIB';
+                // Nếu không khớp, trả về chính nó nhưng xóa khoảng trắng
+                return bankName.replace(/\s/g, '').toUpperCase();
+            }
+
             document.querySelectorAll('.btn-view-detail').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    // Lấy JSON từ data attribute
                     const data = JSON.parse(this.getAttribute('data-withdraw'));
 
-                    // Đổ dữ liệu vào Modal
                     document.getElementById('md-id').innerText = data.id;
                     document.getElementById('md-actual-amount').innerText = new Intl.NumberFormat(
                         'vi-VN').format(data.actual_amount) + 'đ';
@@ -209,15 +217,20 @@
                     document.getElementById('md-bank-number').innerText = data.bank_account_number;
                     document.getElementById('md-bank-user').innerText = data.bank_account_name;
 
-                    // Tạo link VietQR (Ví dụ BankID lấy từ bank_name - Bạn nên map BankID chuẩn của NAPAS nếu có thể)
+                    // --- ĐOẠN FIX MÃ QR ---
+                    const bankId = getBankVietQRId(data.bank_name);
+                    const amount = data.actual_amount;
+                    const content = encodeURIComponent(`Rut tien id ${data.id}`);
+
+                    // Sử dụng template qr_only của VietQR để hiển thị tốt nhất
                     const qrUrl =
-                        `https://img.vietqr.io/image/${data.bank_name}-${data.bank_account_number}-compact.png?amount=${data.actual_amount}&addInfo=RutTien_${data.id}`;
-                    document.getElementById('md-qr-img').src = qrUrl;
+                        `https://img.vietqr.io/image/${bankId}-${data.bank_account_number}-compact.png?amount=${amount}&addInfo=${content}&accountName=${encodeURIComponent(data.bank_account_name)}`;
 
-                    // Thiết lập Action Form
+                    const qrImg = document.getElementById('md-qr-img');
+                    qrImg.src = qrUrl;
+
+                    // Xử lý ẩn hiện form
                     updateForm.action = `/admin/withdrawal-requests/${data.id}/process`;
-
-                    // Kiểm tra trạng thái
                     if (data.status === 'pending') {
                         document.getElementById('md-form-area').classList.remove('d-none');
                         document.getElementById('md-result-area').classList.add('d-none');
@@ -234,7 +247,7 @@
                 });
             });
 
-            // Toggle Duyệt / Từ chối
+            // Toggle logic
             const btnToggle = document.getElementById('btn-toggle-reject');
             const boxApprove = document.getElementById('box-approve');
             const boxReject = document.getElementById('box-reject');
@@ -243,7 +256,6 @@
 
             btnToggle.addEventListener('click', function() {
                 if (inputStatus.value === 'approved') {
-                    // Chuyển sang Từ chối
                     inputStatus.value = 'rejected';
                     boxApprove.classList.add('d-none');
                     boxReject.classList.remove('d-none');

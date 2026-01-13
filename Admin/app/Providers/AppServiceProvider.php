@@ -15,6 +15,35 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+
+        View::composer(['layout.nav', 'layout.notification'], function ($view) {
+            if (Auth::check()) {
+                $userId = Auth::id();
+
+                // Lấy 10 thông báo chưa đọc mới nhất
+                $unreadNotifications = Notification::where('user_id', $userId)
+                    ->whereNull('read_at')
+                    ->orderBy('created_at', 'desc')
+                    ->take(10)
+                    ->get();
+
+                // Đếm tổng số thông báo chưa đọc
+                $unreadCount = Notification::where('user_id', $userId)
+                    ->whereNull('read_at')
+                    ->count();
+
+                $view->with([
+                    'notifications' => $unreadNotifications,
+                    'unreadCount' => $unreadCount
+                ]);
+            } else {
+                // Nếu chưa đăng nhập, trả về giá trị mặc định để tránh lỗi biến undefined
+                $view->with([
+                    'notifications' => collect(),
+                    'unreadCount' => 0
+                ]);
+            }
+        });
         // View Composer cho file layout thông báo
         View::composer('layout.notification', function ($view) {
             if (Auth::check()) {

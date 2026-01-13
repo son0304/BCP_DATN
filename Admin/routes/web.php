@@ -18,6 +18,7 @@ use App\Http\Controllers\Web\{
     OwnerStatisticController,
     PaymentController,
     PostController,
+    ProfileController,
     VenueController,
     PromotionController,
     ServiceCategoryController,
@@ -91,6 +92,9 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
 
     Route::get('/', [AdminStatisticController::class, 'index'])->name('statistics.index');
+
+    Route::get('/my-account', [ProfileController::class, 'myAccount'])->name('user.index');
+    Route::post('/my-account/update', [ProfileController::class, 'update'])->name('user.update');
     Route::prefix('withdrawal-requests')->group(function () {
         Route::get('/', [WithdrawalRequestController::class, 'index'])->name('withdraw.index');
         Route::post('/{id}/process', [WithdrawalRequestController::class, 'update'])->name('withdraw.update');
@@ -209,7 +213,8 @@ Route::middleware(['auth', 'role:venue_owner'])->prefix('owner')->name('owner.')
 
     // Dashboard
     Route::get('/', [OwnerStatisticController::class, 'index'])->name('statistics.index');
-    Route::get('/my-account', [UserController::class, 'myAccout'])->name('user.index');
+    Route::get('/my-account', [ProfileController::class, 'myAccount'])->name('user.index');
+    Route::post('/my-account/update', [ProfileController::class, 'update'])->name('user.update');
 
     Route::prefix('withdrawal-requests')->group(function () {
         Route::get('/', [WithdrawalRequestController::class, 'index'])->name('withdraw.index');

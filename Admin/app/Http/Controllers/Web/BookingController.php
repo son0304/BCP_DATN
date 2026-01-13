@@ -34,41 +34,44 @@ class BookingController extends Controller
     {
         $search  = $request->input('search');
         $status  = $request->input('status');
-        $venueId = $request->input('venue');
+        $venueId = $request->input('venue_id');
 
-        // Khởi tạo query với các quan hệ cần thiết
         $query = Ticket::with([
             'user',
             'items.booking.court.venue',
             'items.booking.timeSlot',
+            'items.venueService.service'
         ]);
 
-        // Filter: Lọc theo sân (nếu chọn)
+        // 1. Lọc theo Sân (Venue)
         if ($venueId) {
-            $query->whereHas('items.booking.court.venue', function ($q) use ($venueId) {
-                $q->where('id', $venueId);
+            $query->whereHas('items.booking.court', function ($q) use ($venueId) {
+                $q->where('venue_id', $venueId);
             });
         }
 
-        // Filter: Trạng thái
+        // 2. Lọc theo trạng thái
         if ($status) {
             $query->where('status', $status);
         }
 
-        // Filter: Tìm kiếm tên khách hàng
+        // 3. Tìm kiếm (Mã, ID, Tên khách, SĐT, Khách vãng lai)
         if ($search) {
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('booking_code', 'like', "%{$search}%")
+                    ->orWhere('id', $search)
+                    ->orWhere('guest', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($qu) use ($search) {
+                        $qu->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    });
             });
         }
 
-        // Lấy dữ liệu và phân trang
-        $tickets = $query->orderBy('created_at', 'desc')->paginate(10);
+        $tickets = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
+        $venues = Venue::select('id', 'name')->get();
 
-        // Admin được lấy toàn bộ danh sách sân để lọc
-        $venues = Venue::all();
-
-        return view('admin.bookings.index', compact('tickets', 'search', 'status', 'venues', 'venueId'));
+        return view('admin.bookings.index', compact('tickets', 'venues', 'search', 'status', 'venueId'));
     }
     public function booking_venue(Request $request)
     {

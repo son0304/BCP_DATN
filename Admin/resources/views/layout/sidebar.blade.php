@@ -46,6 +46,12 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('admin.bookings.index') }}" class="waves-effect">
+                                <i class="ri-calendar-check-line"></i> {{-- Icon Đặt lịch --}}
+                                <span> Đơn đặt sân </span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ route('admin.reviews.index') }}" class="waves-effect">
                                 <i class="ri-star-line"></i>
                                 <span> Đánh giá </span>
@@ -70,7 +76,7 @@
                             </a>
                         </li>
 
-                       
+
 
                         <li>
                             <a href="{{ route('admin.chats.index') }}" class="waves-effect">
@@ -92,7 +98,6 @@
                             <a href="{{ route('owner.statistics.index') }}" class="waves-effect">
                                 <i class="ri-dashboard-line"></i>
                                 <span> Thống kê Sàn </span>
-                                <span class="badge bg-danger float-end">1</span>
                             </a>
                         </li>
                         <li>

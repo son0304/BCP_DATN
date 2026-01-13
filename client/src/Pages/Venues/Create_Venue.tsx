@@ -70,9 +70,6 @@ const CreateVenue = () => {
     // --- API HOOKS ---
     const { mutate: createVenueMutate, isPending: isCreating } = usePostData('venues');
     const { data: merchantStatus, isLoading } = useFetchData<MerchantDataApi>('merchant');
-    console.log(merchantStatus);
-
-
     const merchant = merchantStatus?.data?.merchant;
     const venue = merchantStatus?.data?.venue;
     const hasRegistration = !!(merchantStatus?.data?.merchant || merchantStatus?.data?.venue);
@@ -151,7 +148,7 @@ const CreateVenue = () => {
                                 </p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                            <div className="grid grid-cols-1  gap-4 mb-8">
                                 <div
                                     onClick={() => navigate('/partner/merchant-profile', { state: merchant })}
                                     className="group bg-white p-5 rounded-2xl border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all cursor-pointer flex flex-col items-center text-center relative"
@@ -166,17 +163,6 @@ const CreateVenue = () => {
                                     </span>
                                 </div>
 
-                                <div
-                                    onClick={() => navigate('/partner/venue-profile', { state: venue })}
-                                    className="group bg-white p-5 rounded-2xl border border-gray-200 hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer flex flex-col items-center text-center relative"
-                                >
-                                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl mb-3 group-hover:scale-110 transition">
-                                        <i className="fa-solid fa-map-location-dot"></i>
-                                    </div>
-                                    <h3 className="text-base font-bold text-gray-800 mb-1">Thông Tin Bãi Sân</h3>
-                                    <p className="text-xs text-gray-500 mb-3 line-clamp-1 px-2">{venue?.name || "Đang cập nhật..."}</p>
-                                    <span className="bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">Xem chi tiết</span>
-                                </div>
                             </div>
 
                             <div className="text-center">

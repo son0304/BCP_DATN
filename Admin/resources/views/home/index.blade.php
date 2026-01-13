@@ -3,7 +3,7 @@
     <!-- Start Content-->
     <div class="container-fluid">
 
-      <h1>Đăng nhập để tiếp tục</h1>
+        <h1>Bạn cần đăng nhập bằng tài khoản đói tác</h1>
 
     </div> <!-- container -->
 @endsection

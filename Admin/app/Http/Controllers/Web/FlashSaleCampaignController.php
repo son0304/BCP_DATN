@@ -46,14 +46,14 @@ class FlashSaleCampaignController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             // Nới lỏng 10 phút để tránh lỗi "thời gian quá khứ" khi người dùng thao tác chậm
-            'start_datetime' => 'required|date|after:' . now()->subMinutes(10)->toDateTimeString(),
-            'end_datetime' => 'required|date|after:start_datetime',
+            'start_datetime' => 'required|date|after_or_equal:now',
+            'end_datetime'   => 'required|date|after:start_datetime',
         ], [
             'name.required' => 'Vui lòng nhập tên chiến dịch.',
             'name.max' => 'Tên chiến dịch không quá 255 ký tự.',
             'start_datetime.required' => 'Vui lòng chọn thời gian bắt đầu.',
             'start_datetime.date' => 'Định dạng thời gian không hợp lệ.',
-            'start_datetime.after' => 'Thời gian bắt đầu không được ở trong quá khứ.',
+            'start_datetime.after_or_equal' => 'Thời gian bắt đầu không được ở trong quá khứ.',
             'end_datetime.required' => 'Vui lòng chọn thời gian kết thúc.',
             'end_datetime.after' => 'Thời gian kết thúc phải sau thời gian bắt đầu.',
         ]);
@@ -137,8 +137,11 @@ class FlashSaleCampaignController extends Controller
         // 1. Validate dữ liệu mới
         $request->validate([
             'name' => 'required|string|max:255',
-            'start_datetime' => 'required|date', // Có thể bỏ after:now nếu cho phép sửa quá khứ nhẹ, tùy logic
+            'start_datetime' => 'required|date|after_or_equal:now',
             'end_datetime' => 'required|date|after:start_datetime',
+        ], [
+            'start_datetime.after_or_equal' => 'Thời gian bắt đầu không được ở trong quá khứ.',
+            'end_datetime.after' => 'Thời gian kết thúc phải sau thời gian bắt đầu.',
         ]);
 
         $campaign = FlashSaleCampaign::where('id', $id)

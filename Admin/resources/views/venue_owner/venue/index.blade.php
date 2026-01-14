@@ -83,20 +83,20 @@
                             </td>
 
                             {{-- Hành động --}}
-                            <td class="text-end">
+                            <td class="text-center">
                                 <a href="{{ route('owner.venues.show', $venue->id) }}" class="btn btn-outline-primary btn-sm me-2">
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 <a href="{{ route('owner.venues.edit', $venue->id) }}" class="btn btn-outline-warning btn-sm me-2">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <form action="{{ route('owner.venues.destroy', $venue->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN sân này? Hành động này không thể hoàn tác!')">
+                                <!-- <form action="{{ route('owner.venues.destroy', $venue->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn XÓA VĨNH VIỄN sân này? Hành động này không thể hoàn tác!')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-outline-danger btn-sm">
                                         <i class="fas fa-trash"></i>
                                     </button>
-                                </form>
+                                </form> -->
                             </td>
                         </tr>
                         @empty

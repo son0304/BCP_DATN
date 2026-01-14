@@ -52,7 +52,12 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold small">Ngày kết thúc <span class="text-danger">*</span></label>
-                            <input type="date" name="end_date" class="form-control @error('end_date') is-invalid @enderror" value="{{ old('end_date') }}">
+                            <input type="date"
+                                name="end_date"
+                                id="add_end_date"
+                                class="form-control @error('end_date') is-invalid @enderror"
+                                value="{{ old('end_date') }}"
+                                min="{{ date('Y-m-d') }}">
                             @error('end_date') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                     </div>

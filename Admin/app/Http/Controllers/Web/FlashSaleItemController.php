@@ -18,14 +18,35 @@ class FlashSaleItemController extends Controller
             'campaign_id' => 'required|exists:flash_sale_campaigns,id',
             'availability_ids' => 'required|array',
             'sale_price' => 'required|numeric|min:0',
+        ], [
+            'sale_price.required' => 'Vui lòng nhập giá giảm.',
+            'availability_ids.required' => 'Vui lòng chọn ít nhất một sân.'
         ]);
 
-        return DB::transaction(function () use ($request, $user) {
+        // --- BỔ SUNG: KIỂM TRA GIÁ GỐC TRƯỚC KHI VÀO TRANSACTION ---
+        $availabilities = Availability::with('court')
+            ->whereIn('id', $request->availability_ids)
+            ->get();
+
+        foreach ($availabilities as $availability) {
+            // So sánh sale_price với giá gốc (price) của availability
+            if ($request->sale_price > $availability->price) {
+                return back()->withInput()->with(
+                    'error',
+                    "Giá giảm (" . number_format($request->sale_price) . "đ) " .
+                        "không được lớn hơn giá gốc (" . number_format($availability->price) . "đ) " .
+                        "của sân {$availability->court->name}."
+                );
+            }
+        }
+        // --------------------------------------------------------
+
+        return DB::transaction(function () use ($request, $user, $availabilities) {
             $campaign = FlashSaleCampaign::where('id', $request->campaign_id)
                 ->where('owner_id', $user->id)
                 ->firstOrFail();
 
-            // 1. Sync Flash Sale Items
+            // 1. Sync Flash Sale Items (Xóa những item không còn được chọn)
             FlashSaleItem::where('campaign_id', $campaign->id)
                 ->whereNotIn('availability_id', $request->availability_ids)
                 ->delete();
@@ -33,12 +54,14 @@ class FlashSaleItemController extends Controller
             $currentVenueIds = [];
 
             // Lưu items và lấy danh sách Venue ID
-            foreach ($request->availability_ids as $availabilityId) {
-                $availability = Availability::with('court.venue')->find($availabilityId);
-                if ($availability && $availability->court->venue->owner_id == $user->id) {
+            // Sử dụng danh sách $availabilities đã lấy ở trên để tối ưu query
+            foreach ($availabilities as $availability) {
+                // Kiểm tra quyền sở hữu sân
+                if ($availability->court->venue->owner_id == $user->id) {
                     $venueId = $availability->court->venue->id;
+
                     FlashSaleItem::updateOrCreate(
-                        ['campaign_id' => $campaign->id, 'availability_id' => $availabilityId],
+                        ['campaign_id' => $campaign->id, 'availability_id' => $availability->id],
                         ['sale_price' => $request->sale_price, 'status' => 'active']
                     );
                     $currentVenueIds[] = $venueId;
@@ -48,8 +71,6 @@ class FlashSaleItemController extends Controller
             $uniqueVenueIds = array_unique($currentVenueIds);
 
             // 2. XỬ LÝ BÀI ĐĂNG (POST) + HÌNH ẢNH
-
-            // Format nội dung
             $startTime = Carbon::parse($campaign->start_datetime)->format('H:i d/m');
             $endTime   = Carbon::parse($campaign->end_datetime)->format('H:i d/m');
             $priceFormatted = number_format($request->sale_price);
@@ -60,7 +81,6 @@ class FlashSaleItemController extends Controller
                 "⚡️ Số lượng có hạn, chốt đơn ngay kẻo lỡ!";
 
             foreach ($uniqueVenueIds as $venueId) {
-                // A. Tạo hoặc cập nhật Post
                 $post = Post::updateOrCreate(
                     [
                         'type' => 'sale',
@@ -75,30 +95,22 @@ class FlashSaleItemController extends Controller
                     ]
                 );
 
-                // B. XỬ LÝ ẢNH (Mới thêm)
-                // Lấy thông tin Venue và ảnh chính (primary) của nó
+                // B. XỬ LÝ ẢNH
                 $venue = Venue::with(['images' => function ($q) {
                     $q->where('is_primary', 1);
                 }])->find($venueId);
 
-                // Nếu Venue có ảnh chính
                 if ($venue && $venue->images->isNotEmpty()) {
                     $sourceImage = $venue->images->first();
-
-                    // Logic: Xóa ảnh cũ của Post này (nếu có) để cập nhật ảnh mới nhất từ Venue
-                    // Hoặc bạn có thể check if(!$post->images()->exists()) nếu không muốn update ảnh
                     $post->images()->delete();
-
-                    // Tạo ảnh mới cho Post (Copy URL từ Venue sang)
                     $post->images()->create([
                         'url' => $sourceImage->url,
-                        'is_primary' => 1, // Set ảnh này là ảnh chính của bài Post
-                        // Các trường khác nếu bảng images của bạn yêu cầu
+                        'is_primary' => 1,
                     ]);
                 }
             }
 
-            // C. Dọn dẹp bài đăng thừa (Logic cũ)
+            // C. Dọn dẹp bài đăng thừa
             if (!empty($uniqueVenueIds)) {
                 Post::where('type', 'sale')
                     ->where('reference_id', $campaign->id)

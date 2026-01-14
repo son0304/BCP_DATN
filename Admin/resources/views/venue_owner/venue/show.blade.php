@@ -272,7 +272,16 @@
                             {{-- Giao diện 1: Nhập số tồn (Cho sản phẩm thường) --}}
                             <div id="stockInputGroup">
                                 <label class="form-label small fw-bold">Số lượng tồn kho</label>
-                                <input type="number" id="uiStockInput" class="form-control" min="0">
+                                <div id="stockInputGroup">
+                                    <input type="number"
+                                        id="uiStockInput"
+                                        class="form-control"
+                                        min="0"
+                                        max="200"
+                                        step="1"
+                                        required
+                                        onkeypress="return event.charCode >= 48 && event.charCode <= 57">
+                                </div>
                             </div>
 
                             {{-- Giao diện 2: Toggle Bảo trì (Cho Amenities) --}}
@@ -376,7 +385,26 @@
 
             // 1. Khi nhập số (Dịch vụ thường)
             uiStockInput.oninput = function() {
-                finalStockInput.value = this.value;
+                // 1. Loại bỏ các ký tự không phải là số (đề phòng copy-paste)
+                let val = this.value.replace(/[^0-9]/g, '');
+
+                // 2. Kiểm tra giới hạn 200
+                if (val !== '' && parseInt(val) > 200) {
+                    val = 200;
+                    alert('Số lượng tồn kho tối đa là 200');
+                }
+
+                // 3. Cập nhật lại giá trị hiển thị và giá trị ẩn
+                this.value = val;
+                finalStockInput.value = val;
+            };
+
+            // Đảm bảo khi nhấn "Lưu", nếu để trống sẽ báo lỗi
+            document.getElementById('formUpdateService').onsubmit = function(e) {
+                if (!finalStockInput.value || finalStockInput.value === '') {
+                    alert('Vui lòng nhập số lượng tồn kho!');
+                    return false;
+                }
             };
 
             // 2. Khi click Radio (Tiện ích) - Xử lý logic thay cho thuộc tính "name"

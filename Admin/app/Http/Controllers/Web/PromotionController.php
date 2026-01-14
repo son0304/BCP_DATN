@@ -91,7 +91,7 @@ class PromotionController extends Controller
                 'code'             => 'required|string|max:50|unique:promotions,code',
                 'value'            => 'required|numeric|min:0' . ($request->type === 'percentage' ? '|max:100' : ''),
                 'type'             => 'required|in:percentage,fixed',
-                'start_at'         => 'required|date',
+                'start_at'         => 'required|date|after_or_equal:now',
                 'end_at'           => 'required|date|after:start_at',
                 'usage_limit'      => 'nullable|integer',
                 'venue_id'         => 'nullable|exists:venues,id',
@@ -117,7 +117,7 @@ class PromotionController extends Controller
 
                 // start_at
                 'start_at.required' => 'Vui lòng chọn thời gian bắt đầu.',
-                'start_at.date'     => 'Thời gian bắt đầu không hợp lệ.',
+                'start_at.after_or_equal'     => 'Thời gian bắt đầu không được ở trong quá khứ.',
 
                 // end_at
                 'end_at.required' => 'Vui lòng chọn thời gian kết thúc.',
@@ -192,7 +192,7 @@ class PromotionController extends Controller
                 // Lưu ý: Thường mã code sẽ không cho sửa, nhưng nếu có thì thêm unique loại trừ ID hiện tại
                 'value'            => 'required|numeric|min:0' . ($request->type === 'percentage' ? '|max:100' : ''),
                 'type'             => 'required|in:percentage,fixed',
-                'start_at'         => 'required|date',
+                'start_at'         => 'required|date|after_or_equal:now',
                 'end_at'           => 'required|date|after:start_at',
                 'usage_limit'      => 'nullable|integer',
                 'venue_id'         => 'nullable|exists:venues,id',
@@ -212,7 +212,7 @@ class PromotionController extends Controller
 
                 // start_at
                 'start_at.required' => 'Vui lòng chọn thời gian bắt đầu.',
-                'start_at.date'     => 'Thời gian bắt đầu không hợp lệ.',
+                'start_at.date.after_or_equal'     => 'Thời gian bắt đầu không được ở trong quá khứ.',
 
                 // end_at
                 'end_at.required' => 'Vui lòng chọn thời gian kết thúc.',

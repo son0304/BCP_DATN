@@ -119,7 +119,7 @@ const Header = () => {
             className="w-8 h-8 md:w-11 md:h-11 rounded-full object-cover shadow-sm group-hover:rotate-12 transition-transform duration-300"
           />
           <div className="hidden sm:block">
-            <h1 className="text-lg md:text-2xl font-bold text-[#11182C] leading-none tracking-tight">BCP Sports</h1>
+            <h1 className="text-lg md:text-2xl font-bold text-[#11182C] leading-none tracking-tight">Booking Court Prime</h1>
             <p className="text-[10px] md:text-xs text-[#10B981] font-bold tracking-widest uppercase mt-0.5">Đặt sân nhanh</p>
           </div>
         </Link>

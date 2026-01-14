@@ -242,10 +242,14 @@ class ServicesController extends Controller
         Log::info("Request Data for update_stock: " . print_r($request->all(), true));
         $validated = $request->validate([
             'service_id' => 'required|exists:services,id',
-            'venue_id' => 'required|exists:venues,id',
-            'price' => 'required|numeric|min:0',
-            'status' => 'nullable|in:0,1',
-            'stock' => 'required|integer|min:0',
+            'venue_id'   => 'required|exists:venues,id',
+            'price'      => 'required|numeric|min:0',
+            'status'     => 'nullable|in:0,1',
+            'stock'      => 'required|integer|min:0|max:200', // Thêm max:200 ở đây
+        ], [
+            'stock.max'  => 'Số lượng tồn kho không được vượt quá 200.',
+            'stock.required' => 'Vui lòng không để trống số lượng tồn kho.',
+            'stock.integer'  => 'Số lượng tồn kho phải là số nguyên.',
         ]);
 
         $venue_service = VenueService::where('venue_id', $validated['venue_id'])

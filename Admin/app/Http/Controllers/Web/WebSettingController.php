@@ -42,12 +42,14 @@ class WebSettingController extends Controller
             'image'      => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
             'position'   => 'required',
             'priority'   => 'required|integer|min:0',
-            'start_date' => 'required|date',
+            'start_date' => 'required|date|after_or_equal:now',
             'end_date'   => 'required|date|after_or_equal:start_date',
         ], [
             'title.required' => 'Tiêu đề không được để trống.',
             'image.required' => 'Vui lòng chọn ảnh banner.',
             'priority.required' => 'Vui lòng nhập thứ tự ưu tiên.',
+            'start_date.after_or_equal' => 'Thời gian bắt đầu không được ở trong quá khứ.',
+            'end_date.after'    => 'Thời gian kết thúc phải sau thời gian bắt đầu.',
         ]);
 
         $banner = Banner::create([
@@ -83,12 +85,15 @@ class WebSettingController extends Controller
             'image'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'position'   => 'required',
             'priority'   => 'required|integer|min:0',
-            'start_date' => 'required|date',
+            'start_date' => 'required|date|after_or_equal:now',
             'end_date'   => 'required|date|after_or_equal:start_date',
         ], [
             'title.required' => 'Tiêu đề không được để trống.',
             'position.required' => 'Vui lòng chọn vị trí hiển thị.',
             'priority.required' => 'Vui lòng nhập thứ tự ưu tiên.',
+            'start_date.after_or_equal' => 'Thời gian bắt đầu không được ở trong quá khứ.',
+            'end_date.after'    => 'Thời gian kết thúc phải sau thời gian bắt đầu.',
+
         ]);
 
         // 1. Cập nhật thông tin text

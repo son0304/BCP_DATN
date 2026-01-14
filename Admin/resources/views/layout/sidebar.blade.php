@@ -7,7 +7,7 @@
 
             <ul class="metismenu" id="side-menu">
 
-                <li class="menu-title">Navigation</li>
+                <li class="menu-title">Bảng điều khiển</li>
 
                 @if (auth()->check())
 
@@ -22,7 +22,7 @@
                         <li>
                             <a href="{{ route('admin.settings.index') }}" class="waves-effect">
                                 <i class="ri-settings-3-line"></i> {{-- Icon Cài đặt --}}
-                                <span> Quản lý Web </span>
+                                <span> Quản lý Banner </span>
                             </a>
                         </li>
 
@@ -45,12 +45,12 @@
                                 <span> Quản lý Thương hiệu </span>
                             </a>
                         </li>
-                        <li>
+                        <!-- <li>
                             <a href="{{ route('admin.bookings.index') }}" class="waves-effect">
                                 <i class="ri-calendar-check-line"></i> {{-- Icon Đặt lịch --}}
                                 <span> Đơn đặt sân </span>
                             </a>
-                        </li>
+                        </li> -->
                         <li>
                             <a href="{{ route('admin.reviews.index') }}" class="waves-effect">
                                 <i class="ri-star-line"></i>
@@ -60,7 +60,7 @@
                         <li>
                             <a href="{{ route('admin.promotions.index') }}" class="waves-effect">
                                 <i class="ri-coupon-line"></i>
-                                <span> Voucher </span>
+                                <span> Khuyến mãi </span>
                             </a>
                         </li>
                         <li>
@@ -72,16 +72,13 @@
                         <li>
                             <a href="{{ route('admin.posts.index') }}" class="waves-effect">
                                 <i class="ri-article-line"></i> {{-- Icon Bài viết --}}
-                                <span> Quản lý Posts </span>
+                                <span> Quản lý Bài viết </span>
                             </a>
                         </li>
-
-
-
                         <li>
                             <a href="{{ route('admin.chats.index') }}" class="waves-effect">
                                 <i class="ri-chat-3-line"></i>
-                                <span> Message </span>
+                                <span> Hộp thư </span>
                             </a>
                         </li>
                         <li>
@@ -110,7 +107,7 @@
                         <li>
                             <a href="{{ route('owner.flash_sale_campaigns.index') }}" class="waves-effect">
                                 <i class="ri-flashlight-fill"></i> {{-- Icon Flash Sale --}}
-                                <span> Flash Sale </span>
+                                <span> Chương trình giảm giá </span>
                             </a>
                         </li>
 
@@ -143,13 +140,13 @@
                         <li>
                             <a href="{{ route('owner.promotions.index') }}" class="waves-effect">
                                 <i class="ri-coupon-line"></i>
-                                <span> Voucher </span>
+                                <span> Khuyến mãi </span>
                             </a>
                         </li>
                         <li>
                             <a href="{{ route('owner.chats.index') }}" class="waves-effect">
                                 <i class="ri-chat-3-line"></i>
-                                <span> Message </span>
+                                <span> Hộp thư </span>
                             </a>
                         </li>
                     @endif
